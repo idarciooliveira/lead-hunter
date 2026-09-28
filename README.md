@@ -29,8 +29,7 @@ Requirements: Java 21 and Docker.
 
 ```bash
 docker compose up -d                     # Postgres on localhost:5432
-cp .env.example .env                     # then fill in APIFY_TOKEN
-set -a; source .env; set +a
+cp .env.example .env                     # then replace APIFY_TOKEN with your real token
 ./mvnw package -DskipTests
 alias lh='java -jar target/lead-hunter.jar'
 
@@ -55,9 +54,12 @@ lh leads show 12
 
 ## Configuration
 
+Copy [.env.example](.env.example) to `.env` in the project root and replace the values. The app reads `.env` on startup from the directory you run it in, so there's nothing to export. Real environment variables override `.env`, which is how Railway's settings take over in production. `.env` is in `.gitignore`.
+
 | Variable | Default | Notes |
 |---|---|---|
-| `APIFY_TOKEN` | none | Required for `campaign run` |
+| `APIFY_TOKEN` | none | Required for `campaign run`. From console.apify.com, Settings, API & Integrations |
+| `ANTHROPIC_API_KEY` | none | Needed from step 4, for pitches |
 | `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` | docker-compose values | Railway sets these on its Postgres |
 | `LEADHUNTER_APIFY_MAX_PLACES_PER_RUN` | 600 | Budget guard. Larger runs need `--allow-over-limit` |
 | `LEADHUNTER_APIFY_ESTIMATED_USD_PER_PLACE` | 0.004 | Only for `--dry-run`. Set it from the actor's pricing page |

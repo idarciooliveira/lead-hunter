@@ -1,6 +1,9 @@
 spring:
   application:
     name: lead-hunter
+  config:
+    # Local settings from .env in the working directory. See .env.example.
+    import: optional:file:.env[.properties]
   main:
     web-application-type: none
     banner-mode: off
@@ -23,5 +26,5 @@ leadhunter:
     poll-wait: 60s
     max-run-time: 20m
     # Used for --dry-run estimates only. Update it from the actor's pricing page.
-    estimated-usd-per-place: 0.004
-    max-places-per-run: 600
+    estimated-usd-per-place: ${LEADHUNTER_APIFY_ESTIMATED_USD_PER_PLACE:0.004}
+    max-places-per-run: ${LEADHUNTER_APIFY_MAX_PLACES_PER_RUN:600}
