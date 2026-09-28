@@ -1,38 +1,40 @@
-# Lead Hunter campaign. See docs/adr/0013-campaigns-as-yaml.md.
-# Save with: lead-hunter campaign create --file campaigns/<slug>.yml
+# Lead Hunter campaign. See docs/adr/0013-campaigns-as-yaml.md and docs/adr/0019-company-profile.md.
+# Needs the company profile first: ./lh company update
+# Save with: lead-hunter campaign create --file campaigns/clinicas-luanda.yml
 
 slug: clinicas-luanda
 name: Clínicas em Luanda
 
-# The 10 onboarding questions. Plain language. Used later to write pitches.
+# The campaign questions. Facts about the company live in campaigns/company.yml.
 answers:
-  # 1. What do you sell, in one sentence, and what does it cost?
-  offer: >
-    Software factory: websites, apps and consulting for small companies.
-    TODO: typical project price in kwanzas.
-  # 2. Which types of businesses buy from you?
-  buyers: Clínicas, escolas, empresas de serviços e lojas.
-  # 3. Where do you operate?
-  area: Luanda first. Lubango and Benguela next.
-  # 4. Your best current customers. Used to calibrate scoring.
-  referenceClients:
-    - ajabalg
-    - kintexia
-    - horizontetourangola
-  # 5. How big is a good customer?
-  idealSize: Small PMEs with 1 to 3 locations and regular customers.
-  # 6. What problem do you solve, and how does it show from the outside?
-  visiblePain: >
-    No website or only Instagram. Bookings and orders by phone or DM.
-    Reviews that complain nobody answers or booking is hard.
-  # 7. Who should never show up?
-  exclusions: Chains, banks, telecoms, government, multinationals, current clients.
-  # 8. Who decides, and how do you reach them?
-  decisionMaker: Owner or manager. WhatsApp message or phone call.
-  # 9. What makes you different, and what results can you prove?
-  proof: TODO one concrete result from a past project.
-  # 10. How many leads can you work per week?
-  weeklyCapacity: 35
+  # 1. Sector, in a word or two.
+  sector: clínicas
+  # 2. The problem you bet this sector has, in the customer's words.
+  problem: Perdemos marcações porque os pacientes só conseguem marcar por telefone ou mensagem.
+  # 3. The one service you pitch. Must match a service name in the company profile.
+  service: Site
+  # 4. What the lead gets for free for replying.
+  hook: Uma análise gratuita do vosso perfil no Google Maps
+  # 5. Optional. Why they would buy now.
+  # whyNow:
+  # 8. On the phone: who answers, who to ask for, when not to call.
+  phoneRoutine: A recepção atende; pedir o director clínico ou o gerente. Evitar as manhãs.
+  # 9. Objections specific to this sector. Company objections are added automatically.
+  objections:
+    - objection: Os nossos pacientes preferem ligar
+      answer: Continuam a poder ligar; o site só acrescenta marcações fora do horário.
+  # 10. A case from the company profile, copied here. Leave it out and the pitch makes no claims.
+  # caseStudy:
+  # 11. Goal and stop rule.
+  goal:
+    meetings: 3
+    wins: 1
+    endDate: 2026-11-09
+    leadsPerWeek: 35
+    stopRule:
+      minInterested: 2
+      afterContacted: 70
+  tone: Formal, em português (o senhor / a senhora)
 
 # What the scraper searches and how stage 1 filters the results.
 search:
@@ -49,6 +51,15 @@ search:
     - Alvalade, Luanda, Angola
   maxPlacesPerSearch: 40
   language: pt-PT
+  # 6. Google Maps signals: NO_WEBSITE, SOCIAL_ONLY, OWN_WEBSITE, FEW_REVIEWS, MANY_REVIEWS, LOW_RATING.
+  # Disqualifying ones exclude the place. Wanted ones go to the pitch. Neither changes the score weights.
+  wantedSignals:
+    - NO_WEBSITE
+    - SOCIAL_ONLY
+  disqualifyingSignals:
+    - OWN_WEBSITE
+  # 7. Minimum Google reviews for a business that can pay.
+  minReviews: 5
   # Places whose name or category contains one of these whole words get the target sector points.
   targetKeywords:
     - clínica
@@ -60,7 +71,7 @@ search:
   # Added to the built-in exclusions: banks, government, telecoms, big retail chains.
   excludeKeywords:
     - hospital
-  # Current clients and anyone else you never want in the list. Matched inside the place name.
+  # Extra names to exclude. Current clients from the company profile are always excluded.
   excludeNames: []
   # Share of non-excluded places kept as QUALIFIED for stage 2.
   qualifyShare: 0.4

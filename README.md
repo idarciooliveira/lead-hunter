@@ -15,11 +15,12 @@ Finds small companies on Google Maps that need a website, an app, or a system, a
 
 ## How it works
 
-1. A campaign answers the 10 onboarding questions and lists search terms and locations. Create it with `campaign new`, or write the YAML yourself.
-2. `campaign run` starts one Apify Google Maps run per location, with no reviews or images to keep it cheap.
-3. Each place gets hard filters first: closed, no phone, banks, government, telecoms, big chains, your own clients.
-4. The rest get a stage 1 score from rules in `Stage1Scorer`. Every point comes with a reason.
-5. The top share of the campaign, 40% by default, becomes `QUALIFIED`. The rest is `BELOW_CUT`, with the reason stored.
+1. The company profile says what you sell, at what price, to whom you've sold, and what you can prove. You answer it once with `company setup`, see [ADR 0019](docs/adr/0019-company-profile.md).
+2. A campaign answers 11 questions about its goal: sector, the problem you bet on, the service you pitch, which Maps signals qualify or rule out a place, and the goal with a stop rule. Then it lists search terms and locations. Create it with `campaign new`, or write the YAML yourself.
+3. `campaign run` starts one Apify Google Maps run per location, with no reviews or images to keep it cheap.
+4. Each place gets hard filters first: closed, no phone, your current clients (by phone, then name), banks, government, telecoms, big chains, fewer reviews than the campaign minimum, and the campaign's disqualifying signals.
+5. The rest get a stage 1 score from rules in `Stage1Scorer`. Every point comes with a reason.
+6. The top share of the campaign, 40% by default, becomes `QUALIFIED`. The rest is `BELOW_CUT`, with the reason stored.
 
 Places are shared across campaigns and deduplicated by Google place ID. Re-running a campaign never touches a lead you already worked on.
 
@@ -40,7 +41,8 @@ Needs Java 21. `./lh` builds the jar the first time, then runs it.
 
 ```bash
 ./lh --help
-./lh campaign new                                   # answer the questions, no file needed
+./lh company setup                                  # once: your company, services, clients, cases
+./lh campaign new                                   # answer the campaign questions, no file needed
 ./lh campaign create -f campaigns/clinicas-luanda.yml  # or load a ready file
 ./lh campaign run clinicas-luanda --dry-run
 ./lh campaign run clinicas-luanda
@@ -57,13 +59,14 @@ Needs only Docker. The first run builds the image, which takes a few minutes.
 
 ```bash
 docker compose run --rm app --help
+docker compose run --rm app company setup
 docker compose run --rm app campaign new
 docker compose run --rm app campaign create -f campaigns/clinicas-luanda.yml
 docker compose run --rm app campaign run clinicas-luanda
 docker compose run --rm app leads list clinicas-luanda
 ```
 
-The `app` service reads `.env`, connects to the `postgres` service by name, and mounts `./campaigns` into the container, so campaign files you edit on your machine are visible inside. After changing code, rebuild with `docker compose build app`.
+The `app` service reads `.env`, connects to the `postgres` service by name, and mounts `./campaigns` into the container, so campaign files and `campaigns/company.yml` you edit on your machine are visible inside. After changing code, rebuild with `docker compose build app`.
 
 A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list clinicas-luanda`.
 
@@ -71,9 +74,13 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 
 | Command | What it does |
 |---|---|
-| `campaign new [--dir campaigns] [--no-file]` | Ask the 10 questions, save the campaign, and write `campaigns/<slug>.yml` |
-| `campaign template` | Print an example campaign file with the 10 questions |
-| `campaign create -f <file>` | Save a campaign. Same slug again updates it |
+| `company setup [--file campaigns/company.yml] [--no-file]` | Ask the company questions and save the profile. Run it again to change answers |
+| `company update [-f campaigns/company.yml]` | Save the profile from its YAML file |
+| `company show` | Print the saved profile |
+| `company template` | Print an example company file |
+| `campaign new [--dir campaigns] [--no-file]` | Ask the campaign questions, save the campaign, and write `campaigns/<slug>.yml`. Needs a company profile |
+| `campaign template` | Print an example campaign file |
+| `campaign create -f <file>` | Save a campaign. Same slug again updates it. The service must be one the company sells |
 | `campaign list` | Campaigns and how much each has spent on Apify |
 | `campaign run <slug> [--dry-run] [--allow-over-limit]` | Scrape, filter, score, cut |
 | `leads list <slug> [--stage QUALIFIED\|BELOW_CUT\|EXCLUDED\|ALL] [--limit 20]` | Ranked leads |

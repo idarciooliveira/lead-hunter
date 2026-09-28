@@ -12,6 +12,8 @@ import me.iofdev.leadhunter.PostgresTestSupport;
 import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignFileParser;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
+import me.iofdev.leadhunter.company.CompanyProfile;
+import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.maps.ScrapedPlace;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +40,7 @@ class CampaignRunnerIntegrationTest extends PostgresTestSupport {
     static final String CAMPAIGN = """
             slug: clinicas-teste
             name: Clínicas teste
-            answers: {offer: sites, buyers: clínicas, area: Luanda}
+            answers: {sector: clínicas, problem: marcações só por telefone, service: Site}
             search:
               terms: [clínica, centro médico]
               locations: [Talatona, Maianga, Viana]
@@ -72,6 +74,8 @@ class CampaignRunnerIntegrationTest extends PostgresTestSupport {
     LeadRepository leads;
     @Autowired
     FakeScraper scraper;
+    @Autowired
+    CompanyRepository companies;
 
     Campaign campaign;
     List<String> progress = new ArrayList<>();
@@ -151,6 +155,41 @@ class CampaignRunnerIntegrationTest extends PostgresTestSupport {
 
         assertThatThrownBy(() -> runner.run(campaign, false, progress::add)).hasMessageContaining("APIFY_TOKEN");
         assertThat(jdbc.sql("select count(*) from campaign_run").query(Long.class).single()).isZero();
+    }
+
+    @Test
+    void excludesCompanyClientsByPhoneAndAppliesCampaignFilters() {
+        companies.save(new CompanyProfile("X", "Somos a X.", List.of(new CompanyProfile.Service("Site", "1 Kz", null)),
+                "Site", null, List.of(new CompanyProfile.Client("Horizonte", "+244 923 000 444")), null, null, null, null));
+        campaigns.save(parser.parse(CAMPAIGN.replace("qualifyShare: 0.5", """
+                qualifyShare: 0.5
+                  minReviews: 5
+                  disqualifyingSignals: [SOCIAL_ONLY]""")));
+        Campaign filtered = campaigns.findBySlug("clinicas-teste").orElseThrow();
+
+        runner.run(filtered, false, progress::add);
+
+        assertThat(leads.list(filtered.id(), Optional.of(LeadStage.EXCLUDED), 10)).extracting(LeadView::stageReason)
+                .contains("Current client 'Horizonte'", "Only 2 reviews, the campaign needs at least 5",
+                        "Disqualifying signal: only a social page");
+        assertThat(leads.list(filtered.id(), Optional.of(LeadStage.QUALIFIED), 10)).extracting(LeadView::name)
+                .containsExactly("Clínica Sorriso");
+    }
+
+    @Test
+    void readsCampaignsSavedBeforeTheCompanyProfile() {
+        jdbc.sql("""
+                insert into campaign (slug, name, answers, search) values ('antiga', 'Antiga',
+                  '{"offer": "sites", "buyers": "lojas", "area": "Luanda", "referenceClients": ["a"],
+                    "proof": "TODO", "weeklyCapacity": 35}',
+                  '{"terms": ["loja"], "locations": ["Luanda"], "maxPlacesPerSearch": 10}')
+                """).update();
+
+        Campaign old = campaigns.findBySlug("antiga").orElseThrow();
+
+        assertThat(old.answers().sector()).isNull();
+        assertThat(old.search().minReviews()).isZero();
+        assertThat(old.search().disqualifyingSignals()).isEmpty();
     }
 
     @Test

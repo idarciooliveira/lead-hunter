@@ -8,12 +8,16 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 
 import me.iofdev.leadhunter.campaign.Campaign;
+import me.iofdev.leadhunter.campaign.CampaignChecks;
 import me.iofdev.leadhunter.campaign.CampaignFile;
 import me.iofdev.leadhunter.campaign.CampaignFileParser;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
+import me.iofdev.leadhunter.company.CompanyProfile;
+import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.maps.ScrapeRequest;
 import me.iofdev.leadhunter.pipeline.CampaignRunner;
 import me.iofdev.leadhunter.pipeline.RunSummary;
@@ -50,7 +54,7 @@ class CampaignCommand implements Runnable {
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"));
     }
 
-    @Command(name = "new", description = "Answer the 10 questions in the terminal. Saves the campaign and writes its YAML file.")
+    @Command(name = "new", description = "Answer the campaign questions in the terminal. Saves the campaign and writes its YAML file.")
     static class New implements Runnable {
 
         @Spec
@@ -65,20 +69,31 @@ class CampaignCommand implements Runnable {
 
         private final CampaignFileParser parser;
         private final CampaignRepository campaigns;
+        private final CompanyRepository company;
 
-        New(CampaignFileParser parser, CampaignRepository campaigns) {
+        New(CampaignFileParser parser, CampaignRepository campaigns, CompanyRepository company) {
             this.parser = parser;
             this.campaigns = campaigns;
+            this.company = company;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            CampaignWizard wizard = new CampaignWizard(
-                    new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)), out);
+            CompanyProfile profile = CompanyCommand.requireCompany(company);
+            LocalDate today = LocalDate.now();
+            List<Campaign> all = campaigns.findAll();
+            Prompter prompter = new Prompter(
+                    new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)), out,
+                    "input ended before the campaign was complete. "
+                            + "In Docker, run it with: docker compose run --rm app campaign new");
+            CampaignWizard wizard = new CampaignWizard(prompter, profile,
+                    slug -> CampaignChecks.freeCapacity(profile, all, slug, today), today);
             CampaignFile campaign = wizard.run();
             CampaignFileParser.validate(campaign);
+            CampaignChecks.requireFits(campaign, profile);
             out.println();
+            CompanyCommand.printWarnings(out, CampaignChecks.warnings(campaign, profile, all, today));
 
             if (campaigns.findBySlug(campaign.slug()).isPresent()
                     && !wizard.confirm("Campaign '" + campaign.slug() + "' already exists. Replace it?")) {
@@ -104,7 +119,7 @@ class CampaignCommand implements Runnable {
         }
     }
 
-    @Command(name = "template", description = "Print an example campaign file with the 10 questions.")
+    @Command(name = "template", description = "Print an example campaign file with the campaign questions.")
     static class Template implements Runnable {
 
         @Spec
@@ -132,10 +147,12 @@ class CampaignCommand implements Runnable {
 
         private final CampaignFileParser parser;
         private final CampaignRepository campaigns;
+        private final CompanyRepository company;
 
-        Create(CampaignFileParser parser, CampaignRepository campaigns) {
+        Create(CampaignFileParser parser, CampaignRepository campaigns, CompanyRepository company) {
             this.parser = parser;
             this.campaigns = campaigns;
+            this.company = company;
         }
 
         @Override
@@ -147,7 +164,11 @@ class CampaignCommand implements Runnable {
                 throw new IllegalArgumentException("cannot read " + file + ": " + e.getMessage());
             }
             CampaignFile campaign = parser.parse(content);
+            CompanyProfile profile = CompanyCommand.requireCompany(company);
+            CampaignChecks.requireFits(campaign, profile);
+            List<String> warnings = CampaignChecks.warnings(campaign, profile, campaigns.findAll(), LocalDate.now());
             boolean created = campaigns.save(campaign);
+            CompanyCommand.printWarnings(spec.commandLine().getOut(), warnings);
             spec.commandLine().getOut().printf("%s campaign '%s'. Next: campaign run %s --dry-run%n",
                     created ? "Created" : "Updated", campaign.slug(), campaign.slug());
         }
@@ -170,7 +191,7 @@ class CampaignCommand implements Runnable {
             PrintWriter out = spec.commandLine().getOut();
             List<Campaign> all = campaigns.findAll();
             if (all.isEmpty()) {
-                out.println("No campaigns yet. Start with: campaign template > campaigns/my-campaign.yml");
+                out.println("No campaigns yet. Start with: campaign new");
                 return;
             }
             out.printf("%-28s %-40s %10s%n", "SLUG", "NAME", "SPENT USD");

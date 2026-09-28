@@ -18,7 +18,7 @@ Every decision lives in `docs/adr/`. Read `docs/adr/README.md` before changing a
 
 ## Conventions
 
-- Package by feature under `me.iofdev.leadhunter`: `campaign`, `maps`, `apify`, `place`, `scoring`, `pipeline`, `llm`, `cli`.
+- Package by feature under `me.iofdev.leadhunter`: `company`, `campaign`, `maps`, `apify`, `place`, `scoring`, `pipeline`, `llm`, `cli`.
 - SQL is hand-written with `JdbcClient`. Schema changes are new Flyway migrations; never edit an applied one.
 - Jackson 3: packages are `tools.jackson.*`, and `JsonNode.asString()` replaces `asText()`.
 - CLI output goes through picocli's `spec.commandLine().getOut()` so tests can capture it. Errors are thrown and printed as `error: <message>` with exit code 1.

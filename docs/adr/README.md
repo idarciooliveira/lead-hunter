@@ -22,3 +22,5 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0016](0016-testing-strategy.md) | Test SQL against real Postgres; fake the scraper | Accepted |
 | [0017](0017-vercel-ai-gateway.md) | Call LLMs through the Vercel AI Gateway; test with Gemma 4 26B A4B | Accepted |
 | [0018](0018-campaign-wizard.md) | Create campaigns with an interactive wizard; YAML stays the stored format | Accepted |
+| [0019](0019-company-profile.md) | Split the questions into a company profile and campaign questions | Accepted |
+| [0020](0020-not-now-lost-reason.md) | Add "not now" as a reason for a lost lead | Accepted |
