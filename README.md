@@ -25,21 +25,45 @@ Places are shared across campaigns and deduplicated by Google place ID. Re-runni
 
 ## Run it locally
 
-Requirements: Java 21 and Docker.
+First time, in the project root:
 
 ```bash
-docker compose up -d                     # Postgres on localhost:5432
-cp .env.example .env                     # then replace APIFY_TOKEN with your real token
-./mvnw package -DskipTests
-alias lh='java -jar target/lead-hunter.jar'
-
-lh campaign template > campaigns/escolas-luanda.yml   # edit it
-lh campaign create --file campaigns/clinicas-luanda.yml
-lh campaign run clinicas-luanda --dry-run             # shows searches and max cost, calls nothing
-lh campaign run clinicas-luanda
-lh leads list clinicas-luanda
-lh leads show 12
+cp .env.example .env          # then replace APIFY_TOKEN and AI_GATEWAY_API_KEY
+docker compose up -d postgres # Postgres on localhost:5432, data kept in a Docker volume
 ```
+
+There are two ways to run commands. Both use the same database, so you can mix them.
+
+### Option A: Java on your machine
+
+Needs Java 21. `./lh` builds the jar the first time, then runs it.
+
+```bash
+./lh --help
+./lh campaign create -f campaigns/clinicas-luanda.yml
+./lh campaign run clinicas-luanda --dry-run
+./lh campaign run clinicas-luanda
+./lh leads list clinicas-luanda
+./lh leads show 12
+./lh llm test
+```
+
+After changing code, rebuild with `./mvnw package -DskipTests`. `./lh` only builds when the jar is missing. On Windows, use `mvnw.cmd package -DskipTests` and then `java -jar target\lead-hunter.jar <command>`.
+
+### Option B: everything in Docker
+
+Needs only Docker. The first run builds the image, which takes a few minutes.
+
+```bash
+docker compose run --rm app --help
+docker compose run --rm app campaign create -f campaigns/clinicas-luanda.yml
+docker compose run --rm app campaign run clinicas-luanda
+docker compose run --rm app leads list clinicas-luanda
+```
+
+The `app` service reads `.env`, connects to the `postgres` service by name, and mounts `./campaigns` into the container, so campaign files you edit on your machine are visible inside. After changing code, rebuild with `docker compose build app`.
+
+A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list clinicas-luanda`.
 
 ## Commands
 

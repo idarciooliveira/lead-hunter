@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Runs the Lead Hunter CLI from the project root, building the jar first if it is missing.
+# Usage: ./lh campaign list
+set -e
+cd "$(dirname "$0")"
+if [ ! -f target/lead-hunter.jar ]; then
+  ./mvnw -q -B package -DskipTests
+fi
+exec java -jar target/lead-hunter.jar "$@"
