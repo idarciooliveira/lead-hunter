@@ -1,0 +1,35 @@
+[
+  {
+    "title": "Clínica Sorriso Talatona",
+    "placeId": "ChIJ-sorriso",
+    "categoryName": "Clínica dentária",
+    "categories": ["Clínica dentária", "Dentista"],
+    "address": "Rua do Talatona, Luanda, Angola",
+    "neighborhood": "Talatona",
+    "city": "Luanda",
+    "countryCode": "AO",
+    "phone": "+244 923 456 789",
+    "phoneUnformatted": "+244923456789",
+    "totalScore": 4.4,
+    "reviewsCount": 142,
+    "location": {"lat": -8.9167, "lng": 13.1833},
+    "url": "https://www.google.com/maps/place/?q=place_id:ChIJ-sorriso",
+    "permanentlyClosed": false,
+    "temporarilyClosed": false
+  },
+  {
+    "title": "Centro Médico Maianga",
+    "placeId": "ChIJ-maianga",
+    "categoryName": "Centro médico",
+    "phone": "222 123 456",
+    "website": "https://www.facebook.com/centromedicomaianga",
+    "totalScore": 3.9,
+    "reviewsCount": 35
+  },
+  {
+    "title": "Sem Id"
+  },
+  {
+    "placeId": "ChIJ-no-title"
+  }
+]

@@ -1,0 +1,184 @@
+package me.iofdev.leadhunter.cli;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+import me.iofdev.leadhunter.campaign.Campaign;
+import me.iofdev.leadhunter.campaign.CampaignFile;
+import me.iofdev.leadhunter.campaign.CampaignFileParser;
+import me.iofdev.leadhunter.campaign.CampaignRepository;
+import me.iofdev.leadhunter.maps.ScrapeRequest;
+import me.iofdev.leadhunter.pipeline.CampaignRunner;
+import me.iofdev.leadhunter.pipeline.RunSummary;
+import me.iofdev.leadhunter.pipeline.SearchPlan;
+import org.springframework.core.io.ClassPathResource;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+import picocli.CommandLine.Spec;
+
+@Command(
+        name = "campaign",
+        description = "Create and run campaigns.",
+        mixinStandardHelpOptions = true,
+        subcommands = {
+                CampaignCommand.Template.class,
+                CampaignCommand.Create.class,
+                CampaignCommand.ListCampaigns.class,
+                CampaignCommand.Run.class})
+class CampaignCommand implements Runnable {
+
+    @Spec
+    CommandSpec spec;
+
+    @Override
+    public void run() {
+        spec.commandLine().usage(spec.commandLine().getOut());
+    }
+
+    static Campaign requireCampaign(CampaignRepository campaigns, String slug) {
+        return campaigns.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"));
+    }
+
+    @Command(name = "template", description = "Print an example campaign file with the 10 questions.")
+    static class Template implements Runnable {
+
+        @Spec
+        CommandSpec spec;
+
+        @Override
+        public void run() {
+            try (InputStream in = new ClassPathResource("campaign-template.yml").getInputStream()) {
+                spec.commandLine().getOut().print(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+                spec.commandLine().getOut().flush();
+            } catch (IOException e) {
+                throw new IllegalStateException("template missing from the jar", e);
+            }
+        }
+    }
+
+    @Command(name = "create", description = "Save a campaign from a YAML file. Saving the same slug again updates it.")
+    static class Create implements Runnable {
+
+        @Spec
+        CommandSpec spec;
+
+        @Option(names = {"-f", "--file"}, required = true, description = "Campaign YAML file.")
+        Path file;
+
+        private final CampaignFileParser parser;
+        private final CampaignRepository campaigns;
+
+        Create(CampaignFileParser parser, CampaignRepository campaigns) {
+            this.parser = parser;
+            this.campaigns = campaigns;
+        }
+
+        @Override
+        public void run() {
+            String content;
+            try {
+                content = Files.readString(file);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("cannot read " + file + ": " + e.getMessage());
+            }
+            CampaignFile campaign = parser.parse(content);
+            boolean created = campaigns.save(campaign);
+            spec.commandLine().getOut().printf("%s campaign '%s'. Next: campaign run %s --dry-run%n",
+                    created ? "Created" : "Updated", campaign.slug(), campaign.slug());
+        }
+    }
+
+    @Command(name = "list", description = "List campaigns and what they have cost so far.")
+    static class ListCampaigns implements Runnable {
+
+        @Spec
+        CommandSpec spec;
+
+        private final CampaignRepository campaigns;
+
+        ListCampaigns(CampaignRepository campaigns) {
+            this.campaigns = campaigns;
+        }
+
+        @Override
+        public void run() {
+            PrintWriter out = spec.commandLine().getOut();
+            List<Campaign> all = campaigns.findAll();
+            if (all.isEmpty()) {
+                out.println("No campaigns yet. Start with: campaign template > campaigns/my-campaign.yml");
+                return;
+            }
+            out.printf("%-28s %-40s %10s%n", "SLUG", "NAME", "SPENT USD");
+            for (Campaign campaign : all) {
+                out.printf("%-28s %-40s %10s%n", campaign.slug(), Format.truncate(campaign.name(), 40),
+                        campaign.totalCostUsd().setScale(4, java.math.RoundingMode.HALF_UP));
+            }
+        }
+    }
+
+    @Command(name = "run", description = "Search Google Maps for a campaign, filter, score, and rank the results.")
+    static class Run implements Runnable {
+
+        @Spec
+        CommandSpec spec;
+
+        @Parameters(index = "0", description = "Campaign slug.")
+        String slug;
+
+        @Option(names = "--dry-run", description = "Show the searches and the maximum cost without calling the scraper.")
+        boolean dryRun;
+
+        @Option(names = "--allow-over-limit", description = "Run even if the plan exceeds leadhunter.apify.max-places-per-run.")
+        boolean allowOverLimit;
+
+        private final CampaignRepository campaigns;
+        private final CampaignRunner runner;
+
+        Run(CampaignRepository campaigns, CampaignRunner runner) {
+            this.campaigns = campaigns;
+            this.runner = runner;
+        }
+
+        @Override
+        public void run() {
+            PrintWriter out = spec.commandLine().getOut();
+            Campaign campaign = requireCampaign(campaigns, slug);
+            SearchPlan plan = runner.plan(campaign);
+
+            if (dryRun) {
+                out.printf("Campaign '%s' would start %d scraper runs:%n", campaign.slug(), plan.requests().size());
+                for (ScrapeRequest request : plan.requests()) {
+                    out.printf("  %s: %s, up to %d places%n", request.location(),
+                            String.join(", ", request.terms()), request.maxPlaces());
+                }
+                out.printf("Up to %d places, about $%s at the configured price per place.%n",
+                        plan.maxPlaces(), plan.estimatedMaxUsd().setScale(2, java.math.RoundingMode.HALF_UP));
+                return;
+            }
+
+            RunSummary summary = runner.run(campaign, allowOverLimit, message -> {
+                out.println(message);
+                out.flush();
+            });
+            out.println();
+            out.printf("Scraper runs: %d, failed: %d%n", summary.scraperRuns(), summary.failedRuns());
+            out.printf("Places found: %d, new to this campaign: %d, excluded this run: %d%n",
+                    summary.placesFound(), summary.newLeads(), summary.excludedThisRun());
+            out.printf("Campaign totals: %d qualified, %d below the cut, %d excluded%n",
+                    summary.totals().qualified(), summary.totals().belowCut(), summary.totals().excluded());
+            out.printf("Cost of this run: $%s%n", summary.costUsd());
+            if (summary.failedRuns() == summary.scraperRuns()) {
+                throw new IllegalStateException("every scraper run failed. See the messages above");
+            }
+            out.printf("Next: leads list %s%n", campaign.slug());
+        }
+    }
+}

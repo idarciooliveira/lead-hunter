@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: lead-hunter
+  main:
+    web-application-type: none
+    banner-mode: off
+    log-startup-info: false
+  datasource:
+    # Railway's Postgres exposes PG* variables. Locally these default to docker-compose.yml.
+    url: jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:leadhunter}
+    username: ${PGUSER:leadhunter}
+    password: ${PGPASSWORD:leadhunter}
+
+logging:
+  level:
+    root: WARN
+    me.iofdev.leadhunter: INFO
+
+leadhunter:
+  apify:
+    token: ${APIFY_TOKEN:}
+    actor-id: compass~crawler-google-places
+    poll-wait: 60s
+    max-run-time: 20m
+    # Used for --dry-run estimates only. Update it from the actor's pricing page.
+    estimated-usd-per-place: 0.004
+    max-places-per-run: 600
