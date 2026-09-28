@@ -18,10 +18,11 @@ Every decision lives in `docs/adr/`. Read `docs/adr/README.md` before changing a
 
 ## Conventions
 
-- Package by feature under `me.iofdev.leadhunter`: `campaign`, `maps`, `apify`, `place`, `scoring`, `pipeline`, `llm`, `cli`.
+- Package by feature under `me.iofdev.leadhunter`: `company`, `campaign`, `maps`, `apify`, `place`, `scoring`, `pipeline`, `llm`, `cli`.
 - SQL is hand-written with `JdbcClient`. Schema changes are new Flyway migrations; never edit an applied one.
 - Jackson 3: packages are `tools.jackson.*`, and `JsonNode.asString()` replaces `asText()`.
 - CLI output goes through picocli's `spec.commandLine().getOut()` so tests can capture it. Errors are thrown and printed as `error: <message>` with exit code 1.
 - No test calls real external APIs. Use `FakeScraper` or `MockRestServiceServer`.
 - Code that needs an LLM depends on `LlmClient`, never on a provider SDK.
 - Secrets only come from environment variables.
+- Commits: one-line message, authored by Idarcio Oliveira <idarciooliveira@gmail.com>. No body, no Co-Authored-By, no Claude or session trailers.

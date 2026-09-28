@@ -5,11 +5,13 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import me.iofdev.leadhunter.campaign.CampaignFile;
+import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.maps.ScrapedPlace;
 import me.iofdev.leadhunter.place.PhoneNumber;
+import me.iofdev.leadhunter.place.WebsiteKind;
 
 /**
- * Hard filters from ADR 0003 and ADR 0007. An excluded place never reaches the list, whatever its score.
+ * Hard filters from ADR 0003, ADR 0007 and ADR 0019. An excluded place never reaches the list, whatever its score.
  */
 public final class Exclusions {
 
@@ -22,7 +24,8 @@ public final class Exclusions {
     private Exclusions() {
     }
 
-    public static Optional<String> check(ScrapedPlace place, Optional<PhoneNumber> phone, CampaignFile.Search search) {
+    public static Optional<String> check(ScrapedPlace place, Optional<PhoneNumber> phone, WebsiteKind website,
+                                         CampaignFile.Search search, List<CompanyProfile.Client> clients) {
         if (place.permanentlyClosed()) {
             return Optional.of("Permanently closed");
         }
@@ -33,6 +36,10 @@ public final class Exclusions {
             return Optional.of("No phone number");
         }
         String normalizedName = Text.normalize(place.name());
+        Optional<String> client = currentClient(normalizedName, phone.get(), clients);
+        if (client.isPresent()) {
+            return Optional.of("Current client '" + client.get() + "'");
+        }
         for (String name : search.excludeNames()) {
             String needle = Text.normalize(name);
             if (!needle.isEmpty() && normalizedName.contains(needle)) {
@@ -45,6 +52,29 @@ public final class Exclusions {
         for (String keyword : Stream.concat(DEFAULT_KEYWORDS.stream(), search.excludeKeywords().stream()).toList()) {
             if (Text.containsWord(haystack, keyword)) {
                 return Optional.of("Matches exclusion keyword '" + keyword + "'");
+            }
+        }
+        if (place.reviewsCount() < search.minReviews()) {
+            return Optional.of("Only " + place.reviewsCount() + " reviews, the campaign needs at least " + search.minReviews());
+        }
+        for (MapsSignal signal : search.disqualifyingSignals()) {
+            if (signal.matches(place, website)) {
+                return Optional.of("Disqualifying signal: " + signal.label());
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** Matches on the normalized phone first, since names on Google Maps vary. */
+    private static Optional<String> currentClient(String normalizedName, PhoneNumber phone,
+                                                  List<CompanyProfile.Client> clients) {
+        for (CompanyProfile.Client client : clients) {
+            boolean samePhone = PhoneNumber.parse(client.phone())
+                    .map(p -> p.e164().equals(phone.e164()))
+                    .orElse(false);
+            String name = Text.normalize(client.name());
+            if (samePhone || !name.isEmpty() && normalizedName.contains(name)) {
+                return Optional.of(client.name());
             }
         }
         return Optional.empty();

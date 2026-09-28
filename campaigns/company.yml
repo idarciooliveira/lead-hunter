@@ -1,0 +1,29 @@
+# Company profile. See docs/adr/0019-company-profile.md.
+# Fill in the TODOs, then save with: ./lh company update
+# Or answer the questions instead: ./lh company setup
+
+name: TODO nome da empresa
+intro: TODO. Somos a X, uma software factory que faz sites, apps e sistemas para PMEs em Luanda.
+services:
+  - name: Site
+    price: TODO preço típico em Kz
+  - name: App
+    price: TODO preço típico em Kz
+  - name: Sistema à medida
+    price: TODO preço típico em Kz
+  - name: Consultoria
+    price: TODO preço típico em Kz
+entryOffer: Site
+area:
+  - Luanda
+  - Lubango
+  - Benguela
+# Add each client's phone so matching doesn't depend on how the name appears on Google Maps.
+clients:
+  - name: ajabalg
+  - name: kintexia
+  - name: horizontetourangola
+# Add results with numbers here. Until then, pitches make no claims.
+cases: []
+objections: []
+weeklyCapacity: 35

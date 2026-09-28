@@ -1,0 +1,49 @@
+# Lead Hunter company profile. See docs/adr/0019-company-profile.md.
+# Answered once and shared by every campaign. Save with: lead-hunter company update -f campaigns/company.yml
+
+# C1. Company name.
+name: Exemplo Software
+# C2. How you introduce the company in one sentence, as you'd say it on the phone.
+intro: Somos a Exemplo Software, fazemos sites e sistemas para PMEs em Luanda.
+# C3. Services you sell. price is free text; deliveryTime is optional.
+services:
+  - name: Landing page
+    price: 150 a 250 mil Kz
+    deliveryTime: 1 semana
+  - name: Site institucional
+    price: 400 a 800 mil Kz
+    deliveryTime: 3 a 4 semanas
+  - name: Sistema de marcações
+    price: 1,5 a 3 milhões Kz
+    deliveryTime: 2 a 3 meses
+# C4. The entry offer: the cheapest first step a new client can buy. Must be one of the service names.
+entryOffer: Landing page
+# C5. Where you serve clients in person. Campaigns search here by default.
+area:
+  - Luanda
+# C6. Current clients. They never show up as leads, in any campaign.
+#     The phone matches better than the name, because names on Google Maps vary.
+clients:
+  - name: Clínica Exemplo
+    phone: 923 000 000
+# C7. Results you can prove. The pitch only ever claims these. result needs a number.
+#     mayName: true lets the pitch name the client.
+cases:
+  - sector: clínica dentária
+    client: Clínica Exemplo
+    problem: Marcações só por telefone, muitas chamadas perdidas
+    built: Sistema de marcações online com lembretes por WhatsApp
+    result: Marcações passaram de 40 para 90 por mês em 3 meses
+    mayName: false
+# C8. Objections you hear in every sector, and your answer.
+objections:
+  - objection: É caro
+    answer: Começamos por uma landing page, a partir de 150 mil Kz, e crescemos a partir daí.
+  - objection: Já tenho Instagram ou Facebook
+    answer: O Instagram mostra fotos; o site aparece no Google quando alguém procura o vosso serviço.
+# C9. How many leads you can contact per week, across all campaigns.
+weeklyCapacity: 35
+# C10. Optional. Target for this quarter.
+quarterTarget:
+  newClients: 4
+  revenueKz: 3000000

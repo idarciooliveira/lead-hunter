@@ -8,6 +8,8 @@ import java.util.function.Consumer;
 import me.iofdev.leadhunter.apify.ApifyProperties;
 import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignFile;
+import me.iofdev.leadhunter.company.CompanyProfile;
+import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.maps.GoogleMapsScraper;
 import me.iofdev.leadhunter.maps.ScrapeException;
 import me.iofdev.leadhunter.maps.ScrapeRequest;
@@ -30,14 +32,16 @@ public class CampaignRunner {
     private final LeadRepository leads;
     private final RunRepository runs;
     private final ApifyProperties apify;
+    private final CompanyRepository company;
 
     public CampaignRunner(GoogleMapsScraper scraper, PlaceRepository places, LeadRepository leads,
-                          RunRepository runs, ApifyProperties apify) {
+                          RunRepository runs, ApifyProperties apify, CompanyRepository company) {
         this.scraper = scraper;
         this.places = places;
         this.leads = leads;
         this.runs = runs;
         this.apify = apify;
+        this.company = company;
     }
 
     public SearchPlan plan(Campaign campaign) {
@@ -57,6 +61,7 @@ public class CampaignRunner {
                     + ". Lower search.maxPlacesPerSearch, split the campaign, or pass --allow-over-limit");
         }
         scraper.checkReady();
+        List<CompanyProfile.Client> clients = company.find().map(CompanyProfile::clients).orElse(List.of());
 
         int failed = 0;
         int found = 0;
@@ -90,7 +95,7 @@ public class CampaignRunner {
                 WebsiteKind website = WebsiteKind.classify(place.website());
                 long placeId = places.upsert(place, phone, website);
 
-                Optional<String> exclusion = Exclusions.check(place, phone, campaign.search());
+                Optional<String> exclusion = Exclusions.check(place, phone, website, campaign.search(), clients);
                 boolean isNew;
                 if (exclusion.isPresent()) {
                     isNew = leads.saveStage1(campaign.id(), placeId, runId, LeadStage.EXCLUDED, Score.of(List.of()),
