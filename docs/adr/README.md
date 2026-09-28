@@ -17,6 +17,7 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0011](0011-railway-and-docker-compose.md) | Deploy on Railway; run locally with Docker Compose | Accepted |
 | [0012](0012-track-outcomes.md) | Track contact outcomes per lead to calibrate scoring | Accepted |
 | [0013](0013-campaigns-as-yaml.md) | Define campaigns as YAML files built on the 10 questions | Accepted |
-| [0014](0014-claude-haiku.md) | Use Claude Haiku 4.5 for review analysis and pitches | Accepted |
+| [0014](0014-claude-haiku.md) | Use Claude Haiku 4.5 for review analysis and pitches | Superseded by 0017 |
 | [0015](0015-on-demand-runs.md) | Run campaigns on demand | Accepted |
 | [0016](0016-testing-strategy.md) | Test SQL against real Postgres; fake the scraper | Accepted |
+| [0017](0017-vercel-ai-gateway.md) | Call LLMs through the Vercel AI Gateway; test with Gemma 4 26B A4B | Accepted |

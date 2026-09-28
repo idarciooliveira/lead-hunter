@@ -9,7 +9,7 @@ Finds small companies on Google Maps that need a website, an app, or a system, a
 | 1 | Scaffold, schema, campaigns from YAML | done |
 | 2 | Apify scraping, stage 1 filters, scoring and cut | done |
 | 3 | Website crawl and stage 2 scoring | next |
-| 4 | Review analysis and pitches with Claude | planned |
+| 4 | Review analysis and pitches through the Vercel AI Gateway | planned |
 | 5 | `today` queue, `lead mark` outcomes, CSV export | planned |
 | 6 | Calibration on existing clients | planned |
 
@@ -51,6 +51,7 @@ lh leads show 12
 | `campaign run <slug> [--dry-run] [--allow-over-limit]` | Scrape, filter, score, cut |
 | `leads list <slug> [--stage QUALIFIED\|BELOW_CUT\|EXCLUDED\|ALL] [--limit 20]` | Ranked leads |
 | `leads show <id>` | Lead card with score breakdown and WhatsApp link |
+| `llm test ["prompt"]` | Send one prompt to the configured model, print the answer and token usage |
 
 ## Configuration
 
@@ -59,7 +60,9 @@ Copy [.env.example](.env.example) to `.env` in the project root and replace the 
 | Variable | Default | Notes |
 |---|---|---|
 | `APIFY_TOKEN` | none | Required for `campaign run`. From console.apify.com, Settings, API & Integrations |
-| `ANTHROPIC_API_KEY` | none | Needed from step 4, for pitches |
+| `AI_GATEWAY_API_KEY` | none | Vercel AI Gateway key. Check it with `llm test` |
+| `LEADHUNTER_LLM_MODEL` | `google/gemma-4-26b-a4b-it` | Any gateway model id. Gemma is for testing, see [ADR 0017](docs/adr/0017-vercel-ai-gateway.md) |
+| `LEADHUNTER_LLM_BASE_URL` | `https://ai-gateway.vercel.sh/v1` | Any OpenAI-compatible endpoint |
 | `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` | docker-compose values | Railway sets these on its Postgres |
 | `LEADHUNTER_APIFY_MAX_PLACES_PER_RUN` | 600 | Budget guard. Larger runs need `--allow-over-limit` |
 | `LEADHUNTER_APIFY_ESTIMATED_USD_PER_PLACE` | 0.004 | Only for `--dry-run`. Set it from the actor's pricing page |

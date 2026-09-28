@@ -1,6 +1,6 @@
 # Lead Hunter
 
-Internal CLI that finds and ranks PME leads from Google Maps for a software factory in Luanda. Java 21, Spring Boot 4.1, Maven, picocli, PostgreSQL with Flyway and JdbcClient, Apify for scraping. See README.md.
+Internal CLI that finds and ranks PME leads from Google Maps for a software factory in Luanda. Java 21, Spring Boot 4.1, Maven, picocli, PostgreSQL with Flyway and JdbcClient, Apify for scraping, LLM calls through the Vercel AI Gateway behind `LlmClient`. See README.md.
 
 ## Decisions
 
@@ -18,9 +18,10 @@ Every decision lives in `docs/adr/`. Read `docs/adr/README.md` before changing a
 
 ## Conventions
 
-- Package by feature under `me.iofdev.leadhunter`: `campaign`, `maps`, `apify`, `place`, `scoring`, `pipeline`, `cli`.
+- Package by feature under `me.iofdev.leadhunter`: `campaign`, `maps`, `apify`, `place`, `scoring`, `pipeline`, `llm`, `cli`.
 - SQL is hand-written with `JdbcClient`. Schema changes are new Flyway migrations; never edit an applied one.
 - Jackson 3: packages are `tools.jackson.*`, and `JsonNode.asString()` replaces `asText()`.
 - CLI output goes through picocli's `spec.commandLine().getOut()` so tests can capture it. Errors are thrown and printed as `error: <message>` with exit code 1.
 - No test calls real external APIs. Use `FakeScraper` or `MockRestServiceServer`.
+- Code that needs an LLM depends on `LlmClient`, never on a provider SDK.
 - Secrets only come from environment variables.

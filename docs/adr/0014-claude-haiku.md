@@ -1,7 +1,7 @@
 # 0014. Use Claude Haiku 4.5 for review analysis and pitches
 
 - Date: 2026-09-28
-- Status: Accepted
+- Status: Superseded by [0017](0017-vercel-ai-gateway.md)
 
 ## Context
 
