@@ -25,3 +25,4 @@ Every decision lives in `docs/adr/`. Read `docs/adr/README.md` before changing a
 - No test calls real external APIs. Use `FakeScraper` or `MockRestServiceServer`.
 - Code that needs an LLM depends on `LlmClient`, never on a provider SDK.
 - Secrets only come from environment variables.
+- Commits: one-line message, authored by Idarcio Oliveira <idarciooliveira@gmail.com>. No body, no Co-Authored-By, no Claude or session trailers.
