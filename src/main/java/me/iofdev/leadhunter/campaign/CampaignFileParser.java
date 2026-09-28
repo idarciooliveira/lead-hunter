@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.dataformat.yaml.YAMLMapper;
+import tools.jackson.dataformat.yaml.YAMLWriteFeature;
 
 @Component
 public class CampaignFileParser {
@@ -16,6 +18,9 @@ public class CampaignFileParser {
 
     private final YAMLMapper yaml = YAMLMapper.builder()
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .disable(YAMLWriteFeature.WRITE_DOC_START_MARKER)
+            .enable(YAMLWriteFeature.MINIMIZE_QUOTES)
+            .changeDefaultPropertyInclusion(inclusion -> inclusion.withValueInclusion(JsonInclude.Include.NON_NULL))
             .build();
 
     public CampaignFile parse(String content) {
@@ -32,7 +37,13 @@ public class CampaignFileParser {
         return file;
     }
 
-    private static void validate(CampaignFile file) {
+    /** Writes a campaign back to YAML that {@link #parse} accepts, so wizard campaigns can live in git. */
+    public String toYaml(CampaignFile file) {
+        return "# Created with `campaign new`. Edit it, then save changes with `campaign create -f <this file>`.\n"
+                + yaml.writeValueAsString(file);
+    }
+
+    public static void validate(CampaignFile file) {
         List<String> problems = new ArrayList<>();
         if (file.slug() == null || !SLUG.matcher(file.slug()).matches()) {
             problems.add("slug must be lowercase letters, digits and dashes, like clinicas-luanda");

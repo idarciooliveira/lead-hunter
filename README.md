@@ -15,7 +15,7 @@ Finds small companies on Google Maps that need a website, an app, or a system, a
 
 ## How it works
 
-1. A campaign file answers the 10 onboarding questions and lists search terms and locations.
+1. A campaign answers the 10 onboarding questions and lists search terms and locations. Create it with `campaign new`, or write the YAML yourself.
 2. `campaign run` starts one Apify Google Maps run per location, with no reviews or images to keep it cheap.
 3. Each place gets hard filters first: closed, no phone, banks, government, telecoms, big chains, your own clients.
 4. The rest get a stage 1 score from rules in `Stage1Scorer`. Every point comes with a reason.
@@ -40,7 +40,8 @@ Needs Java 21. `./lh` builds the jar the first time, then runs it.
 
 ```bash
 ./lh --help
-./lh campaign create -f campaigns/clinicas-luanda.yml
+./lh campaign new                                   # answer the questions, no file needed
+./lh campaign create -f campaigns/clinicas-luanda.yml  # or load a ready file
 ./lh campaign run clinicas-luanda --dry-run
 ./lh campaign run clinicas-luanda
 ./lh leads list clinicas-luanda
@@ -56,6 +57,7 @@ Needs only Docker. The first run builds the image, which takes a few minutes.
 
 ```bash
 docker compose run --rm app --help
+docker compose run --rm app campaign new
 docker compose run --rm app campaign create -f campaigns/clinicas-luanda.yml
 docker compose run --rm app campaign run clinicas-luanda
 docker compose run --rm app leads list clinicas-luanda
@@ -69,6 +71,7 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 
 | Command | What it does |
 |---|---|
+| `campaign new [--dir campaigns] [--no-file]` | Ask the 10 questions, save the campaign, and write `campaigns/<slug>.yml` |
 | `campaign template` | Print an example campaign file with the 10 questions |
 | `campaign create -f <file>` | Save a campaign. Same slug again updates it |
 | `campaign list` | Campaigns and how much each has spent on Apify |

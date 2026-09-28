@@ -21,3 +21,4 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0015](0015-on-demand-runs.md) | Run campaigns on demand | Accepted |
 | [0016](0016-testing-strategy.md) | Test SQL against real Postgres; fake the scraper | Accepted |
 | [0017](0017-vercel-ai-gateway.md) | Call LLMs through the Vercel AI Gateway; test with Gemma 4 26B A4B | Accepted |
+| [0018](0018-campaign-wizard.md) | Create campaigns with an interactive wizard; YAML stays the stored format | Accepted |

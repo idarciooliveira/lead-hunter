@@ -2,13 +2,18 @@ package me.iofdev.leadhunter.cli;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import me.iofdev.leadhunter.PostgresTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import picocli.CommandLine;
 
@@ -29,6 +34,39 @@ class CliIntegrationTest extends PostgresTestSupport {
         commandLine.setErr(new PrintWriter(err));
         int exitCode = commandLine.execute(args);
         return new Result(exitCode, out.toString(), err.toString());
+    }
+
+    private Result executeWithInput(String input, String... args) {
+        InputStream original = System.in;
+        System.setIn(new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8)));
+        try {
+            return execute(args);
+        } finally {
+            System.setIn(original);
+        }
+    }
+
+    @Test
+    void newAsksTheQuestionsSavesTheCampaignAndWritesItsFile(@TempDir Path dir) throws Exception {
+        Result result = executeWithInput(CampaignWizardTest.ANSWERS, "campaign", "new", "--dir", dir.toString());
+
+        assertThat(result.exitCode()).as(result.err()).isZero();
+        assertThat(result.out())
+                .contains("1/10  What do you sell")
+                .contains("Saved campaign 'escolas-em-luanda'")
+                .contains("Next: campaign run escolas-em-luanda --dry-run");
+        Path file = dir.resolve("escolas-em-luanda.yml");
+        assertThat(Files.readString(file)).contains("colégio");
+
+        // The written file feeds straight back into `campaign create`.
+        assertThat(execute("campaign", "create", "-f", file.toString()).out())
+                .contains("Updated campaign 'escolas-em-luanda'");
+
+        // Running it again for the same slug asks first; answering no keeps the saved campaign.
+        Result again = executeWithInput(CampaignWizardTest.ANSWERS.replace("Sites e apps para PMEs", "Outra oferta") + "n\n",
+                "campaign", "new", "--dir", dir.toString());
+        assertThat(again.out()).contains("already exists. Replace it?").contains("Nothing saved.");
+        assertThat(Files.readString(file)).doesNotContain("Outra oferta");
     }
 
     @Test

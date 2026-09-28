@@ -1,7 +1,9 @@
 package me.iofdev.leadhunter.cli;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -28,6 +30,7 @@ import picocli.CommandLine.Spec;
         description = "Create and run campaigns.",
         mixinStandardHelpOptions = true,
         subcommands = {
+                CampaignCommand.New.class,
                 CampaignCommand.Template.class,
                 CampaignCommand.Create.class,
                 CampaignCommand.ListCampaigns.class,
@@ -45,6 +48,60 @@ class CampaignCommand implements Runnable {
     static Campaign requireCampaign(CampaignRepository campaigns, String slug) {
         return campaigns.findBySlug(slug)
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"));
+    }
+
+    @Command(name = "new", description = "Answer the 10 questions in the terminal. Saves the campaign and writes its YAML file.")
+    static class New implements Runnable {
+
+        @Spec
+        CommandSpec spec;
+
+        @Option(names = "--dir", defaultValue = "campaigns",
+                description = "Folder for the YAML file. Default: ${DEFAULT-VALUE}.")
+        Path dir;
+
+        @Option(names = "--no-file", description = "Save to the database only, without writing a YAML file.")
+        boolean noFile;
+
+        private final CampaignFileParser parser;
+        private final CampaignRepository campaigns;
+
+        New(CampaignFileParser parser, CampaignRepository campaigns) {
+            this.parser = parser;
+            this.campaigns = campaigns;
+        }
+
+        @Override
+        public void run() {
+            PrintWriter out = spec.commandLine().getOut();
+            CampaignWizard wizard = new CampaignWizard(
+                    new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)), out);
+            CampaignFile campaign = wizard.run();
+            CampaignFileParser.validate(campaign);
+            out.println();
+
+            if (campaigns.findBySlug(campaign.slug()).isPresent()
+                    && !wizard.confirm("Campaign '" + campaign.slug() + "' already exists. Replace it?")) {
+                out.println("Nothing saved.");
+                return;
+            }
+            Path file = dir.resolve(campaign.slug() + ".yml");
+            boolean writeFile = !noFile
+                    && (!Files.exists(file) || wizard.confirm(file + " already exists. Overwrite it?"));
+
+            campaigns.save(campaign);
+            out.printf("Saved campaign '%s'.%n", campaign.slug());
+            if (writeFile) {
+                try {
+                    Files.createDirectories(dir);
+                    Files.writeString(file, parser.toYaml(campaign));
+                } catch (IOException e) {
+                    throw new IllegalStateException("campaign saved, but writing " + file + " failed: " + e.getMessage());
+                }
+                out.printf("Wrote %s. Edit it for finer settings, then: campaign create -f %s%n", file, file);
+            }
+            out.printf("Next: campaign run %s --dry-run%n", campaign.slug());
+        }
     }
 
     @Command(name = "template", description = "Print an example campaign file with the 10 questions.")
