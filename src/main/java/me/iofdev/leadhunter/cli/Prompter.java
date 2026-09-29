@@ -125,6 +125,19 @@ final class Prompter {
         }
     }
 
+    /**
+     * Prints the options numbered from 1 and returns the number typed. Enter and 0 both return 0,
+     * which callers treat as back or quit.
+     */
+    int choose(String question, List<String> options) {
+        out.println(question);
+        for (int i = 0; i < options.size(); i++) {
+            out.printf("  %d. %s%n", i + 1, options.get(i));
+        }
+        Integer picked = askOptionalInt("", null, 0, options.size());
+        return picked == null ? 0 : picked;
+    }
+
     boolean confirm(String question) {
         out.print(question + " [y/N] > ");
         out.flush();
@@ -208,7 +221,9 @@ final class Prompter {
     }
 
     private void prompt(String question, String hint, String defaultValue) {
-        out.println(question);
+        if (!question.isEmpty()) {
+            out.println(question);
+        }
         if (hint != null) {
             note(hint);
         }
@@ -220,11 +235,19 @@ final class Prompter {
         try {
             String line = in.readLine();
             if (line == null) {
-                throw new IllegalStateException(inputEndedMessage);
+                throw new InputEnded(inputEndedMessage);
             }
             return line;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    /** Thrown when stdin closes. The menu treats it as quit, the wizards report the message. */
+    static final class InputEnded extends IllegalStateException {
+
+        InputEnded(String message) {
+            super(message);
         }
     }
 }
