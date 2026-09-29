@@ -77,7 +77,7 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 
 | Command | What it does |
 |---|---|
-| `menu` | Numbered menu to run a campaign, browse leads, create a campaign, see the company profile and usage. Opens by itself when you run with no arguments in a terminal |
+| `menu` | Numbered menu to run a campaign, browse leads, create a campaign, see the company profile and usage. Opens by itself when you run with no arguments in a terminal. Greets you with a shaded fox illustration (monochrome text without color; honor `NO_COLOR`) |
 | `company setup [--file campaigns/company.yml] [--no-file]` | Ask the company questions and save the profile. Run it again to change answers |
 | `company update [-f campaigns/company.yml]` | Save the profile from its YAML file |
 | `company show` | Print the saved profile |

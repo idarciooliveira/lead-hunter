@@ -1,0 +1,43 @@
+# Created with `campaign new`. Edit it, then save changes with `campaign create -f <this file>`.
+slug: advocates
+name: advocates
+answers:
+  sector: "juridico, advogados, escritorio jurico, lei"
+  problem: custumers dont know they exist and what they offer
+  service: website premium
+  hook: Uma análise gratuita do vosso perfil no Google Maps
+  whyNow: positioness
+  phoneRoutine: A recepção atende; pedir o dono ou gerente.
+  objections: []
+  goal:
+    meetings: 10
+    wins: 3
+    endDate: 2026-11-10
+    leadsPerWeek: 10
+    stopRule:
+      minInterested: 2
+      afterContacted: 20
+  tone: "Formal, em português (o senhor / a senhora)"
+search:
+  terms:
+  - "advogado, escritorio de advogados, jurista"
+  locations:
+  - "Luanda, Camama, Viana, Talatona"
+  - iLHA
+  - MACULUSO
+  maxPlacesPerSearch: 40
+  language: pt-PT
+  targetKeywords:
+  - "advogado, escritorio de advogados, jurista"
+  excludeKeywords: []
+  excludeNames: []
+  qualifyShare: 0.4
+  wantedSignals:
+  - NO_WEBSITE
+  - SOCIAL_ONLY
+  - OWN_WEBSITE
+  - FEW_REVIEWS
+  - MANY_REVIEWS
+  - LOW_RATING
+  disqualifyingSignals: []
+  minReviews: 0

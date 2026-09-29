@@ -1,5 +1,6 @@
 package me.iofdev.leadhunter.cli;
 
+import java.io.Console;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -24,17 +25,40 @@ final class Menu {
     private final Prompter prompter;
     private final Executor executor;
     private final Supplier<List<Campaign>> campaigns;
+    private final boolean colorWanted;
+    private boolean firstPass = true;
 
     Menu(Prompter prompter, Executor executor, Supplier<List<Campaign>> campaigns) {
         this.prompter = prompter;
         this.executor = executor;
         this.campaigns = campaigns;
+        this.colorWanted = colorWanted();
+    }
+
+    /** ADR 0024: color when stdout is a terminal and NO_COLOR is not set. Tests get plain mode. */
+    private static boolean colorWanted() {
+        if (System.getenv("NO_COLOR") != null) {
+            return false;
+        }
+        Console console = System.console();
+        if (console == null) {
+            return false;
+        }
+        try {
+            return (boolean) Console.class.getMethod("isTerminal").invoke(console);
+        } catch (ReflectiveOperationException e) {
+            return true;
+        }
     }
 
     void run() {
         try {
             while (true) {
                 prompter.out().println();
+                if (firstPass) {
+                    LeadFox.print(prompter.out(), colorWanted);
+                    firstPass = false;
+                }
                 int choice = prompter.choose("Lead Hunter. Enter or 0 quits.", MAIN);
                 switch (choice) {
                     case 1 -> runCampaign();

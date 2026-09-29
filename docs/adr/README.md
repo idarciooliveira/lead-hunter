@@ -26,3 +26,6 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0020](0020-not-now-lost-reason.md) | Add "not now" as a reason for a lost lead | Accepted |
 | [0021](0021-track-usage-and-costs.md) | Store what Apify and the LLM cost, and report it with `usage` | Accepted |
 | [0022](0022-interactive-menu.md) | Open an interactive menu when the tool starts in a terminal | Accepted |
+| [0023](0023-fox-banner-in-interactive-menu.md) | Show a pixel fox banner when the interactive menu starts | Superseded by 0024 |
+| [0024](0024-shaded-fox-banner.md) | Render a shaded fox illustration in the interactive menu | Superseded by 0025 |
+| [0025](0025-pixel-art-fox-banner.md) | Draw the fox banner as hand-placed pixel art | Accepted |

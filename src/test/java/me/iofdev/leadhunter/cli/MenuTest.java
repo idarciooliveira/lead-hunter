@@ -40,6 +40,17 @@ class MenuTest {
     }
 
     @Test
+    void printsTheFoxBannerOnceInPlainMode() {
+        run("1\n0\n\n", List.of(campaign("escolas", "Escolas")));
+
+        String printed = output.toString();
+        assertThat(printed).contains("LEAD HUNTER");
+        assertThat(printed.indexOf("LEAD HUNTER"))
+                .isEqualTo(printed.lastIndexOf("LEAD HUNTER"));
+        assertThat(printed).doesNotContain("\u001B");
+    }
+
+    @Test
     void runsTheDryRunFirstAndStartsTheRealRunOnlyAfterYes() {
         List<Campaign> campaigns = List.of(campaign("escolas", "Escolas"), campaign("clinicas", "Clínicas"));
 

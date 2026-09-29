@@ -1,29 +1,28 @@
 # Company profile. See docs/adr/0019-company-profile.md.
-# Fill in the TODOs, then save with: ./lh company update
-# Or answer the questions instead: ./lh company setup
-
-name: TODO nome da empresa
-intro: TODO. Somos a X, uma software factory que faz sites, apps e sistemas para PMEs em Luanda.
+# Edit it, then save changes with `company update -f <this file>`.
+name: TchiowaLabs
+intro: "Somos an TchiowaLabs, Transformamos ideias em produtos digitais reais — apps,\
+  \ plataformas e ferramentas que os teus clientes vão usar. Tu defines a visão, nó\
+  s tratamos do resto"
 services:
-  - name: Site
-    price: TODO preço típico em Kz
-  - name: App
-    price: TODO preço típico em Kz
-  - name: Sistema à medida
-    price: TODO preço típico em Kz
-  - name: Consultoria
-    price: TODO preço típico em Kz
-entryOffer: Site
+- name: website pacote basic
+  price: 165.000 kz
+- name: website standart
+  price: 245.000 kz
+- name: website premium
+  price: 486.000 kz
+- name: mobile apps
+  price: sub-consulta
+- name: consultoria
+  price: sub-consulta
+entryOffer: website pacote basic
 area:
-  - Luanda
-  - Lubango
-  - Benguela
-# Add each client's phone so matching doesn't depend on how the name appears on Google Maps.
-clients:
-  - name: ajabalg
-  - name: kintexia
-  - name: horizontetourangola
-# Add results with numbers here. Until then, pitches make no claims.
+- Luanda
+clients: []
 cases: []
-objections: []
-weeklyCapacity: 35
+objections:
+- objection: É caro
+  answer: "Muito caro, nao preciso, nao e importante"
+weeklyCapacity: 10
+quarterTarget:
+  revenueKz: 500000
