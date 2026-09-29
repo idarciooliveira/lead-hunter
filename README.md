@@ -48,6 +48,7 @@ Needs Java 21. `./lh` builds the jar the first time, then runs it.
 ./lh campaign run clinicas-luanda
 ./lh leads list clinicas-luanda
 ./lh leads show 12
+./lh usage
 ./lh llm test
 ```
 
@@ -85,7 +86,8 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 | `campaign run <slug> [--dry-run] [--allow-over-limit]` | Scrape, filter, score, cut |
 | `leads list <slug> [--stage QUALIFIED\|BELOW_CUT\|EXCLUDED\|ALL] [--limit 20]` | Ranked leads |
 | `leads show <id>` | Lead card with score breakdown and WhatsApp link |
-| `llm test ["prompt"]` | Send one prompt to the configured model, print the answer and token usage |
+| `usage [--month YYYY-MM] [--campaign <slug>] [--runs] [--limit 30]` | What Apify and the LLM have cost, with a monthly budget bar and spend per campaign. `--runs` lists each run and call |
+| `llm test ["prompt"]` | Send one prompt to the configured model, print the answer, token usage and cost |
 
 ## Configuration
 
@@ -100,10 +102,11 @@ Copy [.env.example](.env.example) to `.env` in the project root and replace the 
 | `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` | docker-compose values | Railway sets these on its Postgres |
 | `LEADHUNTER_APIFY_MAX_PLACES_PER_RUN` | 600 | Budget guard. Larger runs need `--allow-over-limit` |
 | `LEADHUNTER_APIFY_ESTIMATED_USD_PER_PLACE` | 0.004 | Only for `--dry-run`. Set it from the actor's pricing page |
+| `LEADHUNTER_USAGE_MONTHLY_BUDGET_USD` | 10 | The budget the bar in `usage` measures against |
 
 ## Costs
 
-The budget is $10 a month for scraping and LLM calls, see [ADR 0006](docs/adr/0006-two-stage-pipeline.md). Every Apify run stores what it cost in `campaign_run.cost_usd`, and `campaign list` sums it per campaign. Always `--dry-run` a new campaign first.
+The budget is $10 a month for scraping and LLM calls, see [ADR 0006](docs/adr/0006-two-stage-pipeline.md). Every Apify run stores what Apify reported it cost in `campaign_run.cost_usd`, failed and aborted runs included, and every LLM call stores the cost the gateway reported in `llm_call.cost_usd`. `usage` adds it up, see [ADR 0021](docs/adr/0021-track-usage-and-costs.md). LLM history starts from the day `usage` shipped. Always `--dry-run` a new campaign first.
 
 ## Railway
 
