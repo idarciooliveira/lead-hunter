@@ -25,4 +25,5 @@ Every decision lives in `docs/adr/`. Read `docs/adr/README.md` before changing a
 - No test calls real external APIs. Use `FakeScraper` or `MockRestServiceServer`.
 - Code that needs an LLM depends on `LlmClient`, never on a provider SDK.
 - Secrets only come from environment variables.
-- Commits: one-line message, authored by Idarcio Oliveira <idarciooliveira@gmail.com>. No body, no Co-Authored-By, no Claude or session trailers.
+- Commits: Conventional Commits, one line, `type(scope): summary`. The scope is optional. Types are `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `build` and `ci`. The summary is lowercase, imperative and has no trailing period, for example `feat(usage): add the usage command`. Authored by Idarcio Oliveira <idarciooliveira@gmail.com>. No body, no Co-Authored-By, no Claude or session trailers.
+- Pull requests: the title follows the same `type(scope): summary` format. The description carries no Claude or session attribution.

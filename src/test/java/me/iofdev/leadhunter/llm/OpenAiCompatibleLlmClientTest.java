@@ -62,6 +62,47 @@ class OpenAiCompatibleLlmClientTest {
     }
 
     @Test
+    void readsTheCostTheGatewayReports() {
+        server.expect(requestTo(BASE + "/chat/completions"))
+                .andRespond(withSuccess("""
+                        {"id": "gen_1", "generationId": "gen_1", "model": "google/gemma-4-26b-a4b-it",
+                         "choices": [{"index": 0, "message": {"role": "assistant", "content": "Olá",
+                           "provider_metadata": {"gateway": {"cost": "0.00000771", "generationId": "gen_1"}}}}],
+                         "usage": {"prompt_tokens": 15, "completion_tokens": 10, "cost": 7.71e-06, "is_byok": false}}
+                        """, MediaType.APPLICATION_JSON));
+
+        LlmResponse response = client.complete(LlmRequest.text(null, "Olá"));
+
+        assertThat(response.costUsd()).isEqualByComparingTo("0.00000771");
+        assertThat(response.generationId()).isEqualTo("gen_1");
+        assertThat(response.rawUsage()).contains("\"cost\"").contains("\"prompt_tokens\":15");
+    }
+
+    @Test
+    void fallsBackToTheCostInTheGatewayMetadata() {
+        server.expect(requestTo(BASE + "/chat/completions"))
+                .andRespond(withSuccess("""
+                        {"id": "gen_2", "model": "google/gemma-4-26b-a4b-it",
+                         "choices": [{"index": 0, "message": {"role": "assistant", "content": "Olá",
+                           "provider_metadata": {"gateway": {"cost": "0.0004"}}}}],
+                         "usage": {"prompt_tokens": 1, "completion_tokens": 1}}
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThat(client.complete(LlmRequest.text(null, "Olá")).costUsd()).isEqualByComparingTo("0.0004");
+    }
+
+    @Test
+    void leavesTheCostEmptyWhenTheProviderSendsNone() {
+        server.expect(requestTo(BASE + "/chat/completions"))
+                .andRespond(withSuccess(OK, MediaType.APPLICATION_JSON));
+
+        LlmResponse response = client.complete(LlmRequest.text(null, "Olá"));
+
+        assertThat(response.costUsd()).isNull();
+        assertThat(response.generationId()).isEqualTo("chatcmpl-1");
+    }
+
+    @Test
     void asksForJsonAndSkipsAnEmptySystemPrompt() {
         server.expect(requestTo(BASE + "/chat/completions"))
                 .andExpect(jsonPath("$.messages", Matchers.hasSize(1)))

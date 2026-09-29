@@ -25,6 +25,8 @@ leadhunter:
     actor-id: compass~crawler-google-places
     poll-wait: 60s
     max-run-time: 20m
+    # Apify's first answer after a run ends can hold a preliminary cost. We wait, then read it again.
+    cost-settle-delay: 10s
     # Used for --dry-run estimates only. Update it from the actor's pricing page.
     estimated-usd-per-place: ${LEADHUNTER_APIFY_ESTIMATED_USD_PER_PLACE:0.004}
     max-places-per-run: ${LEADHUNTER_APIFY_MAX_PLACES_PER_RUN:600}
@@ -34,3 +36,6 @@ leadhunter:
     base-url: ${LEADHUNTER_LLM_BASE_URL:https://ai-gateway.vercel.sh/v1}
     model: ${LEADHUNTER_LLM_MODEL:google/gemma-4-26b-a4b-it}
     timeout: 60s
+  usage:
+    # The bar in `usage`. ADR 0006 sets the budget at $10 a month.
+    monthly-budget-usd: ${LEADHUNTER_USAGE_MONTHLY_BUDGET_USD:10}

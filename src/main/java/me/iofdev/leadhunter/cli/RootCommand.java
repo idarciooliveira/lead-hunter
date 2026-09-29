@@ -9,7 +9,7 @@ import picocli.CommandLine.Spec;
         mixinStandardHelpOptions = true,
         version = "lead-hunter 0.1.0",
         description = "Finds PME leads on Google Maps and ranks them for outreach.",
-        subcommands = {CompanyCommand.class, CampaignCommand.class, LeadsCommand.class, LlmCommand.class})
+        subcommands = {CompanyCommand.class, CampaignCommand.class, LeadsCommand.class, UsageCommand.class, LlmCommand.class})
 class RootCommand implements Runnable {
 
     @Spec

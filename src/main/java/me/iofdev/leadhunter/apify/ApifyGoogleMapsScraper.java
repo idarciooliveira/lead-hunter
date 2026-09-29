@@ -1,5 +1,7 @@
 package me.iofdev.leadhunter.apify;
 
+import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -45,12 +47,15 @@ class ApifyGoogleMapsScraper implements GoogleMapsScraper {
         while (!run.finished()) {
             if (Instant.now().isAfter(deadline)) {
                 throw new ScrapeException("Apify run " + run.id() + " still " + run.status()
-                        + " after " + properties.maxRunTime().toMinutes() + " minutes", run.id());
+                        + " after " + properties.maxRunTime().toMinutes() + " minutes, aborted",
+                        run.id(), abortAndSettle(run));
             }
             run = client.getRun(run.id(), properties.pollWait());
         }
+        run = settle(run);
         if (!run.succeeded()) {
-            throw new ScrapeException("Apify run " + run.id() + " ended with status " + run.status(), run.id());
+            throw new ScrapeException("Apify run " + run.id() + " ended with status " + run.status(),
+                    run.id(), run.usageTotalUsd());
         }
         JsonNode items = client.datasetItems(run.defaultDatasetId());
         List<ScrapedPlace> places = new ArrayList<>();
@@ -60,6 +65,27 @@ class ApifyGoogleMapsScraper implements GoogleMapsScraper {
             }
         }
         return new ScrapeResult(run.id(), run.defaultDatasetId(), run.usageTotalUsd(), places);
+    }
+
+    /** Apify keeps billing a run we stop watching, so a timeout aborts it. Returns the cost, or null if Apify can't tell us. */
+    private BigDecimal abortAndSettle(ApifyRun run) {
+        try {
+            client.abortRun(run.id());
+            return settle(run).usageTotalUsd();
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** The first answer after a run ends can hold a preliminary cost. Wait, then read the run again. */
+    private ApifyRun settle(ApifyRun run) {
+        try {
+            Thread.sleep(properties.costSettleDelay());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return run;
+        }
+        return client.getRun(run.id(), Duration.ZERO);
     }
 
     static Map<String, Object> input(ScrapeRequest request) {

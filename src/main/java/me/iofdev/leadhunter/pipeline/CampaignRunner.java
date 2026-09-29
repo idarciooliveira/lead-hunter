@@ -76,12 +76,16 @@ public class CampaignRunner {
             try {
                 result = scraper.search(request);
             } catch (ScrapeException e) {
-                runs.fail(runId, e.externalRunId(), e.getMessage());
-                progress.accept("  failed: " + e.getMessage());
+                runs.fail(runId, e.externalRunId(), e.getMessage(), e.costUsd());
+                if (e.costUsd() != null) {
+                    cost = cost.add(e.costUsd());
+                }
+                progress.accept("  failed: " + e.getMessage()
+                        + (e.costUsd() == null ? "" : ", cost $" + e.costUsd()));
                 failed++;
                 continue;
             } catch (RuntimeException e) {
-                runs.fail(runId, null, e.toString());
+                runs.fail(runId, null, e.toString(), null);
                 progress.accept("  failed: " + e.getMessage());
                 failed++;
                 continue;

@@ -136,4 +136,60 @@ class CliIntegrationTest extends PostgresTestSupport {
         assertThat(missing.exitCode()).isEqualTo(1);
         assertThat(missing.err()).isEqualToIgnoringNewLines("error: no campaign 'nope'. Run: campaign list");
     }
+
+    @Test
+    void showsSpendForAMonthAndListsEachRun() {
+        jdbc.sql("""
+                insert into campaign (slug, name, answers, search) values ('clinicas', 'Clínicas', '{}'::jsonb, '{}'::jsonb)
+                """).update();
+        jdbc.sql("""
+                insert into campaign_run (campaign_id, location, search_terms, max_places, status, places_found, cost_usd, started_at)
+                values (1, 'Luanda', '{clínica}', 40, 'SUCCEEDED', 40, 2.5, '2026-09-10T10:00:00Z'),
+                       (1, 'Talatona', '{clínica}', 40, 'FAILED', null, 0.5, '2026-09-11T10:00:00Z'),
+                       (1, 'Viana', '{clínica}', 40, 'SUCCEEDED', 10, 9, '2026-08-11T10:00:00Z')
+                """).update();
+        jdbc.sql("""
+                insert into llm_call (campaign_id, purpose, model, prompt_tokens, completion_tokens, cost_usd, created_at)
+                values (1, 'pitch', 'google/gemma-4-26b-a4b-it', 131500, 22000, 0.0008, '2026-09-12T10:00:00Z'),
+                       (null, 'test', 'google/gemma-4-26b-a4b-it', 15, 10, 0.00000771, '2026-09-12T11:00:00Z')
+                """).update();
+
+        Result month = execute("usage", "--month", "2026-09");
+
+        assertThat(month.exitCode()).as(month.err()).isZero();
+        assertThat(month.out())
+                .contains("Usage  ·  2026-09")
+                .contains("Apify  $3.0000")
+                .contains("Runs          2 (1 failed)")
+                .contains("LLM  $0.0008")
+                .contains("131.5k in, 22.0k out")
+                .contains("Total  $3.0008")
+                .contains("30% of $10.00 monthly budget")
+                .contains("clinicas")
+                .contains("(no campaign)")
+                .contains("<$0.0001");
+        assertThat(execute("usage", "--month", "2026-08").out()).contains("Apify  $9.0000");
+        assertThat(execute("usage", "--campaign", "clinicas").out())
+                .contains("Usage  ·  all time, campaign clinicas")
+                .doesNotContain("By campaign");
+
+        Result list = execute("usage", "--runs", "--limit", "2");
+        assertThat(list.out()).contains("KIND").contains("llm").contains("gemma");
+        assertThat(list.out().lines().filter(l -> l.contains("apify") || l.contains(" llm ")).count()).isEqualTo(2);
+    }
+
+    @Test
+    void reportsBadUsageArguments() {
+        assertThat(execute("usage", "--month", "sept").err()).contains("error: --month must look like 2026-09");
+        assertThat(execute("usage", "--campaign", "nope").err()).contains("error: no campaign 'nope'");
+    }
+
+    @Test
+    void showsZerosBeforeAnyRun() {
+        Result result = execute("usage");
+
+        assertThat(result.exitCode()).as(result.err()).isZero();
+        assertThat(result.out()).contains("Apify  $0.0000").contains("LLM  $0.0000").contains("Total  $0.0000");
+        assertThat(execute("usage", "--runs").out()).contains("No runs or calls yet.");
+    }
 }

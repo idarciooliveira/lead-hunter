@@ -39,6 +39,15 @@ public class ApifyClient {
         return toRun(body);
     }
 
+    public ApifyRun abortRun(String runId) {
+        JsonNode body = http.post()
+                .uri("/v2/actor-runs/{runId}/abort", runId)
+                .header(HttpHeaders.AUTHORIZATION, bearer())
+                .retrieve()
+                .body(JsonNode.class);
+        return toRun(body);
+    }
+
     public JsonNode datasetItems(String datasetId) {
         return http.get()
                 .uri("/v2/datasets/{datasetId}/items?clean=true&format=json", datasetId)

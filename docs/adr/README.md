@@ -24,3 +24,4 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0018](0018-campaign-wizard.md) | Create campaigns with an interactive wizard; YAML stays the stored format | Accepted |
 | [0019](0019-company-profile.md) | Split the questions into a company profile and campaign questions | Accepted |
 | [0020](0020-not-now-lost-reason.md) | Add "not now" as a reason for a lost lead | Accepted |
+| [0021](0021-track-usage-and-costs.md) | Store what Apify and the LLM cost, and report it with `usage` | Accepted |

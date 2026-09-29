@@ -44,15 +44,18 @@ public class RunRepository {
                 .update();
     }
 
-    public void fail(long runId, String externalRunId, String error) {
+    /** A failed run still costs money, so costUsd is stored when Apify reported one. */
+    public void fail(long runId, String externalRunId, String error, BigDecimal costUsd) {
         jdbc.sql("""
                         update campaign_run
-                        set status = 'FAILED', external_run_id = :externalRunId, error = :error, finished_at = now()
+                        set status = 'FAILED', external_run_id = :externalRunId, error = :error,
+                            cost_usd = :costUsd, finished_at = now()
                         where id = :id
                         """)
                 .param("id", runId)
                 .param("externalRunId", externalRunId)
                 .param("error", error)
+                .param("costUsd", costUsd)
                 .update();
     }
 }
