@@ -1,5 +1,6 @@
 package me.iofdev.leadhunter.llm;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -81,7 +82,31 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
                 content.asString().trim(),
                 body.path("model").asString(model),
                 usage.path("prompt_tokens").asInt(0),
-                usage.path("completion_tokens").asInt(0));
+                usage.path("completion_tokens").asInt(0),
+                cost(body),
+                body.path("generationId").asString(body.path("id").asString(null)),
+                usage.isMissingNode() ? null : usage.toString());
+    }
+
+    /**
+     * The Vercel AI Gateway sends the cost in {@code usage.cost} as a number, and again as a string in
+     * {@code choices[0].message.provider_metadata.gateway.cost}. Other providers send neither, so this can be null.
+     */
+    private static BigDecimal cost(JsonNode body) {
+        JsonNode usageCost = body.path("usage").path("cost");
+        if (usageCost.isNumber()) {
+            return usageCost.decimalValue();
+        }
+        JsonNode gatewayCost = body.path("choices").path(0).path("message")
+                .path("provider_metadata").path("gateway").path("cost");
+        if (gatewayCost.isString()) {
+            try {
+                return new BigDecimal(gatewayCost.asString());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return gatewayCost.isNumber() ? gatewayCost.decimalValue() : null;
     }
 
     private static String abbreviate(String value) {

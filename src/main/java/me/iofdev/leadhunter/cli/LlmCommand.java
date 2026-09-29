@@ -49,13 +49,14 @@ class LlmCommand implements Runnable {
             out.printf("Model: %s%n", llm.model());
             out.flush();
             long started = System.nanoTime();
-            LlmResponse response = llm.complete(LlmRequest.text(null, prompt == null ? DEFAULT_PROMPT : prompt));
+            LlmResponse response = llm.complete(LlmRequest.text(null, prompt == null ? DEFAULT_PROMPT : prompt).forCampaign(null, "test"));
             long millis = (System.nanoTime() - started) / 1_000_000;
             out.println();
             out.println(response.text());
             out.println();
-            out.printf("Served by %s in %d ms, %d prompt tokens, %d completion tokens%n",
-                    response.model(), millis, response.promptTokens(), response.completionTokens());
+            out.printf("Served by %s in %d ms, %d prompt tokens, %d completion tokens, cost %s%n",
+                    response.model(), millis, response.promptTokens(), response.completionTokens(),
+                    response.costUsd() == null ? "not reported" : "$" + response.costUsd().toPlainString());
         }
     }
 }
