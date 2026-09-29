@@ -1,0 +1,70 @@
+New campaign for TchiowaLabs. Press Enter to accept the value in [brackets].
+Lists take one item per line; an empty line finishes the list.
+
+Campaign name
+      e.g. Clínicas em Luanda
+> Short id for commands
+      lowercase and dashes
+[clinicas-dentarias-em-luanda] > 
+— The bet
+1/11  Sector, in a word or two
+      e.g. clínicas dentárias
+> 2/11  What problem are you betting this sector has? One sentence, in the customer's words.
+      e.g. Perdemos marcações porque os pacientes só conseguem ligar
+> 3/11  Which service do you pitch? One per campaign, so you can tell which one sells.
+      1. website pacote basic (165.000 kz), entry offer
+      2. website standart (245.000 kz)
+      3. website premium (486.000 kz)
+      4. mobile apps (sub-consulta)
+      5. consultoria (sub-consulta)
+Number
+[1] > 4/11  What does the lead get for free for replying?
+      e.g. a mockup of their site, a 15 minute demo
+[Uma análise gratuita do vosso perfil no Google Maps] > 5/11  Optional. Why would they buy now rather than next year?
+      e.g. recently opened, enrolment season
+> 
+— Who qualifies
+6/11  Google Maps signals. w = wanted, d = disqualifying, Enter = doesn't matter.
+      Disqualifying signals exclude the place. Wanted ones go to the pitch.
+      no website >       only a social page >       has its own website >       fewer than 20 reviews >       more than 300 reviews >       rating below 4.0 > 7/11  Minimum Google reviews for a business that can pay
+      places below it are excluded
+[0] > 
+— The pitch
+8/11  On the phone: who answers, who do you ask for, when not to call?
+[A recepção atende; pedir o dono ou gerente.] > 9/11  Optional. Objections specific to this sector
+      One per line: objection | answer. The company objections are already included. An empty line finishes.
+> 10/11 Which case proves it? With none, the pitch makes no claims.
+      The company profile has no cases. Add them with company update.
+
+— The goal
+Goal for this campaign
+      Meetings
+[3] >       Won clients
+[1] >       End date
+      YYYY-MM-DD
+[2026-11-10] >       Leads per week for this campaign
+      10 of 10 free
+[10] >       Stop or rethink when fewer than N leads are interested after M contacts
+      N, interested
+[2] >       M, contacted
+      2 weeks of contacts
+[20] > 11/11 Tone of the messages
+[Formal, em português (o senhor / a senhora)] > 
+— Search
+Google Maps search terms
+      e.g. clínica, clínica dentária
+> > > Locations, one scraper run each
+      e.g. Talatona, Luanda, Angola
+      [Talatona, Angola]
+> Max places per term per location
+[40] > Keywords that mark a target sector
+      matched as whole words in the name or category
+      [clínica; clínica dentária]
+> > Words to exclude
+      matched in the name or category, e.g. agência digital
+> Extra names to exclude
+      current clients from the company profile are always excluded
+> 
+Saved campaign 'clinicas-dentarias-em-luanda'.
+Wrote campaigns/clinicas-dentarias-em-luanda.yml. Edit it for finer settings, then: campaign create -f campaigns/clinicas-dentarias-em-luanda.yml
+Next: campaign run clinicas-dentarias-em-luanda --dry-run

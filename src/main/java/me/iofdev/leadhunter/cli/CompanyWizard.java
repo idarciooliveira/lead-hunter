@@ -108,6 +108,8 @@ final class CompanyWizard {
             }
         }
         p.note("Up to " + MAX_CASES_IN_WIZARD + " now. Add more later in company.yml.");
+        p.note("Um caso mostra o que já consegues: setor, cliente, problema, resultado com número "
+                + "— e.g. clínicas dentárias, Clínica X, marcava só por ligação, +40 marcações em 3 meses.");
         List<CaseStudy> cases = new ArrayList<>();
         while (cases.size() < MAX_CASES_IN_WIZARD && p.confirm("      Add a case?")) {
             String sector = p.ask("      Sector", "e.g. clínica dentária", null, true);
@@ -147,7 +149,10 @@ final class CompanyWizard {
     private QuarterTarget askTarget(QuarterTarget previous) {
         p.out().println("C10/10 Optional. Target for this quarter. Enter skips.");
         if (previous != null) {
-            p.note("[" + previous.newClients() + " new clients, " + previous.revenueKz() + " Kz]");
+            if (previous.newClients() != null || previous.revenueKz() != null) {
+                p.note("[" + orDash(previous.newClients()) + " clientes novos, "
+                        + orDash(previous.revenueKz()) + " Kz]");
+            }
             if (!p.confirm("      Change it?")) {
                 return previous;
             }
@@ -155,6 +160,10 @@ final class CompanyWizard {
         Integer clients = p.askOptionalInt("      New clients", null, 0, 1000);
         Long revenue = p.askOptionalLong("      Revenue in Kz", null, 0, Long.MAX_VALUE);
         return clients == null && revenue == null ? null : new QuarterTarget(clients, revenue);
+    }
+
+    private static String orDash(Object value) {
+        return value == null ? "—" : value.toString();
     }
 
     private static List<String> row(String... fields) {

@@ -43,10 +43,10 @@ class CampaignWizardTest {
             "",                           // 8 phone routine -> default
             "Já temos página no Facebook | O site aparece no Google", "sem resposta", "", // 9 objections
             "1",                          // 10 case: dental, from another sector
+            "",                           // 11 tone -> default
             "", "",                       // goal: meetings, wins
             "2020-01-01", "",             // goal: end date in the past, then the default
             "", "", "",                   // goal: leads per week, stop rule N and M
-            "",                           // 11 tone -> default
             "", "escola", "colégio", "",  // terms: required, asked again
             "",                           // locations -> from the company area
             "",                           // max places -> 40

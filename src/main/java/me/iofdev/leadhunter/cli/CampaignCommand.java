@@ -113,7 +113,7 @@ class CampaignCommand implements Runnable {
                 } catch (IOException e) {
                     throw new IllegalStateException("campaign saved, but writing " + file + " failed: " + e.getMessage());
                 }
-                out.printf("Wrote %s. Edit it for finer settings, then: campaign create -f %s%n", file, file);
+                out.printf("Guardado em %s. Testa sem gastar: campaign run %s --dry-run%n", file, campaign.slug());
             }
             out.printf("Next: campaign run %s --dry-run%n", campaign.slug());
         }
@@ -239,6 +239,7 @@ class CampaignCommand implements Runnable {
                 }
                 out.printf("Up to %d places, about $%s at the configured price per place.%n",
                         plan.maxPlaces(), plan.estimatedMaxUsd().setScale(2, java.math.RoundingMode.HALF_UP));
+                out.println("Next: run without --dry-run to start this campaign (will spend Apify credit)");
                 return;
             }
 

@@ -84,13 +84,16 @@ class CompanyCommand implements Runnable {
             out.println();
 
             boolean writeFile = !noFile
-                    && (!Files.exists(file) || prompter.confirm(file + " already exists. Overwrite it?"));
+                    && (!Files.exists(file) || prompter.confirmOverwrite(file + " already exists. Overwrite it?"));
+            if (!noFile && !writeFile) {
+                return;
+            }
             company.save(profile);
             out.printf("Saved the company profile for %s.%n", profile.name());
             printWarnings(out, CompanyProfileParser.warnings(profile));
             if (writeFile) {
                 write(parser, profile, file);
-                out.printf("Wrote %s. Edit it, then: company update -f %s%n", file, file);
+                out.printf("Guardado em %s. Edita-o e grava as alterações com: company update -f %s%n", file, file);
             }
             out.println("Next: campaign new");
         }

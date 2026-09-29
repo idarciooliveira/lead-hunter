@@ -85,19 +85,25 @@ final class CampaignWizard {
                         "objection | answer. The company objections are already included", List.of(), 2, false)
                 .stream().map(row -> new Objection(row.get(0), row.get(1))).toList();
         CaseStudy caseStudy = askCase(sector);
-
-        p.section("The goal");
-        Goal goal = askGoal();
         String tone = p.ask("11/11 Tone of the messages", null, Answers.DEFAULT_TONE, true);
 
-        p.section("Search");
+        p.out().println();
+        p.out().println("— Metas de campanha —");
+        Goal goal = askGoal();
+
+        p.out().println();
+        p.out().println("— Procura no Google Maps —");
+        p.out().println("A \"search term\" é o que digitamos no Google Maps. "
+                + "As \"keywords\" filtram que resultados contam como alvo do setor.");
         List<String> terms = p.askList("Google Maps search terms", "e.g. clínica, clínica dentária", List.of(), true);
         List<String> locations = p.askList("Locations, one scraper run each", "e.g. Talatona, Luanda, Angola",
                 defaultLocations(), true);
         int maxPlacesPerSearch = p.askInt("Max places per term per location", null,
                 CampaignFile.Search.DEFAULT_MAX_PLACES_PER_SEARCH, 1, 200);
-        List<String> targetKeywords = p.askList("Keywords that mark a target sector",
-                "matched as whole words in the name or category", terms, false);
+        List<String> targetKeywords = p.askList(
+                "Keywords that mark a target sector — matched as whole words in the name or category. "
+                        + "Defaults to the search terms.",
+                null, terms, false);
         List<String> excludeKeywords = p.askList("Words to exclude",
                 "matched in the name or category, e.g. agência digital", List.of(), false);
         List<String> excludeNames = p.askList("Extra names to exclude",
@@ -172,7 +178,6 @@ final class CampaignWizard {
     }
 
     private Goal askGoal() {
-        p.out().println("Goal for this campaign");
         int meetings = p.askInt("      Meetings", null, DEFAULT_MEETINGS, 0, 1000);
         int wins = p.askInt("      Won clients", null, DEFAULT_WINS, 0, 1000);
         LocalDate endDate = p.askDate("      End date", today.plusWeeks(DEFAULT_WEEKS), today);

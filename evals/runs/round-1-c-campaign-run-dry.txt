@@ -1,0 +1,4 @@
+Campaign 'clinicas-dentarias-em-luanda' would start 1 scraper runs:
+  Talatona, Angola: clínica, clínica dentária, up to 80 places
+Up to 80 places, about $0.32 at the configured price per place.
+Next: run without --dry-run to start this campaign (will spend Apify credit)

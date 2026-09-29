@@ -145,6 +145,18 @@ final class Prompter {
         return answer.equals("y") || answer.equals("yes") || answer.equals("s") || answer.equals("sim");
     }
 
+    /** Destructive overwrite: only a line starting with y overwrites. Anything else cancels without writing. */
+    boolean confirmOverwrite(String question) {
+        out.print(question + " [y/N] > ");
+        out.flush();
+        String answer = readLine().trim().toLowerCase(Locale.ROOT);
+        if (!answer.isEmpty() && answer.charAt(0) == 'y') {
+            return true;
+        }
+        out.println("Cancelado — nada foi gravado.");
+        return false;
+    }
+
     List<String> askList(String question, String hint, List<String> defaults, boolean required) {
         while (true) {
             out.println(question);

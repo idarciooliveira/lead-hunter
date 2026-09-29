@@ -1,0 +1,49 @@
+Update the company profile. Press Enter to keep the value in [brackets].
+Lists take one item per line; an empty line finishes the list.
+
+— Who you are
+C1/10  Company name
+[TchiowaLabs] > C2/10  How do you introduce the company in one sentence, as you'd say it on the phone?
+      e.g. Somos a X, fazemos sites e sistemas para PMEs em Luanda.
+[Somos a TchiowaLabs, transformamos ideias em produtos digitais reais — sites e apps para PMEs.] > 
+— What you sell
+C3/10  Services you sell
+      One per line: name | price range in Kz | delivery time (optional). An empty line finishes.
+      [website pacote basic | 165.000 kz]
+      [website standart | 245.000 kz]
+      [website premium | 486.000 kz]
+      [mobile apps | sub-consulta]
+      [consultoria | sub-consulta]
+> > > > > > C4/10  Which one is your entry offer, the cheapest first step a new client can buy?
+      1. website pacote basic (165.000 kz)
+      2. website standart (245.000 kz)
+      3. website premium (486.000 kz)
+      4. mobile apps (sub-consulta)
+      5. consultoria (sub-consulta)
+Number
+[1] > C5/10  Where do you serve clients in person?
+      municipalities or provinces; campaigns search here by default
+      [Luanda]
+> > 
+— Clients and proof
+C6/10  Current clients. They never show up as leads, in any campaign.
+      One per line: name | phone. Names on Google Maps vary, so add the phone. An empty line finishes.
+> > C7/10  Results you can prove. The pitch only ever claims these.
+      Up to 2 now. Add more later in company.yml.
+      Um caso mostra o que já consegues: setor, cliente, problema, resultado com número — e.g. clínicas dentárias, Clínica X, marcava só por ligação, +40 marcações em 3 meses.
+      Add a case? [y/N] > C8/10  Objections you hear in every sector. Type your answer, or Enter to skip.
+      "É caro"
+[Temos o pacote basic de 165.000 kz, o primeiro passo mais barato] >       "Já tenho Instagram ou Facebook"
+>       "O meu sobrinho faz isso"
+>       "Agora não tenho tempo"
+>       Other objections
+      One per line: objection | answer. An empty line finishes.
+> 
+— Capacity and target
+C9/10  How many leads can you contact per week, across all campaigns?
+[10] > C10/10 Optional. Target for this quarter. Enter skips.
+      [— clientes novos, 500000 Kz]
+      Change it? [y/N] > 
+campaigns/company.yml already exists. Overwrite it? [y/N] > Saved the company profile for TchiowaLabs.
+Guardado em campaigns/company.yml. Edita-o e grava as alterações com: company update -f campaigns/company.yml
+Next: campaign new
