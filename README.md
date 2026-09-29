@@ -40,6 +40,7 @@ There are two ways to run commands. Both use the same database, so you can mix t
 Needs Java 21. `./lh` builds the jar the first time, then runs it.
 
 ```bash
+./lh                                                # no arguments in a terminal: the interactive menu
 ./lh --help
 ./lh company setup                                  # once: your company, services, clients, cases
 ./lh campaign new                                   # answer the campaign questions, no file needed
@@ -59,6 +60,7 @@ After changing code, rebuild with `./mvnw package -DskipTests`. `./lh` only buil
 Needs only Docker. The first run builds the image, which takes a few minutes.
 
 ```bash
+docker compose run --rm app                          # the interactive menu
 docker compose run --rm app --help
 docker compose run --rm app company setup
 docker compose run --rm app campaign new
@@ -75,6 +77,7 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 
 | Command | What it does |
 |---|---|
+| `menu` | Numbered menu to run a campaign, browse leads, create a campaign, see the company profile and usage. Opens by itself when you run with no arguments in a terminal |
 | `company setup [--file campaigns/company.yml] [--no-file]` | Ask the company questions and save the profile. Run it again to change answers |
 | `company update [-f campaigns/company.yml]` | Save the profile from its YAML file |
 | `company show` | Print the saved profile |
