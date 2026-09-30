@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import me.iofdev.leadhunter.place.PlaceReview;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -47,6 +48,34 @@ public final class ApifyPlaceMapper {
                 item.toString()));
     }
 
+    /** Reviews of one dataset item. Lenient like {@link #map}: a review without text carries no signal. */
+    public static List<PlaceReview> reviews(JsonNode item) {
+        List<PlaceReview> reviews = new ArrayList<>();
+        JsonNode array = item.path("reviews");
+        if (!array.isArray()) {
+            return reviews;
+        }
+        for (JsonNode review : array) {
+            String text = text(review, "text");
+            if (text == null) {
+                text = text(review, "reviewText");
+            }
+            if (text == null) {
+                continue;
+            }
+            Integer stars = integerOrNull(review, "stars");
+            if (stars == null) {
+                stars = integerOrNull(review, "rating");
+            }
+            String publishedAt = text(review, "publishedAtDate");
+            if (publishedAt == null) {
+                publishedAt = text(review, "publishedAt");
+            }
+            reviews.add(new PlaceReview(stars, text, publishedAt));
+        }
+        return reviews;
+    }
+
     private static String text(JsonNode node, String field) {
         JsonNode value = node.get(field);
         if (value == null || !value.isString()) {
@@ -79,8 +108,13 @@ public final class ApifyPlaceMapper {
     }
 
     private static int integer(JsonNode node, String field) {
+        Integer value = integerOrNull(node, field);
+        return value == null ? 0 : value;
+    }
+
+    private static Integer integerOrNull(JsonNode node, String field) {
         JsonNode value = node.get(field);
-        return value != null && value.isNumber() ? value.intValue() : 0;
+        return value != null && value.isNumber() ? value.intValue() : null;
     }
 
     private static boolean bool(JsonNode node, String field) {
