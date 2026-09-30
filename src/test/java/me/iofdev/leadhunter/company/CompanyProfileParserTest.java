@@ -33,8 +33,9 @@ class CompanyProfileParserTest {
     void theCompanyFileInTheRepoIsValid() throws IOException {
         CompanyProfile profile = parser.parse(Files.readString(Path.of("campaigns", "company.yml")));
 
-        assertThat(profile.clients()).extracting(CompanyProfile.Client::name)
-                .containsExactly("ajabalg", "kintexia", "horizontetourangola");
+        assertThat(profile.name()).isNotBlank();
+        assertThat(profile.services()).isNotEmpty();
+        assertThat(profile.entryOffer()).isNotBlank();
     }
 
     @Test

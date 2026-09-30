@@ -106,7 +106,21 @@ class MenuTest {
     void asksAgainOnANumberOutsideTheMenu() {
         run("9\n0\n", List.of());
 
-        assertThat(output.toString()).contains("Enter a whole number from 0 to 5.");
+        assertThat(output.toString()).contains("Enter a whole number from 0 to 6.");
+    }
+
+    @Test
+    void enrichesOnlyAfterYes() {
+        run("6\n1\ny\n0\n", List.of(campaign("escolas", "Escolas")));
+
+        assertThat(commands).containsExactly("campaign enrich escolas --dry-run", "campaign enrich escolas");
+    }
+
+    @Test
+    void declinesEnrichingByDefault() {
+        run("6\n1\n\n0\n", List.of(campaign("escolas", "Escolas")));
+
+        assertThat(commands).containsExactly("campaign enrich escolas --dry-run");
     }
 
     @Test

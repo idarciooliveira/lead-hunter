@@ -18,7 +18,8 @@ final class Menu {
     }
 
     private static final List<String> MAIN = List.of(
-            "Run a campaign", "Browse leads", "New campaign", "Company profile", "Usage and costs");
+            "Run a campaign", "Browse leads", "New campaign", "Company profile", "Usage and costs",
+            "Enrich leads");
     private static final List<String> COMPANY = List.of("Show the profile", "Set up or change it");
     private static final String STAGE_LETTERS = "qbea";
 
@@ -66,6 +67,7 @@ final class Menu {
                     case 3 -> executor.execute("campaign", "new");
                     case 4 -> companyProfile();
                     case 5 -> executor.execute("usage");
+                    case 6 -> enrichLeads();
                     default -> {
                         return;
                     }
@@ -86,6 +88,19 @@ final class Menu {
         }
         if (prompter.confirm("Start the real run? It spends Apify credit.")) {
             executor.execute("campaign", "run", slug);
+        }
+    }
+
+    private void enrichLeads() {
+        String slug = pickCampaign("Which campaign?");
+        if (slug == null) {
+            return;
+        }
+        if (executor.execute("campaign", "enrich", slug, "--dry-run") != 0) {
+            return;
+        }
+        if (prompter.confirm("Start enriching? It crawls sites and spends Apify and LLM credit.")) {
+            executor.execute("campaign", "enrich", slug);
         }
     }
 

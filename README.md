@@ -8,7 +8,7 @@ Finds small companies on Google Maps that need a website, an app, or a system, a
 |---|---|---|
 | 1 | Scaffold, schema, campaigns from YAML | done |
 | 2 | Apify scraping, stage 1 filters, scoring and cut | done |
-| 3 | Website crawl and stage 2 scoring | next |
+| 3 | Website crawl and stage 2 scoring | done |
 | 4 | Review analysis and pitches through the Vercel AI Gateway | planned |
 | 5 | `today` queue, `lead mark` outcomes, CSV export | planned |
 | 6 | Calibration on existing clients | planned |
@@ -21,6 +21,7 @@ Finds small companies on Google Maps that need a website, an app, or a system, a
 4. Each place gets hard filters first: closed, no phone, your current clients (by phone, then name), banks, government, telecoms, big chains, fewer reviews than the campaign minimum, and the campaign's disqualifying signals.
 5. The rest get a stage 1 score from rules in `Stage1Scorer`. Every point comes with a reason.
 6. The top share of the campaign, 40% by default, becomes `QUALIFIED`. The rest is `BELOW_CUT`, with the reason stored.
+7. `campaign enrich` crawls each qualified lead's website, fetches its recent reviews, classifies what customers complain about, and adds the stage 2 points to the score. See [ADR 0027](docs/adr/0027-stage-two-website-crawl.md).
 
 Places are shared across campaigns and deduplicated by Google place ID. Re-running a campaign never touches a lead you already worked on.
 
@@ -47,6 +48,8 @@ Needs Java 21. `./lh` builds the jar the first time, then runs it.
 ./lh campaign create -f campaigns/clinicas-luanda.yml  # or load a ready file
 ./lh campaign run clinicas-luanda --dry-run
 ./lh campaign run clinicas-luanda
+./lh campaign enrich clinicas-luanda --dry-run
+./lh campaign enrich clinicas-luanda
 ./lh leads list clinicas-luanda
 ./lh leads show 12
 ./lh usage
@@ -87,6 +90,7 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 | `campaign create -f <file>` | Save a campaign. Same slug again updates it. The service must be one the company sells |
 | `campaign list` | Campaigns and how much each has spent on Apify |
 | `campaign run <slug> [--dry-run] [--allow-over-limit]` | Scrape, filter, score, cut |
+| `campaign enrich <slug> [--dry-run] [--batch-size 25] [--max-reviews 10]` | Crawl websites, fetch reviews, classify complaints, rescore the qualified leads |
 | `leads list <slug> [--stage QUALIFIED\|BELOW_CUT\|EXCLUDED\|ALL] [--limit 20]` | Ranked leads |
 | `leads show <id>` | Lead card with score breakdown and WhatsApp link |
 | `usage [--month YYYY-MM] [--campaign <slug>] [--runs] [--limit 30]` | What Apify and the LLM have cost, with a monthly budget bar and spend per campaign. `--runs` lists each run and call |
@@ -106,6 +110,8 @@ Copy [.env.example](.env.example) to `.env` in the project root and replace the 
 | `LEADHUNTER_APIFY_MAX_PLACES_PER_RUN` | 600 | Budget guard. Larger runs need `--allow-over-limit` |
 | `LEADHUNTER_APIFY_ESTIMATED_USD_PER_PLACE` | 0.004 | Only for `--dry-run`. Set it from the actor's pricing page |
 | `LEADHUNTER_USAGE_MONTHLY_BUDGET_USD` | 10 | The budget the bar in `usage` measures against |
+| `LEADHUNTER_STAGE2_BATCH` | 25 | Qualified leads enriched per `campaign enrich` run |
+| `LEADHUNTER_STAGE2_MAX_REVIEWS` | 10 | Recent reviews fetched per place for the complaint classification |
 
 ## Costs
 

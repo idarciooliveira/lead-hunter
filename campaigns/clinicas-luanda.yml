@@ -12,7 +12,7 @@ answers:
   # 2. The problem you bet this sector has, in the customer's words.
   problem: Perdemos marcações porque os pacientes só conseguem marcar por telefone ou mensagem.
   # 3. The one service you pitch. Must match a service name in the company profile.
-  service: Site
+  service: website standart
   # 4. What the lead gets for free for replying.
   hook: Uma análise gratuita do vosso perfil no Google Maps
   # 5. Optional. Why they would buy now.
