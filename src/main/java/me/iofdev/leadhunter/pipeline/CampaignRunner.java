@@ -7,6 +7,7 @@ import java.util.function.Consumer;
 
 import me.iofdev.leadhunter.apify.ApifyProperties;
 import me.iofdev.leadhunter.campaign.Campaign;
+import me.iofdev.leadhunter.cli.Format;
 import me.iofdev.leadhunter.campaign.CampaignFile;
 import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.company.CompanyRepository;
@@ -81,7 +82,7 @@ public class CampaignRunner {
                     cost = cost.add(e.costUsd());
                 }
                 progress.accept("  failed: " + e.getMessage()
-                        + (e.costUsd() == null ? "" : ", cost $" + e.costUsd()));
+                        + (e.costUsd() == null ? "" : ", cost " + Format.usd(e.costUsd())));
                 failed++;
                 continue;
             } catch (RuntimeException e) {
@@ -113,7 +114,7 @@ public class CampaignRunner {
                     created++;
                 }
             }
-            progress.accept("  " + result.places().size() + " places, $" + result.costUsd());
+            progress.accept("  " + result.places().size() + " places, " + Format.usd(result.costUsd()));
         }
 
         leads.applyStage1Cut(campaign.id(), campaign.search().qualifyShare());

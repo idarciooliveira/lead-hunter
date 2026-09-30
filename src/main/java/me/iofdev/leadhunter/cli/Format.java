@@ -3,7 +3,7 @@ package me.iofdev.leadhunter.cli;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-final class Format {
+public final class Format {
 
     private Format() {
     }
@@ -20,7 +20,7 @@ final class Format {
     }
 
     /** Dollars with 4 decimals. An amount that would round to zero shows as "<$0.0001" so small LLM costs stay visible. */
-    static String usd(BigDecimal amount) {
+    public static String usd(BigDecimal amount) {
         if (amount == null) {
             return "unknown";
         }

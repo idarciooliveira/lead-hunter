@@ -20,6 +20,7 @@ import me.iofdev.leadhunter.place.PlaceReview;
 import me.iofdev.leadhunter.place.WebsiteCrawler;
 import me.iofdev.leadhunter.place.WebsiteCrawler.CrawlResult;
 import me.iofdev.leadhunter.place.WebsiteKind;
+import me.iofdev.leadhunter.cli.Format;
 import me.iofdev.leadhunter.scoring.Score;
 import me.iofdev.leadhunter.scoring.ScoreItem;
 import me.iofdev.leadhunter.scoring.Stage2Scorer;
@@ -123,7 +124,7 @@ public class EnrichmentRunner {
             crawls.saveReviews(entry.getValue(), result.reviewsByUrl().getOrDefault(entry.getKey(), List.of()));
         }
         progress.accept("  reviews for " + result.reviewsByUrl().size() + " of " + urls.size()
-                + " places, $" + result.costUsd());
+                + " places, " + Format.usd(result.costUsd()));
     }
 
     /** Exposes the stored reviews of one place, so the CLI can show what the classifier read. */
