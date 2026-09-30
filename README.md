@@ -98,7 +98,7 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 
 ## Configuration
 
-Copy [.env.example](.env.example) to `.env` in the project root and replace the values. The app reads `.env` on startup from the directory you run it in, so there's nothing to export. Real environment variables override `.env`, which is how Railway's settings take over in production. `.env` is in `.gitignore`.
+Copy [.env.example](.env.example) to `.env` in the project root and replace the values. The app reads `.env` on startup from the directory you run it in, so there's nothing to export. Real environment variables override `.env`, which is how Railway's settings take over in production. `.env` is in `.gitignore`. New knobs are added to `.env.example` over time, so after pulling, re-copy or merge from `.env.example` into your `.env`.
 
 | Variable | Default | Notes |
 |---|---|---|
