@@ -31,3 +31,4 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0025](0025-pixel-art-fox-banner.md) | Draw the fox banner as hand-placed pixel art | Accepted |
 | [0026](0026-soft-clear-the-screen-in-interactive-mode.md) | Soft-clear the screen in interactive mode | Accepted |
 | [0027](0027-stage-two-website-crawl.md) | Enrich qualified leads with a website crawl and stage 2 scoring | Accepted |
+| [0028](0028-stage-two-no-issue-marker.md) | Mark a clean stage-2 run with a zero-point STAGE2_NO_ISSUES code | Accepted |

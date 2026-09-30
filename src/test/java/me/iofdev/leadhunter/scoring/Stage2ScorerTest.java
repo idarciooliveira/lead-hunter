@@ -23,11 +23,31 @@ class Stage2ScorerTest {
     }
 
     @Test
-    void healthySiteAndNoComplaintsScoreZero() {
+    void healthySiteAndNoComplaintsGetTheZeroPointNoIssuesMarker() {
         Score score = Stage2Scorer.score(HEALTHY, Set.of());
 
         assertThat(score.total()).isZero();
-        assertThat(score.items()).isEmpty();
+        assertThat(codes(score)).containsExactly("STAGE2_NO_ISSUES");
+        assertThat(score.items().getFirst().points()).isZero();
+        assertThat(score.items().getFirst().reason())
+                .isEqualTo("Website reachable, HTTPS, mobile-friendly; no review complaints");
+    }
+
+    @Test
+    void cleanRunWithoutACrawlableSiteStillGetsTheMarker() {
+        Score score = Stage2Scorer.score(Optional.empty(), Set.of());
+
+        assertThat(score.total()).isZero();
+        assertThat(codes(score)).containsExactly("STAGE2_NO_ISSUES");
+        assertThat(score.items().getFirst().reason()).isEqualTo("No website to crawl; no review complaints");
+    }
+
+    @Test
+    void pointEarningRulesSuppressTheMarker() {
+        Score score = Stage2Scorer.score(unreachable(), Set.of("contact"));
+
+        assertThat(codes(score)).containsExactly("WEBSITE_BROKEN", "REVIEW_COMPLAINTS");
+        assertThat(score.total()).isEqualTo(45);
     }
 
     @Test
@@ -91,6 +111,7 @@ class Stage2ScorerTest {
         Score score = Stage2Scorer.score(HEALTHY, Set.of("price", "noise"));
 
         assertThat(score.total()).isZero();
+        assertThat(codes(score)).containsExactly("STAGE2_NO_ISSUES");
     }
 
     @Test

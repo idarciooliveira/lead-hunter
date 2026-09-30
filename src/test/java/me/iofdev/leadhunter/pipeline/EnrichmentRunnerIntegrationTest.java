@@ -145,10 +145,12 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
         assertThat(girassol.breakdown()).extracting("code").containsExactly(
                 "REVIEWS_SWEET_SPOT", "MOBILE_PHONE", "TARGET_SECTOR", "NO_HTTPS", "REVIEW_COMPLAINTS");
 
-        // No website to crawl: the stage 1 score stands, with no phantom broken-site points.
+        // No website to crawl: the stage 1 score stands, with no phantom broken-site points,
+        // and the zero-point marker proves stage 2 ran (ADR 0028).
         LeadView sorriso = leads.list(campaign.id(), Optional.of(LeadStage.QUALIFIED), 10).get(1);
         assertThat(sorriso.name()).isEqualTo("Clínica Sorriso");
         assertThat(sorriso.score()).isEqualTo(65);
+        assertThat(sorriso.breakdown()).extracting("code").endsWith("STAGE2_NO_ISSUES");
 
         assertThat(jdbc.sql("select count(*) from website_crawl").query(Long.class).single()).isEqualTo(1);
         assertThat(jdbc.sql("select reachable from website_crawl").query(Boolean.class).single()).isTrue();
@@ -197,10 +199,13 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
         assertThat(llm.last.campaignId()).isEqualTo(campaign.id());
         assertThat(llm.last.user()).contains("Impossível marcar consulta");
 
-        // Girassol got no reviews, so no complaint points and no phantom kinds.
+        // Girassol got no reviews, so no complaint points and no phantom kinds; its site still
+        // earns NO_HTTPS, which suppresses the no-issues marker (ADR 0028).
         LeadView girassol = leads.list(campaign.id(), Optional.of(LeadStage.QUALIFIED), 10).stream()
                 .filter(lead -> lead.name().equals("Clínica Girassol")).findFirst().orElseThrow();
         assertThat(girassol.score()).isEqualTo(35 + 25);
+        assertThat(girassol.breakdown()).extracting("code").containsExactly(
+                "REVIEWS_SWEET_SPOT", "MOBILE_PHONE", "TARGET_SECTOR", "NO_HTTPS");
         assertThat(jdbc.sql("select complaint_kinds from lead where id = :id")
                 .param("id", girassol.id()).query(String.class).single())
                 .isEqualTo("{}");
@@ -219,5 +224,13 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
         LeadView girassol = leads.list(campaign.id(), Optional.of(LeadStage.QUALIFIED), 10).stream()
                 .filter(lead -> lead.name().equals("Clínica Girassol")).findFirst().orElseThrow();
         assertThat(girassol.score()).isEqualTo(35 + 25);
+
+        // Sorriso has no site to crawl and no complaint classes, so its clean stage-2 run shows
+        // the zero-point marker in both the breakdown and the progress line.
+        LeadView sorriso = leads.list(campaign.id(), Optional.of(LeadStage.QUALIFIED), 10).stream()
+                .filter(lead -> lead.name().equals("Clínica Sorriso")).findFirst().orElseThrow();
+        assertThat(sorriso.score()).isEqualTo(65);
+        assertThat(sorriso.breakdown()).extracting("code").endsWith("STAGE2_NO_ISSUES");
+        assertThat(progress).anyMatch(line -> line.contains("+0 STAGE2_NO_ISSUES"));
     }
 }

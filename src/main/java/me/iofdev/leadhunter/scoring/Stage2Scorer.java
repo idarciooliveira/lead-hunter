@@ -9,7 +9,8 @@ import me.iofdev.leadhunter.place.WebsiteCrawler.CrawlResult;
 
 /**
  * Stage 2 rules over the website crawl and the LLM's review complaint classes (ADR 0007 weights,
- * ADR 0027). Every point carries its evidence; the LLM never sets the score.
+ * ADR 0027). Every point carries its evidence; the LLM never sets the score. A clean run appends
+ * the zero-point {@link #NO_ISSUES_CODE} marker so the breakdown shows stage 2 ran (ADR 0028).
  */
 public final class Stage2Scorer {
 
@@ -19,6 +20,9 @@ public final class Stage2Scorer {
 
     /** Complaint kinds the review classifier may return and the scorer understands. */
     public static final Set<String> COMPLAINT_KINDS = Set.of("contact", "booking", "waiting");
+
+    /** Zero-point marker proving stage 2 ran and fired no point-earning rule (ADR 0028). */
+    public static final String NO_ISSUES_CODE = "STAGE2_NO_ISSUES";
 
     private Stage2Scorer() {
     }
@@ -46,6 +50,12 @@ public final class Stage2Scorer {
                     "Website has no viewport or responsive layout"));
         }
         complaintRule(complaintKinds).ifPresent(items::add);
+        if (items.isEmpty()) {
+            items.add(crawl.filter(CrawlResult::reachable).isPresent()
+                    ? new ScoreItem(NO_ISSUES_CODE, 0,
+                            "Website reachable, HTTPS, mobile-friendly; no review complaints")
+                    : new ScoreItem(NO_ISSUES_CODE, 0, "No website to crawl; no review complaints"));
+        }
         return Score.of(items);
     }
 
