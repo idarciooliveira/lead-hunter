@@ -187,6 +187,21 @@ class CliIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
+    void suggestsCampaignRunWhenDryRunWithNothingWaiting() {
+        jdbc.sql("""
+                insert into campaign (slug, name, answers, search) values ('vazias', 'Vazias', '{}'::jsonb, '{}'::jsonb)
+                """).update();
+
+        Result dry = execute("campaign", "enrich", "vazias", "--dry-run");
+
+        assertThat(dry.exitCode()).as(dry.err()).isZero();
+        assertThat(dry.out())
+                .contains("Campaign 'vazias' has 0 qualified leads waiting for enrichment. "
+                        + "Next: campaign run vazias (to score places and qualify leads)")
+                .doesNotContain("would enrich up to 0 of them");
+    }
+
+    @Test
     void showsSpendForAMonthAndListsEachRun() {
         jdbc.sql("""
                 insert into campaign (slug, name, answers, search) values ('clinicas', 'Clínicas', '{}'::jsonb, '{}'::jsonb)

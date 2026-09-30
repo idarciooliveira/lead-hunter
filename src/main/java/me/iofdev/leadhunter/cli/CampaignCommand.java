@@ -306,6 +306,11 @@ class CampaignCommand implements Runnable {
 
             int pending = leads.countUnenrichedQualified(campaign.id());
             if (dryRun) {
+                if (pending == 0) {
+                    out.printf("Campaign '%s' has 0 qualified leads waiting for enrichment. Next: campaign run %s (to score places and qualify leads)%n",
+                            campaign.slug(), campaign.slug());
+                    return;
+                }
                 out.printf("Campaign '%s' has %d qualified leads waiting for enrichment.%n", campaign.slug(), pending);
                 out.printf("A run would enrich up to %d of them, crawling each website and fetching up to %d reviews per place.%n",
                         Math.min(pending, batch), reviews);
