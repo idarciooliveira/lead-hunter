@@ -169,6 +169,44 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
+    void complaintReviewsAddTheTwentyPointReviewComplaintsRule() {
+        // Only Sorriso gets reviews, so the fake LLM's last call is its classification and
+        // Girassol keeps no complaint points.
+        reviewFetcher.willReturn("https://maps.google.com/?cid=q1", List.of());
+        reviewFetcher.willReturn("https://maps.google.com/?cid=q2", List.of(
+                new PlaceReview(1, "Ninguém atende o telefone", "2026-08-02"),
+                new PlaceReview(1, "Impossível marcar consulta", "2026-08-03"),
+                new PlaceReview(2, "Duas horas de espera", "2026-08-04")));
+        llm.answer = "{\"complaints\": [\"contact\", \"booking\", \"waiting\"]}";
+
+        enrichment.enrich(campaign, 10, 10, progress::add);
+
+        // Sorriso has no website to crawl, so stage 2 can only add the +20 complaint rule.
+        LeadView sorriso = leads.list(campaign.id(), Optional.of(LeadStage.QUALIFIED), 10).stream()
+                .filter(lead -> lead.name().equals("Clínica Sorriso")).findFirst().orElseThrow();
+        assertThat(sorriso.score()).isEqualTo(65 + 20);
+        assertThat(sorriso.breakdown()).extracting("code").endsWith("REVIEW_COMPLAINTS");
+        assertThat(jdbc.sql("select score, complaint_kinds from lead where id = :id")
+                .param("id", sorriso.id())
+                .query((rs, row) -> rs.getInt(1) + ":" + rs.getString(2)).single())
+                .isEqualTo("85:{booking,contact,waiting}");
+        assertThat(progress).anyMatch(line -> line.contains("Clínica Sorriso: 65 -> 85 (+20 REVIEW_COMPLAINTS)"));
+
+        // The fetched review texts reached the review-analysis call that classified them.
+        assertThat(llm.last.purpose()).isEqualTo("review-analysis");
+        assertThat(llm.last.campaignId()).isEqualTo(campaign.id());
+        assertThat(llm.last.user()).contains("Impossível marcar consulta");
+
+        // Girassol got no reviews, so no complaint points and no phantom kinds.
+        LeadView girassol = leads.list(campaign.id(), Optional.of(LeadStage.QUALIFIED), 10).stream()
+                .filter(lead -> lead.name().equals("Clínica Girassol")).findFirst().orElseThrow();
+        assertThat(girassol.score()).isEqualTo(35 + 25);
+        assertThat(jdbc.sql("select complaint_kinds from lead where id = :id")
+                .param("id", girassol.id()).query(String.class).single())
+                .isEqualTo("{}");
+    }
+
+    @Test
     void skipsReviewsWithoutATokenButStillCrawls() {
         reviewFetcher.notReady();
 
