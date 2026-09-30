@@ -20,6 +20,10 @@ import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.maps.ScrapeRequest;
 import me.iofdev.leadhunter.pipeline.CampaignRunner;
+import me.iofdev.leadhunter.pipeline.EnrichmentProperties;
+import me.iofdev.leadhunter.pipeline.EnrichmentRunner;
+import me.iofdev.leadhunter.pipeline.EnrichmentSummary;
+import me.iofdev.leadhunter.pipeline.LeadRepository;
 import me.iofdev.leadhunter.pipeline.RunSummary;
 import me.iofdev.leadhunter.pipeline.SearchPlan;
 import org.springframework.core.io.ClassPathResource;
@@ -38,7 +42,8 @@ import picocli.CommandLine.Spec;
                 CampaignCommand.Template.class,
                 CampaignCommand.Create.class,
                 CampaignCommand.ListCampaigns.class,
-                CampaignCommand.Run.class})
+                CampaignCommand.Run.class,
+                CampaignCommand.Enrich.class})
 class CampaignCommand implements Runnable {
 
     @Spec
@@ -258,6 +263,73 @@ class CampaignCommand implements Runnable {
                 throw new IllegalStateException("every scraper run failed. See the messages above");
             }
             out.printf("Next: leads list %s%n", campaign.slug());
+        }
+    }
+
+    @Command(name = "enrich", description = "Crawl websites, fetch reviews and rescore the qualified leads of a campaign.")
+    static class Enrich implements Runnable {
+
+        @Spec
+        CommandSpec spec;
+
+        @Parameters(index = "0", description = "Campaign slug.")
+        String slug;
+
+        @Option(names = "--dry-run", description = "Show how many qualified leads wait for enrichment without touching them.")
+        boolean dryRun;
+
+        @Option(names = "--batch-size", description = "Qualified leads to enrich. Default: ${DEFAULT-VALUE}.")
+        Integer batchSize;
+
+        @Option(names = "--max-reviews", description = "Recent reviews fetched per place. Default: ${DEFAULT-VALUE}.")
+        Integer maxReviews;
+
+        private final CampaignRepository campaigns;
+        private final EnrichmentRunner runner;
+        private final LeadRepository leads;
+        private final EnrichmentProperties enrichment;
+
+        Enrich(CampaignRepository campaigns, EnrichmentRunner runner, LeadRepository leads,
+               EnrichmentProperties enrichment) {
+            this.campaigns = campaigns;
+            this.runner = runner;
+            this.leads = leads;
+            this.enrichment = enrichment;
+        }
+
+        @Override
+        public void run() {
+            PrintWriter out = spec.commandLine().getOut();
+            Campaign campaign = requireCampaign(campaigns, slug);
+            int batch = batchSize == null ? enrichment.batch() : batchSize;
+            int reviews = maxReviews == null ? enrichment.maxReviews() : maxReviews;
+
+            int pending = leads.countUnenrichedQualified(campaign.id());
+            if (dryRun) {
+                out.printf("Campaign '%s' has %d qualified leads waiting for enrichment.%n", campaign.slug(), pending);
+                out.printf("A run would enrich up to %d of them, crawling each website and fetching up to %d reviews per place.%n",
+                        Math.min(pending, batch), reviews);
+                out.println("Next: run without --dry-run to enrich them (crawls sites, spends Apify and LLM credit)");
+                return;
+            }
+            if (pending == 0) {
+                out.printf("Nothing to enrich: every qualified lead of '%s' is already enriched.%n", campaign.slug());
+                return;
+            }
+
+            EnrichmentSummary summary = runner.enrich(campaign, batch, reviews, message -> {
+                out.println(message);
+                out.flush();
+            });
+            out.println();
+            out.printf("Enriched %d of %d qualified leads waiting.%n", summary.enriched(), pending);
+            out.printf("Campaign totals: %d qualified, %d below the cut, %d excluded%n",
+                    summary.totals().qualified(), summary.totals().belowCut(), summary.totals().excluded());
+            if (summary.enriched() < pending) {
+                out.printf("Next: campaign enrich %s (there are more waiting)%n", campaign.slug());
+            } else {
+                out.printf("Next: leads list %s%n", campaign.slug());
+            }
         }
     }
 }

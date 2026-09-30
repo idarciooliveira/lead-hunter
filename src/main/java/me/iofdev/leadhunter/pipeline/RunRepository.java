@@ -1,6 +1,7 @@
 package me.iofdev.leadhunter.pipeline;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import me.iofdev.leadhunter.maps.ScrapeRequest;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -25,6 +26,20 @@ public class RunRepository {
                 .param("location", request.location())
                 .param("terms", request.terms().toArray(String[]::new))
                 .param("maxPlaces", request.maxPlaces())
+                .query(Long.class)
+                .single();
+    }
+
+    /** A stage 2 review run over place URLs, so {@code usage} sees its Apify cost. */
+    public long startReviews(long campaignId, List<String> placeUrls) {
+        return jdbc.sql("""
+                        insert into campaign_run (campaign_id, location, search_terms, max_places, status)
+                        values (:campaignId, 'reviews', :terms, :maxPlaces, 'RUNNING')
+                        returning id
+                        """)
+                .param("campaignId", campaignId)
+                .param("terms", placeUrls.toArray(String[]::new))
+                .param("maxPlaces", placeUrls.size())
                 .query(Long.class)
                 .single();
     }

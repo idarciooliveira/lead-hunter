@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import me.iofdev.leadhunter.place.WebsiteKind;
 import me.iofdev.leadhunter.scoring.Score;
@@ -114,6 +115,69 @@ public class LeadRepository {
 
     public Optional<LeadView> findById(long id) {
         return jdbc.sql(SELECT_VIEW + " where l.id = :id").param("id", id).query(this::mapView).optional();
+    }
+
+    /**
+     * Qualified leads this campaign has not enriched yet, best first, up to the batch size.
+     * Already-enriched leads are never returned, so re-running enrichment is safe.
+     */
+    public List<EnrichmentTarget> unenrichedQualified(long campaignId, int limit) {
+        return jdbc.sql("""
+                        select l.id, l.place_id, l.score, l.score_breakdown,
+                               p.name, p.website, p.website_kind, p.maps_url
+                        from lead l
+                        join place p on p.id = l.place_id
+                        where l.campaign_id = :campaignId
+                          and l.status = 'NEW'
+                          and l.stage = 'QUALIFIED'
+                          and l.enriched_at is null
+                        order by l.score desc, p.reviews_count desc, l.id
+                        limit :limit
+                        """)
+                .param("campaignId", campaignId)
+                .param("limit", limit)
+                .query((rs, row) -> new EnrichmentTarget(
+                        rs.getLong("id"),
+                        rs.getLong("place_id"),
+                        rs.getString("name"),
+                        rs.getString("website"),
+                        WebsiteKind.valueOf(rs.getString("website_kind")),
+                        rs.getString("maps_url"),
+                        rs.getInt("score"),
+                        json.readValue(rs.getString("score_breakdown"), SCORE_ITEMS)))
+                .list();
+    }
+
+    public int countUnenrichedQualified(long campaignId) {
+        return jdbc.sql("""
+                        select count(*)
+                        from lead l
+                        where l.campaign_id = :campaignId
+                          and l.status = 'NEW'
+                          and l.stage = 'QUALIFIED'
+                          and l.enriched_at is null
+                        """)
+                .param("campaignId", campaignId)
+                .query(Integer.class)
+                .single();
+    }
+
+    /** Stores the combined stage 1 + stage 2 score and marks the lead enriched. */
+    public void saveStage2(long leadId, Score score, Set<String> complaintKinds) {
+        jdbc.sql("""
+                        update lead
+                        set score = :score,
+                            score_breakdown = cast(:breakdown as jsonb),
+                            complaint_kinds = :complaints,
+                            enriched_at = now(),
+                            updated_at = now()
+                        where id = :id
+                        """)
+                .param("id", leadId)
+                .param("score", score.total())
+                .param("breakdown", json.writeValueAsString(score.items()))
+                .param("complaints", complaintKinds.stream().sorted().toArray(String[]::new))
+                .update();
     }
 
     public StageCounts countByStage(long campaignId) {

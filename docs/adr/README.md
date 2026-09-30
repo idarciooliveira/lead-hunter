@@ -29,3 +29,5 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0023](0023-fox-banner-in-interactive-menu.md) | Show a pixel fox banner when the interactive menu starts | Superseded by 0024 |
 | [0024](0024-shaded-fox-banner.md) | Render a shaded fox illustration in the interactive menu | Superseded by 0025 |
 | [0025](0025-pixel-art-fox-banner.md) | Draw the fox banner as hand-placed pixel art | Accepted |
+| [0026](0026-soft-clear-the-screen-in-interactive-mode.md) | Soft-clear the screen in interactive mode | Accepted |
+| [0027](0027-stage-two-website-crawl.md) | Enrich qualified leads with a website crawl and stage 2 scoring | Accepted |

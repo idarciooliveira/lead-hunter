@@ -96,7 +96,7 @@ class CliIntegrationTest extends PostgresTestSupport {
         execute("company", "update", "-f", "campaigns/company.yml");
         Path file = dir.resolve("apps.yml");
         Files.writeString(file, Files.readString(Path.of("campaigns", "clinicas-luanda.yml"))
-                .replace("service: Site", "service: Loja online"));
+                .replace("service: website standart", "service: Loja online"));
 
         Result result = execute("campaign", "create", "-f", file.toString());
 
@@ -135,6 +135,55 @@ class CliIntegrationTest extends PostgresTestSupport {
 
         assertThat(missing.exitCode()).isEqualTo(1);
         assertThat(missing.err()).isEqualToIgnoringNewLines("error: no campaign 'nope'. Run: campaign list");
+        assertThat(execute("campaign", "enrich", "nope").err()).contains("error: no campaign 'nope'");
+    }
+
+    @Test
+    void enrichesAWaitingLeadAndThenHasNothingLeft() throws Exception {
+        com.sun.net.httpserver.HttpServer site =
+                com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("localhost", 0), 0);
+        byte[] body = "<html><head><meta name=\"viewport\" content=\"width=device-width\"></head><body></body></html>"
+                .getBytes(StandardCharsets.UTF_8);
+        site.createContext("/", exchange -> {
+            exchange.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
+            exchange.sendResponseHeaders(200, body.length);
+            try (var out = exchange.getResponseBody()) {
+                out.write(body);
+            }
+        });
+        site.start();
+        try {
+            long campaignId = jdbc.sql("""
+                    insert into campaign (slug, name, answers, search) values ('dentistas', 'Dentistas', '{}'::jsonb, '{}'::jsonb)
+                    returning id
+                    """).query(Long.class).single();
+            long placeId = jdbc.sql("""
+                    insert into place (google_place_id, name, website, website_kind, raw)
+                    values ('d1', 'Dentista Sorriso', :website, 'OWN', '{}'::jsonb) returning id
+                    """).param("website", "http://localhost:" + site.getAddress().getPort() + "/")
+                    .query(Long.class).single();
+            jdbc.sql("""
+                    insert into lead (campaign_id, place_id, stage, score, score_breakdown)
+                    values (:campaignId, :placeId, 'QUALIFIED', 0, '[]'::jsonb)
+                    """).param("campaignId", campaignId).param("placeId", placeId).update();
+
+            Result dry = execute("campaign", "enrich", "dentistas", "--dry-run");
+            assertThat(dry.exitCode()).as(dry.err()).isZero();
+            assertThat(dry.out())
+                    .contains("has 1 qualified leads waiting for enrichment")
+                    .contains("would enrich up to 1 of them");
+
+            Result result = execute("campaign", "enrich", "dentistas");
+            assertThat(result.exitCode()).as(result.err()).isZero();
+            assertThat(result.out())
+                    .contains("Dentista Sorriso: 0 -> 25 (+25 NO_HTTPS)")
+                    .contains("Enriched 1 of 1")
+                    .contains("Next: leads list dentistas");
+
+            assertThat(execute("campaign", "enrich", "dentistas").out()).contains("already enriched");
+        } finally {
+            site.stop(0);
+        }
     }
 
     @Test
