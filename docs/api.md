@@ -9,8 +9,8 @@ Run it: `SPRING_PROFILES_ACTIVE=web java -jar backend/target/lead-hunter.jar`. T
 | Method | Path | Query | Notes |
 |---|---|---|---|
 | `GET` | `/api/health` | | `{"status":"ok"}` |
-| `GET` | `/api/campaigns` | | Oldest first, with `totalCostUsd` per campaign |
-| `GET` | `/api/campaigns/{slug}` | | 404 `no campaign '<slug>'. Run: campaign list` |
+| `GET` | `/api/campaigns` | | Oldest first, with `totalCostUsd`, `qualifiedCount` and `latestRun` (the newest job that is not a dry run, in the `/api/runs/{id}` shape; null when the campaign never ran) per campaign |
+| `GET` | `/api/campaigns/{slug}` | | Same shape as one row of the list. 404 `no campaign '<slug>'. Run: campaign list` |
 | `GET` | `/api/campaigns/{slug}/leads` | `stage=QUALIFIED\|BELOW_CUT\|EXCLUDED\|ALL` (default `QUALIFIED`), `limit` (default 20, max 200) | Same order as `leads list`: stage, score, reviews, id. Bad stage → 400 |
 | `GET` | `/api/leads/{id}` | | Full lead card: score, `breakdown[{code,points,reason}]`, `whatsappLink`. 404 `no lead with id <id>` |
 | `GET` | `/api/company` | | The company profile. 404 `no company profile yet. Run: company setup` |
@@ -28,4 +28,4 @@ Run it: `SPRING_PROFILES_ACTIVE=web java -jar backend/target/lead-hunter.jar`. T
 
 ## Web client
 
-Each feature's `api.ts` calls these paths through `lib/http.ts` when `VITE_LEADHUNTER_API_URL` is set, and reads the fixtures otherwise. The Playwright `integration` project serves a mock of this contract and proves the pages render from real HTTP responses.
+Each feature's `api.ts` calls these paths through `lib/http.ts` when `VITE_LEADHUNTER_API_URL` is set, and reads the fixtures otherwise. The Playwright `integration` project serves a mock of this contract (`web/e2e/mock-api.mjs`) and proves every page renders from real HTTP responses, and that a run starts through the dry run. The campaign page polls the job history every 3 seconds while a job runs. Not served yet, so not shown with the API: the campaign funnel, the stage-2 audit, complaints and pitch on a lead. Creating a campaign and saving the company profile wait for the planned writes below.

@@ -42,7 +42,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 	return (
 		<div className="flex min-h-screen items-stretch">
-			<Sidebar companyName={company.name} />
+			<Sidebar companyName={company?.name ?? "Perfil da empresa por criar"} />
 			<main className="flex min-w-0 flex-1 flex-col">
 				<TopBar onSearch={() => setPaletteOpen(true)} />
 				<MobileTopBar onSearch={() => setPaletteOpen(true)} />

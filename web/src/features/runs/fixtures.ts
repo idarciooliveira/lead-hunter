@@ -1,4 +1,4 @@
-import type { Run } from "./schema";
+import type { Run, ScrapePlan } from "./schema";
 
 export const RUNS: Run[] = [
 	{
@@ -86,3 +86,15 @@ export const RUNS: Run[] = [
 		error: "timeout do actor após 15 min",
 	},
 ];
+
+/**
+ * What the fake API answers for a dry run: one search per location, 80 places
+ * each, so a two-location campaign passes the 150-place limit of one run.
+ */
+export function fixtureScrapePlan(locations: string[], sector: string): ScrapePlan {
+	const requests = locations.map((location) => ({ location, terms: [sector.toLowerCase()], maxPlaces: 80 }));
+	const maxPlaces = requests.length * 80;
+	return { requests, maxPlaces, estimatedMaxUsd: maxPlaces * 0.004, overLimit: maxPlaces > 150 };
+}
+
+export const FIXTURE_ENRICH_BATCH = 20;

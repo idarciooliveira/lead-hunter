@@ -35,7 +35,7 @@ function CampaignsPage() {
 		<Page>
 			<PageHeader
 				title="Campanhas"
-				subtitle={`${active} campanhas activas · ${usd(totalOf(usage[0]))} gastos este mês em Apify e LLM`}
+				subtitle={`${active} campanhas activas · ${usd(totalOf(usage))} gastos este mês em Apify e LLM`}
 				actions={<NewCampaignButton />}
 			/>
 			<Card className="overflow-hidden">

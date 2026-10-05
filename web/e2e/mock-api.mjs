@@ -59,6 +59,53 @@ const LEADS = [
 	},
 ];
 
+const CAMPAIGN = {
+	id: 1,
+	slug: "mock-clinicas",
+	name: "Mock Clínicas",
+	answers: { sector: "Mock clínicas privadas", service: "Mock sistema de marcações" },
+	search: { terms: ["clínica"], locations: ["Talatona", "Kilamba"] },
+	createdAt: "2026-10-01T09:00:00Z",
+	totalCostUsd: 0.21,
+	qualifiedCount: 1,
+	latestRun: null,
+};
+
+const RUNS = [];
+
+const COMPANY = {
+	name: "Mock Software, Lda.",
+	intro: null,
+	services: [{ name: "Mock marcações online", price: "1 000 000 Kz", deliveryTime: "6 semanas" }],
+	entryOffer: null,
+	area: ["Talatona"],
+	clients: [{ name: "Mock Cliente Antigo", phone: null }],
+	cases: [],
+	objections: [],
+	weeklyCapacity: 35,
+	quarterTarget: null,
+};
+
+const USAGE = {
+	scope: "month",
+	apify: { runs: 1, failedRuns: 0, unpricedRuns: 0, places: 8, costUsd: 0.2 },
+	llm: { calls: 1, unpricedCalls: 0, promptTokens: 100, completionTokens: 50, costUsd: 0.01, models: [] },
+	byCampaign: [{ slug: "mock-clinicas", apifyUsd: 0.2, llmUsd: 0.01 }],
+	llmWithoutCampaignUsd: 0,
+	totalUsd: 0.21,
+	budgetUsd: 10,
+};
+
+const ENTRIES = [
+	{
+		kind: "apify",
+		at: "2026-10-05T09:41:00Z",
+		campaignSlug: "mock-clinicas",
+		label: "Mock Talatona, SUCCEEDED",
+		costUsd: 0.2,
+	},
+];
+
 const PRISTINE = structuredClone(LEADS);
 
 const server = http.createServer((req, res) => {
@@ -95,12 +142,53 @@ const server = http.createServer((req, res) => {
 	if (req.method === "POST" && url.pathname === "/__reset") {
 		LEADS.length = 0;
 		for (const lead of structuredClone(PRISTINE)) LEADS.push(lead);
+		RUNS.length = 0;
+		CAMPAIGN.latestRun = null;
 		return json(200, { status: "ok" });
 	}
 	if (req.method === "GET" && url.pathname === "/api/health") return json(200, { status: "ok" });
-	if (req.method === "GET" && url.pathname === "/api/campaigns") {
-		return json(200, [{ slug: "mock-clinicas", name: "Mock Clínicas" }]);
+	if (req.method === "GET" && url.pathname === "/api/campaigns") return json(200, [CAMPAIGN]);
+	if (req.method === "GET" && url.pathname === "/api/campaigns/mock-clinicas") return json(200, CAMPAIGN);
+	if (req.method === "GET" && url.pathname === "/api/campaigns/mock-clinicas/runs") return json(200, RUNS);
+	if (req.method === "POST" && url.pathname === "/api/campaigns/mock-clinicas/runs") {
+		// Mirrors RunController: the dry run is free and over the limit here, so a start needs the opt-in.
+		if (url.searchParams.get("dryRun") === "true") {
+			return json(200, {
+				requests: [
+					{ location: "Talatona", terms: ["clínica"], maxPlaces: 120 },
+					{ location: "Kilamba", terms: ["clínica"], maxPlaces: 120 },
+				],
+				maxPlaces: 240,
+				estimatedMaxUsd: 0.96,
+				overLimit: true,
+				dryRunId: 1,
+			});
+		}
+		if (url.searchParams.get("allowOverLimit") !== "true") {
+			return json(400, { message: "this run could return up to 240 places, above the limit of 150" });
+		}
+		if (RUNS.some((r) => r.status === "RUNNING")) {
+			return json(409, { message: "campaign mock-clinicas already has a run in progress" });
+		}
+		// Finishes at once, so the page polls one round and settles.
+		const run = {
+			id: 100 + RUNS.length,
+			campaignSlug: "mock-clinicas",
+			kind: "SCRAPE",
+			status: "DONE",
+			startedAt: new Date().toISOString(),
+			done: 8,
+			total: null,
+			costUsd: 0.2,
+			error: null,
+		};
+		RUNS.unshift(run);
+		CAMPAIGN.latestRun = run;
+		return json(202, run);
 	}
+	if (req.method === "GET" && url.pathname === "/api/company") return json(200, COMPANY);
+	if (req.method === "GET" && url.pathname === "/api/usage") return json(200, USAGE);
+	if (req.method === "GET" && url.pathname === "/api/usage/entries") return json(200, ENTRIES);
 	if (req.method === "GET" && url.pathname === "/api/campaigns/mock-clinicas/leads") {
 		const stage = url.searchParams.get("stage") ?? "QUALIFIED";
 		return json(200, stage === "ALL" ? LEADS : LEADS.filter((l) => l.stage === stage));
@@ -108,6 +196,10 @@ const server = http.createServer((req, res) => {
 	const campaignLeadsMatch = /^\/api\/campaigns\/([^/]+)\/leads$/.exec(url.pathname);
 	if (req.method === "GET" && campaignLeadsMatch) {
 		return json(404, { message: `no campaign '${campaignLeadsMatch[1]}'. Run: campaign list` });
+	}
+	const campaignMatch = /^\/api\/campaigns\/([^/]+)$/.exec(url.pathname);
+	if (req.method === "GET" && campaignMatch) {
+		return json(404, { message: `no campaign '${campaignMatch[1]}'. Run: campaign list` });
 	}
 	const leadMatch = /^\/api\/leads\/(\d+)$/.exec(url.pathname);
 	if (leadMatch) {

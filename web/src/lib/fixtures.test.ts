@@ -12,7 +12,7 @@ describe("fake API", () => {
 	it("serves fixtures that match the response schemas", async () => {
 		await expect(fetchCampaigns()).resolves.toHaveLength(5);
 		await expect(fetchCompany()).resolves.toMatchObject({ name: "Raposa Software, Lda." });
-		await expect(fetchUsage()).resolves.toHaveLength(3);
+		await expect(fetchUsage("2026-09")).resolves.toMatchObject({ month: "2026-09", apifyUsd: 5.2 });
 	});
 
 	it("returns runs newest first", async () => {

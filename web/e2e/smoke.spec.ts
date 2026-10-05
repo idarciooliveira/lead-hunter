@@ -50,12 +50,17 @@ test("command palette opens with Ctrl+K and navigates", async ({ page }) => {
 	await expect(page.getByRole("heading", { level: 1, name: "Uso e custos" })).toBeVisible();
 });
 
-test("dry run warns before passing the campaign limit", async ({ page }) => {
+test("a running job disables the run buttons", async ({ page }) => {
 	await page.goto("/campanhas/clinicas-talatona");
 	await page.locator("html[data-hydrated]").waitFor();
-	await page.getByRole("button", { name: /Dry run/ }).click();
-	await expect(page.getByText("Esta execução passa o limite da campanha em $0.26.")).toBeVisible();
-	await page.getByRole("button", { name: /Continuar/ }).click();
+	await expect(page.getByRole("button", { name: /Executar/ })).toBeDisabled();
+});
+
+test("dry run asks for an opt-in before passing the run limit", async ({ page }) => {
+	await page.goto("/campanhas/restaurantes-maianga");
+	await page.locator("html[data-hydrated]").waitFor();
+	await page.getByRole("button", { name: /Executar/ }).click();
+	await expect(page.getByText("Esta execução pode trazer mais lugares do que o limite por execução.")).toBeVisible();
 	const run = page.getByRole("button", { name: /Executar com --allow-over-limit/ });
 	await expect(run).toBeDisabled();
 	await page.getByRole("checkbox").check();

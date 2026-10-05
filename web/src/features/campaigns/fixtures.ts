@@ -10,7 +10,6 @@ export const CAMPAIGNS: Campaign[] = [
 		state: "ENRICHING",
 		qualifiedCount: 38,
 		spendUsd: 1.12,
-		limitUsd: 1.5,
 		funnel: {
 			scraped: 142,
 			scrapeCostUsd: 0.84,
@@ -22,8 +21,6 @@ export const CAMPAIGNS: Campaign[] = [
 			enrichCostUsd: 0.28,
 			enriching: true,
 		},
-		nextRun: { query: "Clínicas em Belas e Kilamba", places: 160, costUsd: 0.64 },
-		enrichCostUsd: 0.31,
 	},
 	{
 		slug: "restaurantes-maianga",
@@ -34,7 +31,6 @@ export const CAMPAIGNS: Campaign[] = [
 		state: "DONE",
 		qualifiedCount: 24,
 		spendUsd: 0.97,
-		limitUsd: 2,
 		funnel: {
 			scraped: 118,
 			scrapeCostUsd: 0.56,
@@ -46,8 +42,6 @@ export const CAMPAIGNS: Campaign[] = [
 			enrichCostUsd: 0.41,
 			enriching: false,
 		},
-		nextRun: { query: "Restaurantes em Maianga, Ingombota e Miramar", places: 120, costUsd: 0.48 },
-		enrichCostUsd: 0,
 	},
 	{
 		slug: "escolas-viana",
@@ -58,7 +52,6 @@ export const CAMPAIGNS: Campaign[] = [
 		state: "DONE",
 		qualifiedCount: 17,
 		spendUsd: 0.78,
-		limitUsd: 1,
 		funnel: {
 			scraped: 118,
 			scrapeCostUsd: 0.78,
@@ -70,8 +63,6 @@ export const CAMPAIGNS: Campaign[] = [
 			enrichCostUsd: 0,
 			enriching: false,
 		},
-		nextRun: { query: "Escolas privadas em Viana, Cazenga e Zango", places: 110, costUsd: 0.44 },
-		enrichCostUsd: 0,
 	},
 	{
 		slug: "oficinas-zango",
@@ -82,7 +73,6 @@ export const CAMPAIGNS: Campaign[] = [
 		state: "FAILED",
 		qualifiedCount: 6,
 		spendUsd: 0.55,
-		limitUsd: 1,
 		funnel: {
 			scraped: 64,
 			scrapeCostUsd: 0.55,
@@ -94,8 +84,6 @@ export const CAMPAIGNS: Campaign[] = [
 			enrichCostUsd: 0,
 			enriching: false,
 		},
-		nextRun: { query: "Oficinas auto no Zango e em Viana", places: 210, costUsd: 0.84 },
-		enrichCostUsd: 0.02,
 	},
 	{
 		slug: "laboratorios-luanda",
@@ -106,9 +94,6 @@ export const CAMPAIGNS: Campaign[] = [
 		state: "DRAFT",
 		qualifiedCount: 0,
 		spendUsd: 0,
-		limitUsd: 1,
 		funnel: null,
-		nextRun: { query: "Laboratórios em Maianga e Alvalade", places: 90, costUsd: 0.36 },
-		enrichCostUsd: 0,
 	},
 ];
