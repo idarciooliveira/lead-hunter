@@ -1,7 +1,7 @@
 # 0030. Build the web client with TanStack Start in the same repository
 
 - Date: 2026-10-04
-- Status: Proposed
+- Status: Accepted
 - Amends: [0009](0009-cli-first.md)
 
 ## Context
