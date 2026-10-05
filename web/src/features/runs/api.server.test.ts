@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubApi } from "#/lib/test-api";
-import { fetchCampaignRuns, previewScrape, startScrape } from "./api";
+import { fetchCampaignRuns, previewScrape, startScrape } from "./api.server";
 
 afterEach(() => {
 	vi.unstubAllEnvs();

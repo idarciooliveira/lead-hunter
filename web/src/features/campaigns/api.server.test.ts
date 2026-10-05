@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BackendRun } from "#/lib/api-contract";
 import { BACKEND_CAMPAIGN, stubApi } from "#/lib/test-api";
-import { fetchCampaign, fetchCampaigns, toCampaign } from "./api";
+import { fetchCampaign, fetchCampaigns, toCampaign } from "./api.server";
 
 afterEach(() => {
 	vi.unstubAllEnvs();

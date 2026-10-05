@@ -99,7 +99,7 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 
 ## Web client
 
-The browser version lives in `web/` (ADR 0030). It has every screen from the prototype and reads the HTTP API when `VITE_LEADHUNTER_API_URL` is set, or sample data without it (ADR 0031, 0035). See [web/README.md](web/README.md) to run it, and [docs/screenshots/web](docs/screenshots/web) for what each page looks like.
+The browser version lives in `web/` (ADR 0030). It has every screen from the prototype and reads the HTTP API through server functions when `LEADHUNTER_API_URL` is set on the web server, or sample data without it (ADR 0031, 0035, 0037). See [web/README.md](web/README.md) to run it, and [docs/screenshots/web](docs/screenshots/web) for what each page looks like.
 
 ```bash
 cd web && pnpm install && pnpm dev   # http://localhost:3000

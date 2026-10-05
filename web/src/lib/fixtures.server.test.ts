@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { fetchCampaign, fetchCampaigns } from "#/features/campaigns/api";
-import { fetchCompany } from "#/features/company/api";
-import { fetchLead } from "#/features/leads/api";
-import { fetchCampaignRuns } from "#/features/runs/api";
-import { fetchUsage } from "#/features/usage/api";
+import { fetchCampaign, fetchCampaigns } from "#/features/campaigns/api.server";
+import { fetchCompany } from "#/features/company/api.server";
+import { fetchLead } from "#/features/leads/api.server";
+import { fetchCampaignRuns } from "#/features/runs/api.server";
+import { fetchUsage } from "#/features/usage/api.server";
 import { NotFoundError } from "./fake-api";
 
 // Every fake endpoint parses its fixtures through the response schema, so a fixture
@@ -13,6 +13,8 @@ describe("fake API", () => {
 		await expect(fetchCampaigns()).resolves.toHaveLength(5);
 		await expect(fetchCompany()).resolves.toMatchObject({ name: "Raposa Software, Lda." });
 		await expect(fetchUsage("2026-09")).resolves.toMatchObject({ month: "2026-09", apifyUsd: 5.2 });
+		// Without a month the fixtures open on their newest one, whatever today's date is.
+		await expect(fetchUsage()).resolves.toMatchObject({ month: "2026-10" });
 	});
 
 	it("returns runs newest first", async () => {

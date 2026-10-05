@@ -9,13 +9,14 @@ const POLL_MS = 3_000;
 export const campaignRunsQuery = (slug: string) =>
 	queryOptions({
 		queryKey: [...campaignQuery(slug).queryKey, "runs"],
-		queryFn: () => fetchCampaignRuns(slug),
+		queryFn: () => fetchCampaignRuns({ data: slug }),
 		refetchInterval: (query) => (query.state.data?.some((r: Run) => r.status === "RUNNING") ? POLL_MS : false),
 	});
 
-export const usePreviewScrape = () => useMutation({ mutationFn: (slug: string) => previewScrape(slug) });
+export const usePreviewScrape = () => useMutation({ mutationFn: (slug: string) => previewScrape({ data: slug }) });
 
-export const usePreviewEnrichment = () => useMutation({ mutationFn: (slug: string) => previewEnrichment(slug) });
+export const usePreviewEnrichment = () =>
+	useMutation({ mutationFn: (slug: string) => previewEnrichment({ data: slug }) });
 
 export type StartRun = { slug: string; kind: "SCRAPE"; allowOverLimit: boolean } | { slug: string; kind: "ENRICH" };
 
@@ -24,7 +25,9 @@ export const useStartRun = () => {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (start: StartRun) =>
-			start.kind === "SCRAPE" ? startScrape(start.slug, start.allowOverLimit) : startEnrichment(start.slug),
+			start.kind === "SCRAPE"
+				? startScrape({ data: { slug: start.slug, allowOverLimit: start.allowOverLimit } })
+				: startEnrichment({ data: start.slug }),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["campaigns"] }),
 	});
 };

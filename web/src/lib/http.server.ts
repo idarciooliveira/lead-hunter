@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { apiBaseUrl } from "./api-config";
+import { apiBaseUrl, apiToken } from "./api-config.server";
 import { NotFoundError } from "./fake-api";
 
 /**
@@ -31,15 +31,16 @@ export async function apiMutate<T extends z.ZodType>(
 
 async function request(path: string, method?: "PATCH" | "POST", body?: unknown): Promise<Response> {
 	const base = apiBaseUrl();
-	if (!base) throw new Error(`no API configured: set VITE_LEADHUNTER_API_URL to fetch ${path}`);
-	return fetch(
-		`${base}${path}`,
-		method === undefined
-			? undefined
-			: body === undefined
-				? { method }
-				: { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
-	);
+	if (!base) throw new Error(`no API configured: set LEADHUNTER_API_URL to fetch ${path}`);
+	const headers: Record<string, string> = {};
+	const token = apiToken();
+	if (token) headers.authorization = `Bearer ${token}`;
+	if (body !== undefined) headers["content-type"] = "application/json";
+	return fetch(`${base}${path}`, {
+		method: method ?? "GET",
+		headers,
+		body: body === undefined ? undefined : JSON.stringify(body),
+	});
 }
 
 async function toError(res: Response, path: string): Promise<Error> {

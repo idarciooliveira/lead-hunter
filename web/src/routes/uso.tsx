@@ -9,7 +9,7 @@ import { Chip } from "#/components/ui/chip";
 import { ProgressBar } from "#/components/ui/progress";
 import { UsageEvents } from "#/features/usage/components/usage-events";
 import { budgetState, shiftMonth, totalOf } from "#/features/usage/model";
-import { currentUsageMonth, usageQuery } from "#/features/usage/queries";
+import { usageQuery } from "#/features/usage/queries";
 import { monthLabel, percent, usd } from "#/lib/format";
 
 export const Route = createFileRoute("/uso")({
@@ -20,17 +20,22 @@ export const Route = createFileRoute("/uso")({
 			.optional()
 			.catch(undefined),
 	}),
-	loaderDeps: ({ search }) => ({ month: search.month ?? currentUsageMonth() }),
-	loader: ({ context, deps }) => context.queryClient.ensureQueryData(usageQuery(deps.month)),
+	loaderDeps: ({ search }) => ({ month: search.month }),
+	loader: ({ context, deps }) =>
+		Promise.all([
+			context.queryClient.ensureQueryData(usageQuery()),
+			context.queryClient.ensureQueryData(usageQuery(deps.month)),
+		]),
 	head: () => ({ meta: [{ title: "Uso e custos · Lead Hunter" }] }),
 	component: UsagePage,
 });
 
 function UsagePage() {
 	const { month: wanted } = Route.useSearch();
-	const latest = currentUsageMonth();
-	const month = wanted ?? latest;
-	const { data: m } = useSuspenseQuery(usageQuery(month));
+	const { data: current } = useSuspenseQuery(usageQuery());
+	const { data: m } = useSuspenseQuery(usageQuery(wanted));
+	const latest = current.month;
+	const month = m.month;
 	const navigate = Route.useNavigate();
 	const total = totalOf(m);
 	const state = budgetState(m);

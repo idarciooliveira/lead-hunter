@@ -1,8 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
-import { currentUsageMonth, fetchUsage } from "./api";
+import { fetchUsage } from "./api";
 
-export { currentUsageMonth };
-
-/** One month of spend; this month by default. */
-export const usageQuery = (month: string = currentUsageMonth()) =>
-	queryOptions({ queryKey: ["usage", month], queryFn: () => fetchUsage(month) });
+/**
+ * One month of spend. Without a month it is this month, which only the server
+ * knows (the fixtures have their own), so pages read `month` from the result.
+ */
+export const usageQuery = (month?: string) =>
+	queryOptions({ queryKey: ["usage", month ?? "current"], queryFn: () => fetchUsage({ data: month }) });

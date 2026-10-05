@@ -1,5 +1,5 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Page, PageHeader } from "#/components/page-header";
 import { Button } from "#/components/ui/button";
@@ -12,21 +12,16 @@ import { CAMPAIGN_STATE } from "#/features/campaigns/model";
 import { campaignQuery } from "#/features/campaigns/queries";
 import { RunTable } from "#/features/runs/components/run-table";
 import { campaignRunsQuery, usePreviewEnrichment, usePreviewScrape, useStartRun } from "#/features/runs/queries";
-import { NotFoundError } from "#/lib/fake-api";
 import { usd } from "#/lib/format";
 
 export const Route = createFileRoute("/campanhas/$slug")({
+	// An unknown slug throws notFound() from the server function, so the router shows its not-found page.
 	loader: async ({ context, params }) => {
-		try {
-			const [campaign] = await Promise.all([
-				context.queryClient.ensureQueryData(campaignQuery(params.slug)),
-				context.queryClient.ensureQueryData(campaignRunsQuery(params.slug)),
-			]);
-			return { name: campaign.name };
-		} catch (e) {
-			if (e instanceof NotFoundError) throw notFound();
-			throw e;
-		}
+		const [campaign] = await Promise.all([
+			context.queryClient.ensureQueryData(campaignQuery(params.slug)),
+			context.queryClient.ensureQueryData(campaignRunsQuery(params.slug)),
+		]);
+		return { name: campaign.name };
 	},
 	head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.name ?? "Campanha"} · Lead Hunter` }] }),
 	component: CampaignPage,

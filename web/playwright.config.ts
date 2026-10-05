@@ -14,7 +14,8 @@ export default defineConfig({
 	use: { baseURL: `http://localhost:${PORT}`, locale: "pt-PT", timezoneId: "Africa/Luanda" },
 	webServer: {
 		command: "pnpm build && pnpm start",
-		env: { PORT: String(PORT) },
+		// Fixtures only, even when the shell points at a backend.
+		env: { PORT: String(PORT), LEADHUNTER_API_URL: "" },
 		url: `http://localhost:${PORT}/hoje`,
 		reuseExistingServer: !process.env.CI,
 		timeout: 180_000,

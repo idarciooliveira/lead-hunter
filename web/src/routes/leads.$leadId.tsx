@@ -1,5 +1,5 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "#/components/ui/button";
 import { Kbd } from "#/components/ui/kbd";
 import {
@@ -11,7 +11,6 @@ import {
 	WebsiteAudit,
 } from "#/features/leads/components/lead-detail";
 import { leadQuery, leadsQuery } from "#/features/leads/queries";
-import { NotFoundError } from "#/lib/fake-api";
 import { whatsappUrl } from "#/lib/format";
 import { useHotkeys } from "#/lib/use-hotkeys";
 
@@ -19,13 +18,9 @@ export const Route = createFileRoute("/leads/$leadId")({
 	loader: async ({ context, params }) => {
 		// Prev/next needs the list, but the page should not wait for it.
 		void context.queryClient.prefetchQuery(leadsQuery());
-		try {
-			const lead = await context.queryClient.ensureQueryData(leadQuery(params.leadId));
-			return { name: lead.name };
-		} catch (e) {
-			if (e instanceof NotFoundError) throw notFound();
-			throw e;
-		}
+		// An unknown id throws notFound() from the server function.
+		const lead = await context.queryClient.ensureQueryData(leadQuery(params.leadId));
+		return { name: lead.name };
 	},
 	head: ({ loaderData }) => ({ meta: [{ title: `${loaderData?.name ?? "Lead"} · Lead Hunter` }] }),
 	component: LeadPage,
