@@ -11,7 +11,6 @@ import me.iofdev.leadhunter.campaign.CampaignFile;
 import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.maps.GoogleMapsScraper;
-import me.iofdev.leadhunter.maps.ScrapeException;
 import me.iofdev.leadhunter.maps.ScrapeRequest;
 import me.iofdev.leadhunter.maps.ScrapeResult;
 import me.iofdev.leadhunter.maps.ScrapedPlace;
@@ -72,26 +71,22 @@ public class CampaignRunner {
 
         for (ScrapeRequest request : plan.requests()) {
             progress.accept("Searching " + request.terms().size() + " terms in " + request.location() + "...");
-            long runId = runs.start(campaign.id(), request);
+            long runId = runs.start(campaign.id(), request.location(), request.terms(), request.maxPlaces());
             ScrapeResult result;
             try {
                 result = scraper.search(request);
-            } catch (ScrapeException e) {
-                runs.fail(runId, e.externalRunId(), e.getMessage(), e.costUsd());
-                if (e.costUsd() != null) {
-                    cost = cost.add(e.costUsd());
+            } catch (RuntimeException e) {
+                RunFailure failure = RunFailure.of(e);
+                runs.fail(runId, failure);
+                if (failure.costUsd() != null) {
+                    cost = cost.add(failure.costUsd());
                 }
                 progress.accept("  failed: " + e.getMessage()
-                        + (e.costUsd() == null ? "" : ", cost " + Money.usd(e.costUsd())));
-                failed++;
-                continue;
-            } catch (RuntimeException e) {
-                runs.fail(runId, null, e.toString(), null);
-                progress.accept("  failed: " + e.getMessage());
+                        + (failure.costUsd() == null ? "" : ", cost " + Money.usd(failure.costUsd())));
                 failed++;
                 continue;
             }
-            runs.succeed(runId, result.externalRunId(), result.datasetId(), result.places().size(), result.costUsd());
+            runs.succeed(runId, result, result.places().size());
             cost = cost.add(result.costUsd());
             found += result.places().size();
 

@@ -14,6 +14,6 @@ public interface ReviewFetcher {
     ReviewsResult fetchReviews(List<String> placeUrls, int maxReviews, String language);
 
     record ReviewsResult(String externalRunId, String datasetId, BigDecimal costUsd,
-                         Map<String, List<PlaceReview>> reviewsByUrl) {
+                           Map<String, List<PlaceReview>> reviewsByUrl) implements ExternalRunResult {
     }
 }

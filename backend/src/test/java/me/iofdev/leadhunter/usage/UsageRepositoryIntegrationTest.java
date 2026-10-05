@@ -12,7 +12,8 @@ import me.iofdev.leadhunter.PostgresTestSupport;
 import me.iofdev.leadhunter.llm.LlmCallRepository;
 import me.iofdev.leadhunter.llm.LlmRequest;
 import me.iofdev.leadhunter.llm.LlmResponse;
-import me.iofdev.leadhunter.maps.ScrapeRequest;
+import me.iofdev.leadhunter.maps.ScrapeResult;
+import me.iofdev.leadhunter.pipeline.RunFailure;
 import me.iofdev.leadhunter.pipeline.RunRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,9 +40,9 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
 
         succeed(run(clinics), 40, "0.50");
         succeed(run(clinics), 20, "0.25");
-        runs.fail(run(schools), "run-x", "boom", new BigDecimal("0.03"));
+        runs.fail(run(schools), new RunFailure("run-x", "boom", new BigDecimal("0.03")));
         // A crash before Apify answered leaves a failed run with no cost.
-        runs.fail(run(schools), null, "connection reset", null);
+        runs.fail(run(schools), new RunFailure(null, "connection reset", null));
 
         call(clinics, "pitch", "google/gemma-4-26b-a4b-it", 1000, 200, "0.00200000");
         call(clinics, "pitch", "anthropic/claude-haiku-4.5", 500, 100, "0.00100000");
@@ -146,11 +147,11 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
     }
 
     private long run(long campaignId) {
-        return runs.start(campaignId, new ScrapeRequest(List.of("clínica"), "Luanda", 40, "pt-PT"));
+        return runs.start(campaignId, "Luanda", List.of("clínica"), 40);
     }
 
     private void succeed(long runId, int places, String cost) {
-        runs.succeed(runId, "ext-" + runId, "ds-" + runId, places, new BigDecimal(cost));
+        runs.succeed(runId, new ScrapeResult("ext-" + runId, "ds-" + runId, new BigDecimal(cost), List.of()), places);
     }
 
     private void call(Long campaignId, String purpose, String model, int prompt, int completion, String cost) {

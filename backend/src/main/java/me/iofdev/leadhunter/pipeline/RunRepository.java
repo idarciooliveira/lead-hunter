@@ -1,14 +1,16 @@
 package me.iofdev.leadhunter.pipeline;
 
-import java.math.BigDecimal;
 import java.util.List;
 
-import me.iofdev.leadhunter.maps.ScrapeRequest;
+import me.iofdev.leadhunter.maps.ExternalRunResult;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class RunRepository {
+
+    /** UsageRepository labels runs by location, so review runs use this location. A real kind column belongs with the ADR 0033 migration. */
+    public static final String REVIEWS_LOCATION = "reviews";
 
     private final JdbcClient jdbc;
 
@@ -16,35 +18,21 @@ public class RunRepository {
         this.jdbc = jdbc;
     }
 
-    public long start(long campaignId, ScrapeRequest request) {
+    public long start(long campaignId, String location, List<String> terms, int maxPlaces) {
         return jdbc.sql("""
                         insert into campaign_run (campaign_id, location, search_terms, max_places, status)
                         values (:campaignId, :location, :terms, :maxPlaces, 'RUNNING')
                         returning id
                         """)
                 .param("campaignId", campaignId)
-                .param("location", request.location())
-                .param("terms", request.terms().toArray(String[]::new))
-                .param("maxPlaces", request.maxPlaces())
+                .param("location", location)
+                .param("terms", terms.toArray(String[]::new))
+                .param("maxPlaces", maxPlaces)
                 .query(Long.class)
                 .single();
     }
 
-    /** A stage 2 review run over place URLs, so {@code usage} sees its Apify cost. */
-    public long startReviews(long campaignId, List<String> placeUrls) {
-        return jdbc.sql("""
-                        insert into campaign_run (campaign_id, location, search_terms, max_places, status)
-                        values (:campaignId, 'reviews', :terms, :maxPlaces, 'RUNNING')
-                        returning id
-                        """)
-                .param("campaignId", campaignId)
-                .param("terms", placeUrls.toArray(String[]::new))
-                .param("maxPlaces", placeUrls.size())
-                .query(Long.class)
-                .single();
-    }
-
-    public void succeed(long runId, String externalRunId, String datasetId, int placesFound, BigDecimal costUsd) {
+    public void succeed(long runId, ExternalRunResult result, int placesFound) {
         jdbc.sql("""
                         update campaign_run
                         set status = 'SUCCEEDED', external_run_id = :externalRunId, dataset_id = :datasetId,
@@ -52,15 +40,15 @@ public class RunRepository {
                         where id = :id
                         """)
                 .param("id", runId)
-                .param("externalRunId", externalRunId)
-                .param("datasetId", datasetId)
+                .param("externalRunId", result.externalRunId())
+                .param("datasetId", result.datasetId())
                 .param("placesFound", placesFound)
-                .param("costUsd", costUsd)
+                .param("costUsd", result.costUsd())
                 .update();
     }
 
     /** A failed run still costs money, so costUsd is stored when Apify reported one. */
-    public void fail(long runId, String externalRunId, String error, BigDecimal costUsd) {
+    public void fail(long runId, RunFailure failure) {
         jdbc.sql("""
                         update campaign_run
                         set status = 'FAILED', external_run_id = :externalRunId, error = :error,
@@ -68,9 +56,9 @@ public class RunRepository {
                         where id = :id
                         """)
                 .param("id", runId)
-                .param("externalRunId", externalRunId)
-                .param("error", error)
-                .param("costUsd", costUsd)
+                .param("externalRunId", failure.externalRunId())
+                .param("error", failure.error())
+                .param("costUsd", failure.costUsd())
                 .update();
     }
 }

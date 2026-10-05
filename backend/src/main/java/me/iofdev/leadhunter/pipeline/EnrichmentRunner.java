@@ -14,7 +14,6 @@ import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.llm.ReviewComplaints;
 import me.iofdev.leadhunter.maps.ReviewFetcher;
 import me.iofdev.leadhunter.maps.ReviewFetcher.ReviewsResult;
-import me.iofdev.leadhunter.maps.ScrapeException;
 import me.iofdev.leadhunter.place.CrawlRepository;
 import me.iofdev.leadhunter.place.WebsiteCrawler;
 import me.iofdev.leadhunter.place.WebsiteCrawler.CrawlResult;
@@ -105,20 +104,17 @@ public class EnrichmentRunner {
             return;
         }
         progress.accept("Fetching up to " + maxReviews + " reviews for " + urls.size() + " places...");
-        long runId = runs.startReviews(campaign.id(), urls);
+        long runId = runs.start(campaign.id(), RunRepository.REVIEWS_LOCATION, urls, urls.size());
         ReviewsResult result;
         try {
             result = reviews.fetchReviews(urls, maxReviews, campaign.search().language());
-        } catch (ScrapeException e) {
-            runs.fail(runId, e.externalRunId(), e.getMessage(), e.costUsd());
-            progress.accept("  reviews failed: " + e.getMessage());
-            return;
         } catch (RuntimeException e) {
-            runs.fail(runId, null, e.toString(), null);
+            RunFailure failure = RunFailure.of(e);
+            runs.fail(runId, failure);
             progress.accept("  reviews failed: " + e.getMessage());
             return;
         }
-        runs.succeed(runId, result.externalRunId(), result.datasetId(), urls.size(), result.costUsd());
+        runs.succeed(runId, result, urls.size());
         for (Map.Entry<String, Long> entry : placeIdsByUrl.entrySet()) {
             crawls.saveReviews(entry.getValue(), result.reviewsByUrl().getOrDefault(entry.getKey(), List.of()));
         }
