@@ -1,17 +1,28 @@
 package me.iofdev.leadhunter.api;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import me.iofdev.leadhunter.campaign.Campaign;
+import me.iofdev.leadhunter.campaign.CampaignChecks;
+import me.iofdev.leadhunter.campaign.CampaignFile;
+import me.iofdev.leadhunter.campaign.CampaignFileParser;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
+import me.iofdev.leadhunter.company.CompanyProfile;
+import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.pipeline.LeadRepository;
 import me.iofdev.leadhunter.pipeline.RunRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Read endpoints for campaigns. Controllers hold no business rules (ADR 0031). */
+/** Read and write endpoints for campaigns. Controllers hold no business rules (ADR 0031). */
 @RestController
 @RequestMapping("/api/campaigns")
 class CampaignController {
@@ -19,11 +30,14 @@ class CampaignController {
     private final CampaignRepository campaigns;
     private final LeadRepository leads;
     private final RunRepository runs;
+    private final CompanyRepository company;
 
-    CampaignController(CampaignRepository campaigns, LeadRepository leads, RunRepository runs) {
+    CampaignController(CampaignRepository campaigns, LeadRepository leads, RunRepository runs,
+                       CompanyRepository company) {
         this.campaigns = campaigns;
         this.leads = leads;
         this.runs = runs;
+        this.company = company;
     }
 
     @GetMapping
@@ -36,6 +50,40 @@ class CampaignController {
         return campaigns.findBySlug(slug)
                 .map(this::dto)
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"));
+    }
+
+    /** Creates a campaign, like {@code campaign create -f}. An existing slug is a 409; use PUT to change it. */
+    @PostMapping
+    ResponseEntity<SaveResult<CampaignDto>> create(@RequestBody CampaignFile body) {
+        CampaignFileParser.validate(body);
+        if (campaigns.findBySlug(body.slug()).isPresent()) {
+            throw new CampaignExistsException("campaign '" + body.slug() + "' already exists. Update it instead");
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(save(body));
+    }
+
+    /** Replaces a campaign's answers and search. The slug in the path wins; a different slug in the body is a 400. */
+    @PutMapping("/{slug}")
+    SaveResult<CampaignDto> update(@PathVariable String slug, @RequestBody CampaignFile body) {
+        campaigns.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"));
+        if (body.slug() != null && !body.slug().equals(slug)) {
+            throw new IllegalArgumentException("slug cannot change: '" + slug + "' in the path, '" + body.slug()
+                    + "' in the body");
+        }
+        CampaignFile file = new CampaignFile(slug, body.name(), body.answers(), body.search());
+        CampaignFileParser.validate(file);
+        return save(file);
+    }
+
+    private SaveResult<CampaignDto> save(CampaignFile file) {
+        CompanyProfile profile = company.find().orElseThrow(() -> new IllegalArgumentException(
+                "no company profile yet. Save it first"));
+        CampaignChecks.requireFits(file, profile);
+        List<String> warnings =
+                CampaignChecks.warnings(file, profile, campaigns.findAll(), LocalDate.now());
+        campaigns.save(file);
+        return new SaveResult<>(get(file.slug()), warnings);
     }
 
     private CampaignDto dto(Campaign campaign) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SAMPLE_ANSWERS, STEPS, yamlLines } from "./wizard";
+import { campaignFileFromAnswers, SAMPLE_ANSWERS, STEPS, slugify, yamlLines } from "./wizard";
 
 const render = (lines: ReturnType<typeof yamlLines>) =>
 	lines.map((l) => `${"  ".repeat(l.indent)}${l.key}${l.value}`).join("\n");
@@ -39,5 +39,27 @@ limits:
 		expect(render(lines)).toContain("  qualify: []");
 		expect(render(lines)).toContain("locations: []");
 		expect(lines.filter((l) => l.step === 8).map((l) => l.key.trim())).toEqual(["goal:", "qualified_leads:", "stop:"]);
+	});
+
+	it("slugifies names to the lowercase-letters-digits-and-dashes shape", () => {
+		expect(slugify("Clínicas Talatona")).toBe("clinicas-talatona");
+		expect(slugify("  Restaurantes & Bares! Maianga ")).toBe("restaurantes-bares-maianga");
+	});
+
+	it("turns the guided answers into a campaign file", () => {
+		expect(campaignFileFromAnswers(SAMPLE_ANSWERS)).toEqual({
+			slug: "clinicas-talatona",
+			name: "Clínicas Talatona",
+			answers: {
+				sector: "Clínicas privadas",
+				problem: "Marcam consultas só por telefone e perdem pacientes pela demora.",
+				service: "Sistema de marcações",
+			},
+			search: {
+				terms: ["clínica privada talatona", "clínica kilamba"],
+				locations: ["Talatona", "Kilamba"],
+				minReviews: 50,
+			},
+		});
 	});
 });

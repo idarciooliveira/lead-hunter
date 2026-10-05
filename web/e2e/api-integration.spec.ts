@@ -123,4 +123,32 @@ test.describe
 			await expect(page.getByText("Mock Girassol")).toHaveCount(0);
 			expect(errors).toEqual([]);
 		});
+
+		test("a campaign is created from the wizard and renders from the API", async ({ page, request }) => {
+			const errors: string[] = [];
+			page.on("pageerror", (e) => errors.push(e.message));
+			await page.goto("/campanhas/nova");
+			await expect(page.getByRole("heading", { level: 1, name: "Nova campanha" })).toBeVisible();
+			// The first three steps keep the sample answers; step four picks the service the mock company sells.
+			for (let i = 0; i < 3; i++) await page.getByRole("button", { name: /Seguinte/ }).click();
+			await page.getByRole("button", { name: "Mock marcações online" }).click();
+			for (let i = 0; i < 7; i++) await page.getByRole("button", { name: /Seguinte/ }).click();
+			await page.getByRole("button", { name: "Criar campanha" }).click();
+			await expect(page.getByRole("heading", { level: 1, name: "Clínicas Talatona" })).toBeVisible();
+			// The slug comes from the name, and the mock stored the campaign the API served back.
+			const campaigns = await (await request.get(`${MOCK}/api/campaigns`, { headers: AUTH })).json();
+			expect(campaigns.map((c: { slug: string }) => c.slug)).toContain("clinicas-talatona");
+			expect(errors).toEqual([]);
+		});
+
+		test("the company profile saves through the API and shows its warnings", async ({ page }) => {
+			const errors: string[] = [];
+			page.on("pageerror", (e) => errors.push(e.message));
+			await page.goto("/empresa");
+			await expect(page.getByText("Mock marcações online")).toBeVisible();
+			await page.getByRole("button", { name: "Guardar perfil" }).click();
+			// The mock client has no phone, so the save answers the backend's warning.
+			await expect(page.getByText(/matched by name only/)).toBeVisible();
+			expect(errors).toEqual([]);
+		});
 	});

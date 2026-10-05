@@ -1,4 +1,5 @@
 /** The 11 campaign questions (ADR 0018, 0019) and the YAML preview built from the answers. */
+import type { CampaignCreateInput } from "./schema";
 
 export type Answers = {
 	name: string;
@@ -194,4 +195,36 @@ export function yamlLines(a: Answers): YamlLine[] {
 	add(0, "limits:", "", 11);
 	add(1, "apify_usd: ", Number(a.limitUsd).toFixed(2), 11);
 	return lines;
+}
+
+/** URL slug from the campaign name, in the shape POST /api/campaigns requires. */
+export function slugify(name: string): string {
+	return name
+		.normalize("NFD")
+		.replace(/\p{M}/gu, "")
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/-{2,}/g, "-")
+		.replace(/^-+|-+$/g, "");
+}
+
+/**
+ * The POST /api/campaigns body for the guided answers. The slug comes from
+ * the name; the qualify and disqualify labels stay on the YAML preview, since
+ * the API takes scraper signals rather than the wizard's wording.
+ */
+export function campaignFileFromAnswers(a: Answers): CampaignCreateInput {
+	return {
+		slug: slugify(a.name),
+		name: a.name.trim(),
+		answers: { sector: a.sector.trim(), problem: a.problem.trim(), service: a.service },
+		search: {
+			terms: a.terms
+				.split(",")
+				.map((t) => t.trim())
+				.filter(Boolean),
+			locations: [...a.locations],
+			minReviews: Math.max(0, Math.floor(a.minReviews)),
+		},
+	};
 }

@@ -22,10 +22,16 @@ Run it: `SPRING_PROFILES_ACTIVE=web java -jar backend/target/lead-hunter.jar`. T
 | `POST` | `/api/campaigns/{slug}/runs` | `dryRun` (default `false`), `allowOverLimit` (default `false`) | Starts a scrape job: 202 with the `RUNNING` job, like `campaign run`. With `dryRun` it returns the free estimate instead (`requests[{location, terms, maxPlaces}]`, `maxPlaces`, `estimatedMaxUsd`, `overLimit`, `dryRunId`), like `campaign run --dry-run`. `allowOverLimit` is the explicit opt-in past the limit. Second start while one runs, from the UI or the CLI → 409; over the limit without the flag → 400 with the budget message; too many jobs waiting → 503; 404 `no campaign '<slug>'. Run: campaign list` |
 | `POST` | `/api/campaigns/{slug}/enrichment` | `batchSize?`, `maxReviews?`, `dryRun` (default `false`) | Starts an enrichment job, same shape as a scrape, like `campaign enrich`. Batch and review counts default like the CLI. With `dryRun` it returns the free estimate (`pending`, `batch`, `maxReviews`, `dryRunId`). Nothing waiting → 400 `nothing to enrich: ...` |
 
-## Writes (planned)
+## Writes
 
-`POST/PUT /api/campaigns[/{slug}]` and `PUT /api/company` with the CLI validation (ADR 0029).
+Same parsers and checks as `campaign create -f` and `company update -f` (ADR 0029). A write answers `{ "saved": <the saved thing>, "warnings": [<text>] }`; the warnings are the CLI's non-blocking ones (clients without a phone, capacity, a case from another sector). A failed validation is a 400 `{ "message": "invalid campaign file:\n  - ...", "problems": ["<one broken rule>", ...] }`. Bodies are JSON in the shape of the campaign and company files; omitted fields take the file defaults.
+
+| Method | Path | Notes |
+|---|---|---|
+| `PUT` | `/api/company` | Saves or replaces the profile. `saved` is the profile with defaults applied |
+| `POST` | `/api/campaigns` | Creates a campaign, 201 with `saved` in the `GET /api/campaigns/{slug}` shape. Slug already taken → 409. No company profile → 404 `no company profile yet. Save it first`. `answers.service` not sold by the company → 400 |
+| `PUT` | `/api/campaigns/{slug}` | Replaces name, answers and search. The slug comes from the path; a different slug in the body → 400, unknown slug → 404 |
 
 ## Web client
 
-The browser never calls these paths (ADR 0037). Each feature's `api.ts` holds TanStack Start server functions; on the web server they call these paths through `lib/http.server.ts` when `LEADHUNTER_API_URL` is set, sending `LEADHUNTER_API_TOKEN` as a bearer token when set, and read the fixtures otherwise. The Playwright `integration` project serves a mock of this contract (`web/e2e/mock-api.mjs`) and proves every page renders from real HTTP responses, and that a run starts through the dry run. The campaign page polls the job history every 3 seconds while a job runs. Not served yet, so not shown with the API: the campaign funnel, the stage-2 audit, complaints and pitch on a lead. Creating a campaign and saving the company profile wait for the planned writes below.
+The browser never calls these paths (ADR 0037). Each feature's `api.ts` holds TanStack Start server functions; on the web server they call these paths through `lib/http.server.ts` when `LEADHUNTER_API_URL` is set, sending `LEADHUNTER_API_TOKEN` as a bearer token when set, and read the fixtures otherwise. The Playwright `integration` project serves a mock of this contract (`web/e2e/mock-api.mjs`) and proves every page renders from real HTTP responses, that a run starts through the dry run, and that the wizard creates a campaign and the company page saves the profile. The campaign page polls the job history every 3 seconds while a job runs. Not served yet, so not shown with the API: the campaign funnel, the stage-2 audit, complaints and pitch on a lead. Replacing a campaign (`PUT /api/campaigns/{slug}`) has an API but no page yet.

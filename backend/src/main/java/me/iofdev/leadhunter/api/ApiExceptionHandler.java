@@ -1,5 +1,6 @@
 package me.iofdev.leadhunter.api;
 
+import me.iofdev.leadhunter.input.InvalidInputException;
 import me.iofdev.leadhunter.pipeline.AlreadyRunningException;
 import me.iofdev.leadhunter.pipeline.BudgetExceededException;
 import org.springframework.core.task.TaskRejectedException;
@@ -25,6 +26,17 @@ class ApiExceptionHandler {
         String message = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
         HttpStatus status = message.startsWith("no ") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
         return ResponseEntity.status(status).body(new ApiError(message));
+    }
+
+    /** Validation failures from the same parsers the CLI uses; each broken rule is listed in {@code problems}. */
+    @ExceptionHandler(InvalidInputException.class)
+    ResponseEntity<ApiError> handleInvalidInput(InvalidInputException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(ex.getMessage(), ex.problems()));
+    }
+
+    @ExceptionHandler(CampaignExistsException.class)
+    ResponseEntity<ApiError> handleCampaignExists(CampaignExistsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(ex.getMessage()));
     }
 
     /**
