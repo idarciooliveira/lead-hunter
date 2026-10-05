@@ -55,7 +55,7 @@ function NewCampaignPage() {
 							<Question
 								step={step}
 								answers={answers}
-								services={company.services.map((s) => s.name)}
+								services={company?.services.map((s) => s.name) ?? []}
 								onChange={(patch) => setAnswers((a) => ({ ...a, ...patch }))}
 							/>
 							<WizardNav

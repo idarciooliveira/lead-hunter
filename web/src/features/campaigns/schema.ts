@@ -25,12 +25,10 @@ export const Campaign = z.object({
 	locations: z.array(z.string()),
 	state: CampaignState,
 	qualifiedCount: z.number().int(),
+	/** Apify and LLM spend so far. */
 	spendUsd: z.number(),
-	limitUsd: z.number(),
+	/** Null until the API serves a funnel report. */
 	funnel: Funnel.nullable(),
-	/** What a dry run reports for the next run, shown before spending (ADR 0033). */
-	nextRun: z.object({ query: z.string(), places: z.number().int(), costUsd: z.number() }),
-	enrichCostUsd: z.number(),
 });
 export type Campaign = z.infer<typeof Campaign>;
 export const CampaignList = z.array(Campaign);

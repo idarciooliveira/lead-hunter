@@ -7,9 +7,7 @@ import { monthName, percent, usd } from "#/lib/format";
 
 /** This month's spend against the $10 budget (ADR 0006). */
 export function BudgetPill() {
-	const { data } = useSuspenseQuery(usageQuery());
-	const month = data[0];
-	if (!month) return null;
+	const { data: month } = useSuspenseQuery(usageQuery());
 	const total = totalOf(month);
 	return (
 		<Link
@@ -28,9 +26,7 @@ export function BudgetPill() {
 
 /** One-line version for the mobile headers. */
 export function BudgetText() {
-	const { data } = useSuspenseQuery(usageQuery());
-	const month = data[0];
-	if (!month) return null;
+	const { data: month } = useSuspenseQuery(usageQuery());
 	return (
 		<>
 			{usd(totalOf(month))} / ${month.budgetUsd} este mês

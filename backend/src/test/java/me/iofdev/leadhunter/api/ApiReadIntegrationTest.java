@@ -1,6 +1,7 @@
 package me.iofdev.leadhunter.api;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -120,12 +121,25 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
         mvc.perform(get("/api/campaigns"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].slug").value("clinicas-teste"))
-                .andExpect(jsonPath("$[0].answers.sector").value("clínicas"));
+                .andExpect(jsonPath("$[0].answers.sector").value("clínicas"))
+                .andExpect(jsonPath("$[0].qualifiedCount").value(1))
+                .andExpect(jsonPath("$[0].latestRun.kind").value("SCRAPE"))
+                .andExpect(jsonPath("$[0].latestRun.status").value("DONE"));
 
         mvc.perform(get("/api/campaigns/clinicas-teste"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Clínicas teste"))
                 .andExpect(jsonPath("$.search.terms[0]").value("clínica"));
+
+        // A dry run is no real work, so a campaign with only dry runs never ran.
+        campaigns.save(parser.parse(CAMPAIGN.replace("clinicas-teste", "so-dry-run")));
+        jdbc.sql("insert into campaign_run (campaign_id, kind, status, places_found) values (:id, 'DRY_RUN', 'SUCCEEDED', 40)")
+                .param("id", campaigns.findBySlug("so-dry-run").orElseThrow().id())
+                .update();
+        mvc.perform(get("/api/campaigns/so-dry-run"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.qualifiedCount").value(0))
+                .andExpect(jsonPath("$.latestRun").value(nullValue()));
 
         mvc.perform(get("/api/campaigns/desconhecida"))
                 .andExpect(status().isNotFound())

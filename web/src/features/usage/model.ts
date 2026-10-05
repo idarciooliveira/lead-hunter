@@ -12,3 +12,10 @@ export function budgetState(m: UsageMonth): { label: string; tone: Tone } {
 	if (share > 0.5) return { label: "Mais de metade gasta", tone: "warn" };
 	return { label: "Dentro do orçamento", tone: "ok" };
 }
+
+/** `2026-10` moved by `delta` months: `shiftMonth("2026-01", -1)` is `2025-12`. */
+export function shiftMonth(month: string, delta: number): string {
+	const [year, m] = month.split("-").map(Number);
+	const index = year * 12 + (m - 1) + delta;
+	return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, "0")}`;
+}

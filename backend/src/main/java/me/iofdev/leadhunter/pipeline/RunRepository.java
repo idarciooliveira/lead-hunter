@@ -288,6 +288,16 @@ public class RunRepository {
                 .list();
     }
 
+    /** The newest job that did or tried real work, so dry runs never count. Empty when the campaign never ran. */
+    public Optional<JobView> latestJob(long campaignId) {
+        return jdbc.sql(JOB_SELECT
+                        + "where p.campaign_id = :campaignId and p.parent_id is null and p.kind not in ('REVIEWS', 'DRY_RUN') "
+                        + "order by p.started_at desc, p.id desc limit 1")
+                .param("campaignId", campaignId)
+                .query(JOB_VIEW)
+                .optional();
+    }
+
     /** Job ids are bigint and lock keys int; ids that wrap only collide 2^31 jobs apart. */
     private static String lockKey(String jobId) {
         return LOCK_SPACE + ", cast(" + jobId + " % 2147483647 as integer)";

@@ -8,8 +8,8 @@ import { Card, CardHeader } from "#/components/ui/card";
 import { Chip } from "#/components/ui/chip";
 import { ProgressBar } from "#/components/ui/progress";
 import { UsageEvents } from "#/features/usage/components/usage-events";
-import { budgetState, totalOf } from "#/features/usage/model";
-import { usageQuery } from "#/features/usage/queries";
+import { budgetState, shiftMonth, totalOf } from "#/features/usage/model";
+import { currentUsageMonth, usageQuery } from "#/features/usage/queries";
 import { monthLabel, percent, usd } from "#/lib/format";
 
 export const Route = createFileRoute("/uso")({
@@ -20,24 +20,22 @@ export const Route = createFileRoute("/uso")({
 			.optional()
 			.catch(undefined),
 	}),
-	loader: ({ context }) => context.queryClient.ensureQueryData(usageQuery()),
+	loaderDeps: ({ search }) => ({ month: search.month ?? currentUsageMonth() }),
+	loader: ({ context, deps }) => context.queryClient.ensureQueryData(usageQuery(deps.month)),
 	head: () => ({ meta: [{ title: "Uso e custos · Lead Hunter" }] }),
 	component: UsagePage,
 });
 
 function UsagePage() {
-	const { data: months } = useSuspenseQuery(usageQuery());
 	const { month: wanted } = Route.useSearch();
+	const latest = currentUsageMonth();
+	const month = wanted ?? latest;
+	const { data: m } = useSuspenseQuery(usageQuery(month));
 	const navigate = Route.useNavigate();
-	const index = Math.max(
-		0,
-		months.findIndex((m) => m.month === wanted),
-	);
-	const m = months[index];
 	const total = totalOf(m);
 	const state = budgetState(m);
 	const max = Math.max(...m.byCampaign.map((c) => c.usd));
-	const go = (i: number) => navigate({ search: { month: months[i].month }, replace: true });
+	const go = (delta: number) => navigate({ search: { month: shiftMonth(month, delta) }, replace: true });
 
 	return (
 		<Page>
@@ -46,16 +44,11 @@ function UsagePage() {
 				subtitle={`Orçamento de $${m.budgetUsd} por mês. Apify cobra por lugar, o LLM por chamada.`}
 				actions={
 					<div className="flex items-center gap-2">
-						<Button
-							size="icon"
-							aria-label="Mês anterior"
-							disabled={index === months.length - 1}
-							onClick={() => go(index + 1)}
-						>
+						<Button size="icon" aria-label="Mês anterior" onClick={() => go(-1)}>
 							<ChevronLeft className="size-4" aria-hidden />
 						</Button>
 						<span className="min-w-[120px] text-center font-medium">{monthLabel(m.month)}</span>
-						<Button size="icon" aria-label="Mês seguinte" disabled={index === 0} onClick={() => go(index - 1)}>
+						<Button size="icon" aria-label="Mês seguinte" disabled={month >= latest} onClick={() => go(1)}>
 							<ChevronRight className="size-4" aria-hidden />
 						</Button>
 					</div>
@@ -81,6 +74,7 @@ function UsagePage() {
 			</Card>
 			<Card className="flex flex-col gap-3 p-4">
 				<h2 className="m-0 text-base font-semibold">Gasto por campanha</h2>
+				{m.byCampaign.length === 0 && <div className="text-mute">Sem gastos neste mês.</div>}
 				{m.byCampaign.map((c) => (
 					<div key={c.campaign} className="grid grid-cols-[minmax(110px,150px)_1fr_56px] items-center gap-3">
 						<span>{c.campaign}</span>

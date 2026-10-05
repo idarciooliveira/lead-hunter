@@ -1,6 +1,6 @@
 # Lead Hunter
 
-Internal CLI that finds and ranks PME leads from Google Maps for a software factory in Luanda. Java 21, Spring Boot 4.1, Maven, picocli, PostgreSQL with Flyway and JdbcClient, Apify for scraping, LLM calls through the Vercel AI Gateway behind `LlmClient`. The web client in `web/` is TanStack Start with Query, Router and Table, Tailwind, Zod and Biome, on sample data until the HTTP API exists (ADR 0030, 0035). See README.md and web/README.md.
+Internal CLI that finds and ranks PME leads from Google Maps for a software factory in Luanda. Java 21, Spring Boot 4.1, Maven, picocli, PostgreSQL with Flyway and JdbcClient, Apify for scraping, LLM calls through the Vercel AI Gateway behind `LlmClient`. The web client in `web/` is TanStack Start with Query, Router and Table, Tailwind, Zod and Biome. It reads the HTTP API when `VITE_LEADHUNTER_API_URL` is set and sample data otherwise (ADR 0030, 0031, 0035). See README.md and web/README.md.
 
 ## Decisions
 

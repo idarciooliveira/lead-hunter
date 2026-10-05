@@ -22,3 +22,21 @@ export const Run = z.object({
 });
 export type Run = z.infer<typeof Run>;
 export const RunList = z.array(Run);
+
+/** The free estimate before a scrape (ADR 0033): what will be searched, at most how many places, and their cost. */
+export const ScrapePlan = z.object({
+	requests: z.array(z.object({ location: z.string(), terms: z.array(z.string()), maxPlaces: z.number().int() })),
+	maxPlaces: z.number().int(),
+	estimatedMaxUsd: z.number(),
+	/** True when the run could return more places than one run allows; starting it needs an explicit opt-in. */
+	overLimit: z.boolean(),
+});
+export type ScrapePlan = z.infer<typeof ScrapePlan>;
+
+/** The free estimate before an enrichment: qualified leads waiting, and how many this batch takes. */
+export const EnrichPlan = z.object({
+	pending: z.number().int(),
+	batch: z.number().int(),
+	maxReviews: z.number().int(),
+});
+export type EnrichPlan = z.infer<typeof EnrichPlan>;

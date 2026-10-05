@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** One month of spend, as the `usage` command reports it (ADR 0021). */
+/** One month of spend, as `usage --month` reports it (ADR 0021), with its newest runs and calls. */
 export const UsageMonth = z.object({
 	month: z.string().regex(/^\d{4}-\d{2}$/),
 	budgetUsd: z.number(),
@@ -10,12 +10,13 @@ export const UsageMonth = z.object({
 	events: z.array(
 		z.object({
 			at: z.iso.datetime({ offset: true }),
-			campaign: z.string(),
+			/** Null for LLM calls made outside a campaign. */
+			campaign: z.string().nullable(),
 			source: z.enum(["APIFY", "LLM"]),
 			detail: z.string(),
-			costUsd: z.number(),
+			/** Null when the provider reported no cost. */
+			costUsd: z.number().nullable(),
 		}),
 	),
 });
 export type UsageMonth = z.infer<typeof UsageMonth>;
-export const UsageMonths = z.array(UsageMonth);

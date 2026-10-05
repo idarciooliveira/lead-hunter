@@ -1,8 +1,7 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Page, PageHeader } from "#/components/page-header";
-import { StatBar } from "#/components/stat-bar";
 import { Button } from "#/components/ui/button";
 import { Card, CardHeader } from "#/components/ui/card";
 import { Chip } from "#/components/ui/chip";
@@ -12,9 +11,9 @@ import { type RunDialog, RunDialogs } from "#/features/campaigns/components/run-
 import { CAMPAIGN_STATE } from "#/features/campaigns/model";
 import { campaignQuery } from "#/features/campaigns/queries";
 import { RunTable } from "#/features/runs/components/run-table";
-import { campaignRunsQuery } from "#/features/runs/queries";
+import { campaignRunsQuery, usePreviewEnrichment, usePreviewScrape, useStartRun } from "#/features/runs/queries";
 import { NotFoundError } from "#/lib/fake-api";
-import { estimate, percent, usd } from "#/lib/format";
+import { usd } from "#/lib/format";
 
 export const Route = createFileRoute("/campanhas/$slug")({
 	loader: async ({ context, params }) => {
@@ -35,11 +34,45 @@ export const Route = createFileRoute("/campanhas/$slug")({
 
 function CampaignPage() {
 	const { slug } = Route.useParams();
+	const queryClient = useQueryClient();
 	const { data: campaign } = useSuspenseQuery(campaignQuery(slug));
 	const { data: runs } = useSuspenseQuery(campaignRunsQuery(slug));
 	const [dialog, setDialog] = useState<RunDialog>(null);
+	const previewScrape = usePreviewScrape();
+	const previewEnrichment = usePreviewEnrichment();
+	const start = useStartRun();
 	const state = CAMPAIGN_STATE[campaign.state];
-	const left = campaign.limitUsd - campaign.spendUsd;
+	const running = runs.some((r) => r.status === "RUNNING");
+	const previewError = previewScrape.error ?? previewEnrichment.error;
+
+	// A job that just finished changed the campaign, its leads and the month's spend.
+	const wasRunning = useRef(running);
+	useEffect(() => {
+		if (wasRunning.current && !running) {
+			for (const queryKey of [["campaigns"], ["leads"], ["usage"]]) queryClient.invalidateQueries({ queryKey });
+		}
+		wasRunning.current = running;
+	}, [running, queryClient]);
+
+	// Each click is a new dry run, so only its own error stays on screen.
+	const openScrape = () => {
+		previewEnrichment.reset();
+		previewScrape.mutate(slug, { onSuccess: (plan) => setDialog({ kind: "SCRAPE", plan }) });
+	};
+	const openEnrich = () => {
+		previewScrape.reset();
+		previewEnrichment.mutate(slug, { onSuccess: (plan) => setDialog({ kind: "ENRICH", plan }) });
+	};
+	const onOpenChange = (open: RunDialog) => {
+		if (open === null) start.reset();
+		setDialog(open);
+	};
+	const onStart = (allowOverLimit: boolean) => {
+		if (!dialog) return;
+		const run =
+			dialog.kind === "SCRAPE" ? { slug, kind: "SCRAPE" as const, allowOverLimit } : { slug, kind: "ENRICH" as const };
+		start.mutate(run, { onSuccess: () => onOpenChange(null) });
+	};
 
 	return (
 		<Page>
@@ -59,27 +92,30 @@ function CampaignPage() {
 				subtitle={`${campaign.sector} · ${campaign.service} · ${campaign.locations.join(", ")}`}
 				actions={
 					<>
-						<Button onClick={() => setDialog("dry")}>
-							Dry run <Cost>grátis</Cost>
+						<Button variant="primary" disabled={running || previewScrape.isPending} onClick={openScrape}>
+							Executar <Cost onAccent>dry run grátis</Cost>
 						</Button>
-						<Button variant="primary" onClick={() => setDialog("dry")}>
-							Executar <Cost onAccent>{estimate(campaign.nextRun.costUsd)}</Cost>
-						</Button>
-						<Button asChild>
-							<Link to="/leads" search={{ stage: "QUALIFIED" }}>
-								Enriquecer <Cost>{estimate(campaign.enrichCostUsd)}</Cost>
-							</Link>
+						<Button disabled={running || previewEnrichment.isPending} onClick={openEnrich}>
+							Enriquecer <Cost>dry run grátis</Cost>
 						</Button>
 					</>
 				}
 			/>
-			<StatBar
-				value={usd(campaign.spendUsd)}
-				caption={`de ${usd(campaign.limitUsd)} de limite da campanha`}
-				percent={percent(campaign.spendUsd, campaign.limitUsd)}
-				label="Gasto da campanha"
-				aside={<Chip tone={left < campaign.limitUsd / 2 ? "warn" : "ok"}>Restam {usd(left)}</Chip>}
-			/>
+			{previewError && (
+				<div role="alert" className="text-sm text-bad">
+					{previewError.message}
+				</div>
+			)}
+			<Card className="flex flex-wrap gap-8 p-4">
+				<div>
+					<span className="font-mono text-xl font-semibold">{usd(campaign.spendUsd)}</span>{" "}
+					<span className="text-mute">gastos em Apify e LLM</span>
+				</div>
+				<div>
+					<span className="font-mono text-xl font-semibold">{campaign.qualifiedCount}</span>{" "}
+					<span className="text-mute">leads qualificados</span>
+				</div>
+			</Card>
 			{campaign.funnel && <FunnelCards funnel={campaign.funnel} />}
 			<Card className="overflow-hidden">
 				<CardHeader
@@ -88,7 +124,13 @@ function CampaignPage() {
 				/>
 				<RunTable runs={runs} />
 			</Card>
-			<RunDialogs campaign={campaign} open={dialog} onOpenChange={setDialog} />
+			<RunDialogs
+				open={dialog}
+				onOpenChange={onOpenChange}
+				onStart={onStart}
+				pending={start.isPending}
+				error={start.error?.message ?? null}
+			/>
 		</Page>
 	);
 }

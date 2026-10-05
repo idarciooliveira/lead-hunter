@@ -15,28 +15,30 @@ export async function apiFetch<T extends z.ZodType>(schema: T, path: string): Pr
 }
 
 /**
- * Sends a JSON body (`PATCH` today) and validates the response like `apiFetch`.
+ * Sends a `PATCH` or `POST`, with an optional JSON body, and validates the response like `apiFetch`.
  * Backend-shaped errors reach the UI verbatim, never as a generic failure.
  */
 export async function apiMutate<T extends z.ZodType>(
 	schema: T,
 	path: string,
-	method: "PATCH",
-	body: unknown,
+	method: "PATCH" | "POST",
+	body?: unknown,
 ): Promise<z.infer<T>> {
 	const res = await request(path, method, body);
 	if (!res.ok) throw await toError(res, path);
 	return schema.parse(await res.json());
 }
 
-async function request(path: string, method?: "PATCH", body?: unknown): Promise<Response> {
+async function request(path: string, method?: "PATCH" | "POST", body?: unknown): Promise<Response> {
 	const base = apiBaseUrl();
 	if (!base) throw new Error(`no API configured: set VITE_LEADHUNTER_API_URL to fetch ${path}`);
 	return fetch(
 		`${base}${path}`,
 		method === undefined
 			? undefined
-			: { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+			: body === undefined
+				? { method }
+				: { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
 	);
 }
 

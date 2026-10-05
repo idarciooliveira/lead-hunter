@@ -1,6 +1,6 @@
 # Lead Hunter web
 
-The browser client for Lead Hunter (ADR 0030). TanStack Start with Router, Query and Table, Tailwind and shadcn/ui primitives, Zod, Biome, Vitest and Playwright. Until the HTTP API exists (ADR 0031) every page runs on sample data; see ADR 0035.
+The browser client for Lead Hunter (ADR 0030). TanStack Start with Router, Query and Table, Tailwind and shadcn/ui primitives, Zod, Biome, Vitest and Playwright. With `VITE_LEADHUNTER_API_URL` set every page reads the HTTP API (ADR 0031); without it the pages run on sample data (ADR 0035).
 
 ## Run it
 
@@ -12,7 +12,7 @@ pnpm install
 pnpm dev                    # http://localhost:3000
 ```
 
-Point the leads pages at the backend instead of the fixtures (needs the `web`
+Point the pages at the backend instead of the fixtures (needs the `web`
 Spring profile running, see `../docs/api.md`):
 
 ```bash
@@ -38,13 +38,13 @@ VITE_LEADHUNTER_API_URL=http://localhost:8080/api pnpm dev
 - `src/routes/` file-based routes, one per page. Loaders prefetch the page's queries for server rendering.
 - `src/features/<feature>/` one folder per feature (`leads`, `campaigns`, `runs`, `usage`, `company`):
   - `schema.ts` Zod schemas for the API responses, mirroring the backend enums.
-  - `api.ts` the functions the API will serve. Today they read `fixtures.ts` through `lib/fake-api.ts`; later they call `fetch`.
+  - `api.ts` the only file that knows where data comes from: the HTTP API through `lib/http.ts` when `VITE_LEADHUNTER_API_URL` is set, `fixtures.ts` through `lib/fake-api.ts` otherwise. It maps the backend shapes in `lib/api-contract.ts` to the feature schema.
   - `queries.ts` TanStack Query options. Pages read data only through these.
   - `model.ts` labels, tones and formatting helpers. Never scoring: scores and reasons come from the API (ADR 0007).
   - `components/` the feature's UI.
 - `src/components/ui/` the design system: button, card, chip, cost, kbd, progress, field, segmented, option button, skeleton, data table, dialog, tooltip, command palette.
 - `src/components/` the app shell (sidebar, top bar, mobile tab bar, ⌘K palette) and shared pieces.
-- `src/lib/` formatting (`format.ts`), theme, hotkeys, the fake API.
+- `src/lib/` formatting (`format.ts`), theme, hotkeys, the HTTP client and backend contract, the fake API, and `test-api.ts` for unit tests that stub the backend.
 - `src/styles.css` design tokens. Use the token classes (`bg-panel`, `text-mute`, `border-line`, `bg-acc`, `text-ok`...) rather than raw colours, so dark mode keeps working.
 
 ## Shortcuts

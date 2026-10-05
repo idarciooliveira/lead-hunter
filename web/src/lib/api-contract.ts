@@ -6,10 +6,54 @@ import { z } from "zod";
  * the mappers in each feature's `api.ts` pick the new fields up here.
  */
 
-/** One row of GET /api/campaigns, as far as the leads pages need it. */
-export const BackendCampaign = z.object({ slug: z.string(), name: z.string() });
+/** One job of GET /api/campaigns/{slug}/runs and GET /api/runs/{id} (ADR 0033). */
+export const BackendRun = z.object({
+	id: z.number().int(),
+	campaignSlug: z.string(),
+	kind: z.enum(["SCRAPE", "ENRICH", "DRY_RUN"]),
+	status: z.enum(["RUNNING", "DONE", "FAILED"]),
+	startedAt: z.iso.datetime({ offset: true }),
+	done: z.number().int(),
+	total: z.number().int().nullable(),
+	costUsd: z.number().nullable(),
+	error: z.string().nullable(),
+});
+export type BackendRun = z.infer<typeof BackendRun>;
+export const BackendRunList = z.array(BackendRun);
+
+/** One row of GET /api/campaigns and GET /api/campaigns/{slug}. */
+export const BackendCampaign = z.object({
+	slug: z.string(),
+	name: z.string(),
+	answers: z.object({ sector: z.string().nullable(), service: z.string().nullable() }),
+	search: z.object({ locations: z.array(z.string()) }),
+	totalCostUsd: z.number(),
+	qualifiedCount: z.number().int(),
+	/** The newest real job, never a dry run; null when the campaign never ran. */
+	latestRun: BackendRun.nullable(),
+});
 export type BackendCampaign = z.infer<typeof BackendCampaign>;
 export const BackendCampaignList = z.array(BackendCampaign);
+
+/** GET /api/usage?month=YYYY-MM. */
+export const BackendUsage = z.object({
+	apify: z.object({ costUsd: z.number() }),
+	llm: z.object({ costUsd: z.number() }),
+	byCampaign: z.array(z.object({ slug: z.string(), apifyUsd: z.number(), llmUsd: z.number() })),
+	budgetUsd: z.number(),
+});
+export type BackendUsage = z.infer<typeof BackendUsage>;
+
+/** GET /api/usage/entries?month=YYYY-MM: one Apify run or LLM call. */
+export const BackendUsageEntry = z.object({
+	kind: z.enum(["apify", "llm"]),
+	at: z.iso.datetime({ offset: true }),
+	campaignSlug: z.string().nullable(),
+	label: z.string(),
+	costUsd: z.number().nullable(),
+});
+export type BackendUsageEntry = z.infer<typeof BackendUsageEntry>;
+export const BackendUsageEntries = z.array(BackendUsageEntry);
 
 /** One row of GET /api/campaigns/{slug}/leads and GET /api/leads/{id}. */
 export const BackendLead = z.object({
