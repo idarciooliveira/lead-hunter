@@ -28,8 +28,8 @@ public final class Stage2Scorer {
     }
 
     /**
-     * Scores the crawl: at most one website rule fires (+25 total), since broken, unreachable,
-     * not mobile-friendly and missing HTTPS mostly travel together on the same site.
+     * Scores the crawl: at most one website rule fires (+25 total), since broken, missing HTTPS,
+     * not mobile-friendly and stale mostly travel together on the same site.
      */
     public static Score score(CrawlResult crawl, Set<String> complaintKinds) {
         return score(Optional.of(crawl), complaintKinds);
@@ -42,13 +42,6 @@ public final class Stage2Scorer {
     public static Score score(Optional<CrawlResult> crawl, Set<String> complaintKinds) {
         List<ScoreItem> items = new ArrayList<>();
         crawl.flatMap(Stage2Scorer::websiteRule).ifPresent(items::add);
-        boolean notMobile = crawl.filter(CrawlResult::reachable)
-                .map(result -> Boolean.FALSE.equals(result.mobileFriendly()))
-                .orElse(false);
-        if (notMobile) {
-            items.add(new ScoreItem("NOT_MOBILE_FRIENDLY", WEBSITE_RULE_POINTS,
-                    "Website has no viewport or responsive layout"));
-        }
         complaintRule(complaintKinds).ifPresent(items::add);
         if (items.isEmpty()) {
             items.add(crawl.filter(CrawlResult::reachable).isPresent()
@@ -59,6 +52,7 @@ public final class Stage2Scorer {
         return Score.of(items);
     }
 
+    /** The first website rule that applies, in order: broken, no HTTPS, not mobile-friendly, stale. */
     private static Optional<ScoreItem> websiteRule(CrawlResult crawl) {
         if (!crawl.reachable()) {
             return Optional.of(new ScoreItem("WEBSITE_BROKEN", WEBSITE_RULE_POINTS,
@@ -66,6 +60,10 @@ public final class Stage2Scorer {
         }
         if (crawl.https() == Boolean.FALSE) {
             return Optional.of(new ScoreItem("NO_HTTPS", WEBSITE_RULE_POINTS, "Website is plain HTTP, not HTTPS"));
+        }
+        if (crawl.mobileFriendly() == Boolean.FALSE) {
+            return Optional.of(new ScoreItem("NOT_MOBILE_FRIENDLY", WEBSITE_RULE_POINTS,
+                    "Website has no viewport or responsive layout"));
         }
         if (crawl.stale() == Boolean.TRUE) {
             return Optional.of(new ScoreItem("WEBSITE_STALE", WEBSITE_RULE_POINTS,

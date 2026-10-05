@@ -98,6 +98,28 @@ class Stage2ScorerTest {
     }
 
     @Test
+    void plainHttpAndNotMobileScoreOneWebsiteRule() {
+        CrawlResult plainHttpDesktopOnly = new CrawlResult("http://exemplo.ao", true, false, false, false,
+                "abc", 200, null);
+
+        Score score = Stage2Scorer.score(plainHttpDesktopOnly, Set.of());
+
+        assertThat(codes(score)).containsExactly("NO_HTTPS");
+        assertThat(score.total()).isEqualTo(25);
+    }
+
+    @Test
+    void notMobileAndStaleScoreOneWebsiteRule() {
+        CrawlResult desktopOnlyStale = new CrawlResult("https://exemplo.ao", true, true, false, true,
+                "abc", 200, null);
+
+        Score score = Stage2Scorer.score(desktopOnlyStale, Set.of());
+
+        assertThat(codes(score)).containsExactly("NOT_MOBILE_FRIENDLY");
+        assertThat(score.total()).isEqualTo(25);
+    }
+
+    @Test
     void complaintKindsAddTwentyPointsWithTheirReason() {
         Score score = Stage2Scorer.score(HEALTHY, Set.of("contact", "waiting", "other"));
 
