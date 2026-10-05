@@ -31,7 +31,7 @@ note() { printf '%s\n' "$*"; }
 
 build_image() {
   # Always rebuild: agents change the wizards, and a stale image silently evals old code.
-  docker build -q -t "$IMAGE" -f "$REPO/Dockerfile" "$REPO" >/dev/null \
+  docker build -q -t "$IMAGE" -f "$REPO/backend/Dockerfile" "$REPO/backend" >/dev/null \
     || { note "error: docker build failed"; exit 1; }
 }
 

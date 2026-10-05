@@ -56,7 +56,7 @@ Needs Java 21. `./lh` builds the jar the first time, then runs it.
 ./lh llm test
 ```
 
-After changing code, rebuild with `./mvnw package -DskipTests`. `./lh` only builds when the jar is missing. On Windows, use `mvnw.cmd package -DskipTests` and then `java -jar target\lead-hunter.jar <command>`.
+After changing code, rebuild with `./backend/mvnw -f backend/pom.xml package -DskipTests`. `./lh` only builds when the jar is missing. On Windows, use `backend\mvnw.cmd -f backend\pom.xml package -DskipTests` and then `java -jar backend\target\lead-hunter.jar <command>`.
 
 ### Option B: everything in Docker
 
@@ -121,19 +121,19 @@ The budget is $10 a month for scraping and LLM calls, see [ADR 0006](docs/adr/00
 
 Create a Railway project with a Postgres database and a service built from the `Dockerfile`. The image's default command prints help and exits, so either:
 
-- run the CLI from your laptop against Railway's database: `railway run java -jar target/lead-hunter.jar leads list clinicas-luanda`, or
+- run the CLI from your laptop against Railway's database: `railway run java -jar backend/target/lead-hunter.jar leads list clinicas-luanda`, or
 - set the service's start command to a campaign run and give it a cron schedule, with restart policy "Never".
 
 ## Tests
 
 ```bash
-./mvnw test
+(cd backend && ./mvnw test)
 ```
 
 Integration tests need Postgres. They use Testcontainers when Docker is running. Without Docker, point them at an empty database:
 
 ```bash
-LEADHUNTER_TEST_JDBC_URL=jdbc:postgresql://localhost:5432/leadhunter_test ./mvnw test
+(cd backend && LEADHUNTER_TEST_JDBC_URL=jdbc:postgresql://localhost:5432/leadhunter_test ./mvnw test)
 ```
 
 See [ADR 0016](docs/adr/0016-testing-strategy.md).
