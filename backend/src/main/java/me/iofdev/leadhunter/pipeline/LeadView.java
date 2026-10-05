@@ -12,6 +12,8 @@ public record LeadView(
         String campaignSlug,
         LeadStage stage,
         LeadStatus status,
+        LostReason lostReason,
+        String outcomeNote,
         int score,
         List<ScoreItem> breakdown,
         String stageReason,

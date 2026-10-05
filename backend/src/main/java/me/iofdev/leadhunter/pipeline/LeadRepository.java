@@ -21,7 +21,7 @@ public class LeadRepository {
     };
 
     private static final String SELECT_VIEW = """
-            select l.id, c.slug, l.stage, l.status, l.score, l.score_breakdown, l.stage_reason,
+            select l.id, c.slug, l.stage, l.status, l.lost_reason, l.outcome_note, l.score, l.score_breakdown, l.stage_reason,
                    p.name, p.category, p.address, p.neighborhood, p.phone_e164, p.phone_mobile, p.website,
                    p.website_kind, p.rating, p.reviews_count, p.maps_url
             from lead l
@@ -183,6 +183,62 @@ public class LeadRepository {
                 .update();
     }
 
+    /**
+     * Marks a contact outcome. The CLI and the API are both thin adapters over this
+     * method, so the rules can never drift. See ADR 0012 and ADR 0020.
+     *
+     * <ul>
+     *   <li>LOST needs one of the five lost reasons, including NOT_NOW.</li>
+     *   <li>A lost reason needs status LOST; any other status must drop it.</li>
+     *   <li>A lead that was already worked can never go back to NEW, which would hide
+     *       the contact history. Every other transition is allowed, so a NOT_NOW lead
+     *       can come back into the queue later.</li>
+     * </ul>
+     *
+     * @throws IllegalArgumentException with a {@code no lead with id <id>} message for
+     *         an unknown id (the API maps it to 404) and any other message for a bad
+     *         transition or reason (the API maps it to 400, the CLI prints {@code error:}).
+     */
+    public LeadView updateOutcome(long id, LeadStatus status, LostReason lostReason, String note) {
+        LeadView current = findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("no lead with id " + id));
+        requireOutcome(current, status, lostReason);
+        String storedNote = note == null || note.isBlank() ? null : note;
+        jdbc.sql("""
+                        update lead
+                        set status = :status,
+                            lost_reason = :lostReason,
+                            outcome_note = :note,
+                            updated_at = now()
+                        where id = :id
+                        """)
+                .param("id", id)
+                .param("status", status.name())
+                .param("lostReason", status == LeadStatus.LOST ? lostReason.name() : null)
+                .param("note", storedNote)
+                .update();
+        return findById(id).orElseThrow();
+    }
+
+    private static void requireOutcome(LeadView current, LeadStatus status, LostReason lostReason) {
+        if (status == null) {
+            throw new IllegalArgumentException("status is required: "
+                    + "NEW, CONTACTED, NO_ANSWER, INTERESTED, MEETING, PROPOSAL_SENT, WON or LOST");
+        }
+        if (status == LeadStatus.LOST && lostReason == null) {
+            throw new IllegalArgumentException("marking lead " + current.id() + " LOST needs a lost reason: "
+                    + "--lost-reason NO_BUDGET, WRONG_PERSON, HAS_SUPPLIER, NOT_INTERESTED or NOT_NOW");
+        }
+        if (status != LeadStatus.LOST && lostReason != null) {
+            throw new IllegalArgumentException("a lost reason needs status LOST, got " + status
+                    + ". Drop --lost-reason or mark the lead LOST");
+        }
+        if (status == LeadStatus.NEW && current.status() != LeadStatus.NEW) {
+            throw new IllegalArgumentException("lead " + current.id() + " is already " + current.status()
+                    + "; marking it NEW again would hide the contact history");
+        }
+    }
+
     public StageCounts countByStage(long campaignId) {
         return jdbc.sql("""
                         select count(*) filter (where stage = 'QUALIFIED') as qualified,
@@ -199,11 +255,14 @@ public class LeadRepository {
     }
 
     private LeadView mapView(ResultSet rs, int row) throws SQLException {
+        String lostReason = rs.getString("lost_reason");
         return new LeadView(
                 rs.getLong("id"),
                 rs.getString("slug"),
                 LeadStage.valueOf(rs.getString("stage")),
                 LeadStatus.valueOf(rs.getString("status")),
+                lostReason == null ? null : LostReason.valueOf(lostReason),
+                rs.getString("outcome_note"),
                 rs.getInt("score"),
                 json.readValue(rs.getString("score_breakdown"), SCORE_ITEMS),
                 rs.getString("stage_reason"),

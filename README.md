@@ -93,6 +93,7 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 | `campaign enrich <slug> [--dry-run] [--batch-size 25] [--max-reviews 10]` | Crawl websites, fetch reviews, classify complaints, rescore the qualified leads |
 | `leads list <slug> [--stage QUALIFIED\|BELOW_CUT\|EXCLUDED\|ALL] [--limit 20]` | Ranked leads |
 | `leads show <id>` | Lead card with score breakdown and WhatsApp link |
+| `leads mark <id> --status <status> [--lost-reason <reason>] [--note <text>]` | Mark a contact outcome. `LOST` needs one of `NO_BUDGET`, `WRONG_PERSON`, `HAS_SUPPLIER`, `NOT_INTERESTED`, `NOT_NOW` |
 | `usage [--month YYYY-MM] [--campaign <slug>] [--runs] [--limit 30]` | What Apify and the LLM have cost, with a monthly budget bar and spend per campaign. `--runs` lists each run and call |
 | `llm test ["prompt"]` | Send one prompt to the configured model, print the answer, token usage and cost |
 

@@ -16,10 +16,11 @@ Run it: `SPRING_PROFILES_ACTIVE=web java -jar backend/target/lead-hunter.jar`. T
 | `GET` | `/api/company` | | The company profile. 404 `no company profile yet. Run: company setup` |
 | `GET` | `/api/usage` | `month=YYYY-MM`, `campaign=<slug>` | Totals (`apify`, `llm`, `byCampaign`, `totalUsd`) plus `budgetUsd`. Bad month → 400, unknown campaign → 404 |
 | `GET` | `/api/usage/entries` | same, plus `limit` (default 30, max 200) | Newest runs and calls first, like `usage --runs` |
+| `PATCH` | `/api/leads/{id}` | `{status, lostReason?, note?}` | Marks a contact outcome, like `leads mark` (ADR 0012, 0020). `LOST` needs one of `NO_BUDGET`, `WRONG_PERSON`, `HAS_SUPPLIER`, `NOT_INTERESTED`, `NOT_NOW`; a lost reason needs `LOST`; a worked lead can never go back to `NEW`. 404 `no lead with id <id>`, 400 otherwise |
 
 ## Writes (planned)
 
-`PATCH /api/leads/{id}` (status, lost reason — ADR 0012, 0020), `POST/PUT /api/campaigns[/{slug}]`, `PUT /api/company` with the CLI validation (ADR 0029), and run/enrichment starts as background jobs the client polls (ADR 0033).
+`POST/PUT /api/campaigns[/{slug}]`, `PUT /api/company` with the CLI validation (ADR 0029), and run/enrichment starts as background jobs the client polls (ADR 0033).
 
 ## Web client
 
