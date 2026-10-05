@@ -7,8 +7,9 @@ import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.scoring.MapsSignal;
 
 /**
- * A campaign as written in YAML: the campaign questions plus the concrete search. Facts about the
- * company live in {@link CompanyProfile}. See ADR 0013 and ADR 0019.
+ * A campaign as saved in the database or imported with `campaign create -f`: the campaign questions
+ * plus the concrete search. Facts about the company live in {@link CompanyProfile}. See ADR 0019 and
+ * ADR 0029.
  */
 public record CampaignFile(String slug, String name, Answers answers, Search search) {
 

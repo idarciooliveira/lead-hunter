@@ -16,7 +16,6 @@ import me.iofdev.leadhunter.maps.ReviewFetcher;
 import me.iofdev.leadhunter.maps.ReviewFetcher.ReviewsResult;
 import me.iofdev.leadhunter.maps.ScrapeException;
 import me.iofdev.leadhunter.place.CrawlRepository;
-import me.iofdev.leadhunter.place.PlaceReview;
 import me.iofdev.leadhunter.place.WebsiteCrawler;
 import me.iofdev.leadhunter.place.WebsiteCrawler.CrawlResult;
 import me.iofdev.leadhunter.place.WebsiteKind;
@@ -125,10 +124,5 @@ public class EnrichmentRunner {
         }
         progress.accept("  reviews for " + result.reviewsByUrl().size() + " of " + urls.size()
                 + " places, " + Format.usd(result.costUsd()));
-    }
-
-    /** Exposes the stored reviews of one place, so the CLI can show what the classifier read. */
-    public List<PlaceReview> reviewsForPlace(long placeId) {
-        return crawls.reviewsForPlace(placeId);
     }
 }
