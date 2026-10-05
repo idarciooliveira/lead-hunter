@@ -1,7 +1,7 @@
 # 0013. Define campaigns as YAML files built on the 10 onboarding questions
 
 - Date: 2026-09-28
-- Status: Accepted
+- Status: Superseded by [0029](0029-database-is-the-only-campaign-store.md)
 
 ## Context
 
