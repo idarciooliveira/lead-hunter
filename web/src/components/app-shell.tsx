@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { companyQuery } from "#/features/company/queries";
 import { useTheme } from "#/lib/theme";
 import { useHotkeys } from "#/lib/use-hotkeys";
@@ -15,7 +15,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 	const [paletteOpen, setPaletteOpen] = useState(false);
 	const navigate = useNavigate();
 	const { toggle } = useTheme();
-	const { data: company } = useQuery(companyQuery());
+	// The root loader has already filled the cache, so this never suspends.
+	const { data: company } = useSuspenseQuery(companyQuery());
 
 	useEffect(() => {
 		// Lets end-to-end tests wait until keyboard shortcuts are live.
@@ -30,19 +31,18 @@ export function AppShell({ children }: { children: ReactNode }) {
 		return () => window.removeEventListener("keydown", onKey);
 	}, []);
 
-	const bindings = useMemo(
-		() => ({
+	useHotkeys(
+		{
 			...Object.fromEntries(Object.entries(CHORDS).map(([key, to]) => [`g ${key}`, () => navigate({ to })])),
 			n: () => navigate({ to: "/campanhas/nova" }),
 			t: toggle,
-		}),
-		[navigate, toggle],
+		},
+		!paletteOpen,
 	);
-	useHotkeys(bindings, !paletteOpen);
 
 	return (
 		<div className="flex min-h-screen items-stretch">
-			<Sidebar companyName={company?.name ?? ""} />
+			<Sidebar companyName={company.name} />
 			<main className="flex min-w-0 flex-1 flex-col">
 				<TopBar onSearch={() => setPaletteOpen(true)} />
 				<MobileTopBar onSearch={() => setPaletteOpen(true)} />

@@ -2,6 +2,9 @@ import type { Tone } from "#/components/ui/chip";
 import type { Band } from "#/components/ui/progress";
 import type { Lead, LeadStage, LeadStatus, LostReason } from "./schema";
 
+/** How many leads the Hoje queue holds. */
+export const DAILY_GOAL = 10;
+
 export const STAGE_TONE: Record<LeadStage, Tone> = { QUALIFIED: "ok", BELOW_CUT: "neutral", EXCLUDED: "bad" };
 
 export const STAGE_FILTERS = [

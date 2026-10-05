@@ -1,5 +1,6 @@
 import { fakeResponse, NotFoundError } from "#/lib/fake-api";
 import { LEADS } from "./fixtures";
+import { DAILY_GOAL } from "./model";
 import { Lead, LeadList } from "./schema";
 
 /** All leads, ranked first and excluded last. Becomes GET /api/leads. */
@@ -21,5 +22,3 @@ export async function fetchTodayQueue(): Promise<Lead[]> {
 	const leads = await fetchLeads();
 	return leads.filter((l) => l.stage === "QUALIFIED" && l.status === "NEW").slice(0, DAILY_GOAL);
 }
-
-export const DAILY_GOAL = 10;

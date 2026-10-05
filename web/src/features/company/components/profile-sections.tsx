@@ -3,7 +3,8 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Chip, type Tone } from "#/components/ui/chip";
 import { Input, Label } from "#/components/ui/field";
-import { type CompanyProfile, MIN_CASES } from "../schema";
+import { MultiSelect } from "#/components/ui/multi-select";
+import { type CompanyProfile, MIN_CASES, SECTOR_OPTIONS, ZONE_OPTIONS } from "../schema";
 
 type Section = { key: string; title: string; summary: string; complete: boolean; body: React.ReactNode };
 
@@ -68,29 +69,39 @@ function Services({ profile }: { profile: CompanyProfile }) {
 
 function Target({ profile }: { profile: CompanyProfile }) {
 	const t = profile.target;
+	const [sectors, setSectors] = useState(t.sectors);
+	const [zones, setZones] = useState(t.zones);
 	return (
-		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+		<div className="grid grid-cols-1 gap-4">
 			<div>
-				<span className="mb-1.5 block text-xs font-medium text-mute">Sectores</span>
-				<div className="flex flex-wrap gap-1.5">
-					{t.sectors.map((s) => (
-						<Chip key={s} tone="acc">
-							{s}
-						</Chip>
-					))}
-				</div>
+				<Label htmlFor="target-sectors">Sectores</Label>
+				<MultiSelect
+					id="target-sectors"
+					options={SECTOR_OPTIONS}
+					value={sectors}
+					onChange={setSectors}
+					placeholder="Escolher sectores"
+					searchPlaceholder="Procurar ou escrever um sector"
+					emptyLabel="Nenhum sector encontrado"
+					createLabel={(v) => `Adicionar "${v}"`}
+				/>
 			</div>
 			<div>
 				<Label htmlFor="target-size">Dimensão</Label>
 				<Input id="target-size" defaultValue={t.size} />
 			</div>
 			<div>
-				<span className="mb-1.5 block text-xs font-medium text-mute">Zonas de Luanda</span>
-				<div className="flex flex-wrap gap-1.5">
-					{t.zones.map((z) => (
-						<Chip key={z}>{z}</Chip>
-					))}
-				</div>
+				<Label htmlFor="target-zones">Zonas de Luanda</Label>
+				<MultiSelect
+					id="target-zones"
+					options={ZONE_OPTIONS}
+					value={zones}
+					onChange={setZones}
+					placeholder="Escolher zonas"
+					searchPlaceholder="Procurar ou escrever uma zona"
+					emptyLabel="Nenhuma zona encontrada"
+					createLabel={(z) => `Adicionar "${z}"`}
+				/>
 			</div>
 			<div>
 				<Label htmlFor="target-decider">Quem decide</Label>
@@ -167,7 +178,10 @@ export function ProfileSections({ sections }: { sections: Section[] }) {
 							</span>
 							<Chip tone={tone}>{s.complete ? "Completa" : "Incompleta"}</Chip>
 						</button>
-						{isOpen && <div className="border-t border-line p-4">{s.body}</div>}
+						{/* Collapsed bodies stay mounted so their unsaved edits survive. */}
+						<div hidden={!isOpen} className="border-t border-line p-4">
+							{s.body}
+						</div>
 					</Card>
 				);
 			})}

@@ -1,14 +1,13 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Page, PageHeader } from "#/components/page-header";
 import { StatBar } from "#/components/stat-bar";
 import { Button } from "#/components/ui/button";
 import { Chip, PlannedChip } from "#/components/ui/chip";
 import { Kbd } from "#/components/ui/kbd";
-import { DAILY_GOAL } from "#/features/leads/api";
 import { type QueueState, TodayQueue } from "#/features/leads/components/today-queue";
-import type { Outcome } from "#/features/leads/model";
+import { DAILY_GOAL, type Outcome } from "#/features/leads/model";
 import { todayQueueQuery } from "#/features/leads/queries";
 import { longDay, percent } from "#/lib/format";
 import { useHotkeys } from "#/lib/use-hotkeys";
@@ -27,7 +26,7 @@ function TodayPage() {
 	const today = new Date();
 	const fileDate = today.toISOString().slice(0, 10);
 
-	useHotkeys(useMemo(() => ({ e: () => setExported(true) }), []));
+	useHotkeys({ e: () => setExported(true) });
 
 	return (
 		<Page>

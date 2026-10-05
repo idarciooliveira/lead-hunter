@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Button } from "./button";
 import { PlannedChip } from "./chip";
+import { MultiSelect } from "./multi-select";
 import { ProgressBar } from "./progress";
 import { Segmented } from "./segmented";
 
@@ -38,5 +39,44 @@ describe("design system", () => {
 		expect(screen.getByRole("button", { name: "Guiado" })).toHaveAttribute("aria-pressed", "true");
 		await userEvent.click(screen.getByRole("button", { name: /Importar YAML/ }));
 		expect(onChange).toHaveBeenCalledWith("b");
+	});
+});
+
+describe("multi select", () => {
+	it("ticks and unticks several options", async () => {
+		const onChange = vi.fn();
+		render(
+			<MultiSelect
+				options={["A", "B"]}
+				value={["A"]}
+				onChange={onChange}
+				placeholder="Escolher"
+				searchPlaceholder="Procurar"
+				emptyLabel="Nada"
+			/>,
+		);
+		await userEvent.click(screen.getByRole("combobox"));
+		await userEvent.click(await screen.findByRole("option", { name: "B" }));
+		expect(onChange).toHaveBeenCalledWith(["A", "B"]);
+		await userEvent.click(screen.getByRole("option", { name: "A" }));
+		expect(onChange).toHaveBeenCalledWith([]);
+	});
+
+	it("adds a typed value with Enter when creation is allowed", async () => {
+		const onChange = vi.fn();
+		render(
+			<MultiSelect
+				options={["A"]}
+				value={["A"]}
+				onChange={onChange}
+				placeholder="Escolher"
+				searchPlaceholder="Procurar"
+				emptyLabel="Nada"
+				createLabel={(v) => `Adicionar "${v}"`}
+			/>,
+		);
+		await userEvent.click(screen.getByRole("combobox"));
+		await userEvent.type(screen.getByLabelText("Procurar"), "Zango Norte{Enter}");
+		expect(onChange).toHaveBeenCalledWith(["A", "Zango Norte"]);
 	});
 });

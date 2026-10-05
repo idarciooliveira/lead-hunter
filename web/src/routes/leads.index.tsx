@@ -13,12 +13,16 @@ import { LeadCards } from "#/features/leads/components/lead-cards";
 import { LeadTable } from "#/features/leads/components/lead-table";
 import { countByStage, filterLeads, STAGE_FILTERS } from "#/features/leads/model";
 import { leadsQuery } from "#/features/leads/queries";
+import { LeadStage } from "#/features/leads/schema";
 import { cn } from "#/lib/utils";
 
 const DEFAULTS = { stage: "ALL", minScore: 0, site: false, phone: false } as const;
 
 const search = z.object({
-	stage: z.enum(["ALL", "QUALIFIED", "BELOW_CUT", "EXCLUDED"]).catch(DEFAULTS.stage).default(DEFAULTS.stage),
+	stage: z
+		.enum(["ALL", ...LeadStage.options])
+		.catch(DEFAULTS.stage)
+		.default(DEFAULTS.stage),
 	minScore: z.coerce.number().int().min(0).max(100).catch(DEFAULTS.minScore).default(DEFAULTS.minScore),
 	site: z.boolean().catch(DEFAULTS.site).default(DEFAULTS.site),
 	phone: z.boolean().catch(DEFAULTS.phone).default(DEFAULTS.phone),

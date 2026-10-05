@@ -1,6 +1,5 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
 import { Button } from "#/components/ui/button";
 import { Kbd } from "#/components/ui/kbd";
 import {
@@ -18,6 +17,8 @@ import { useHotkeys } from "#/lib/use-hotkeys";
 
 export const Route = createFileRoute("/leads/$leadId")({
 	loader: async ({ context, params }) => {
+		// Prev/next needs the list, but the page should not wait for it.
+		void context.queryClient.prefetchQuery(leadsQuery());
 		try {
 			const lead = await context.queryClient.ensureQueryData(leadQuery(params.leadId));
 			return { name: lead.name };
@@ -36,19 +37,21 @@ function LeadPage() {
 	const { data: leads = [] } = useQuery(leadsQuery());
 	const navigate = useNavigate();
 
-	const { prev, next, bindings } = useMemo(() => {
-		const index = leads.findIndex((l) => l.id === lead.id);
-		const step = (delta: number) => () => {
-			if (!leads.length) return;
-			const target = leads[(index + delta + leads.length) % leads.length];
-			navigate({ to: "/leads/$leadId", params: { leadId: target.id } });
-		};
-		const openWhatsApp = () => {
+	const index = leads.findIndex((l) => l.id === lead.id);
+	const step = (delta: number) => () => {
+		if (!leads.length) return;
+		const target = leads[(index + delta + leads.length) % leads.length];
+		navigate({ to: "/leads/$leadId", params: { leadId: target.id } });
+	};
+	const prev = step(-1);
+	const next = step(1);
+	useHotkeys({
+		k: prev,
+		j: next,
+		w: () => {
 			if (lead.phone) window.open(whatsappUrl(lead.phone, lead.pitch), "_blank", "noopener");
-		};
-		return { prev: step(-1), next: step(1), bindings: { k: step(-1), j: step(1), w: openWhatsApp } };
-	}, [lead, leads, navigate]);
-	useHotkeys(bindings);
+		},
+	});
 
 	return (
 		<div className="flex flex-col gap-4">

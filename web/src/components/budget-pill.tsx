@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ProgressBar } from "#/components/ui/progress";
 import { totalOf } from "#/features/usage/model";
@@ -7,8 +7,8 @@ import { monthName, percent, usd } from "#/lib/format";
 
 /** This month's spend against the $10 budget (ADR 0006). */
 export function BudgetPill() {
-	const { data } = useQuery(usageQuery());
-	const month = data?.[0];
+	const { data } = useSuspenseQuery(usageQuery());
+	const month = data[0];
 	if (!month) return null;
 	const total = totalOf(month);
 	return (
@@ -28,8 +28,8 @@ export function BudgetPill() {
 
 /** One-line version for the mobile headers. */
 export function BudgetText() {
-	const { data } = useQuery(usageQuery());
-	const month = data?.[0];
+	const { data } = useSuspenseQuery(usageQuery());
+	const month = data[0];
 	if (!month) return null;
 	return (
 		<>
