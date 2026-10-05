@@ -2,7 +2,7 @@
 
 JSON API for the web client (ADR 0031). Same domain code as the CLI; controllers hold no business rules. Errors mirror the CLI: `{ "message": "<text>" }` with 404 when the message starts with `no ` (not found) and 400 otherwise.
 
-Run it: `SPRING_PROFILES_ACTIVE=web java -jar backend/target/lead-hunter.jar`. The CLI stays the default mode. `GET /api/health` is open; auth follows ADR 0032 (not yet enforced).
+Run it: `SPRING_PROFILES_ACTIVE=web java -jar backend/target/lead-hunter.jar`. The CLI stays the default mode. `GET /api/health` is open; calls come only from the web server's server functions with a service token (ADR 0037) and users sign in with Better Auth (ADR 0038); neither is enforced yet.
 
 ## Endpoints (implemented)
 
