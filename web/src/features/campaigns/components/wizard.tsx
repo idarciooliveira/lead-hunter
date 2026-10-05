@@ -150,11 +150,13 @@ export function WizardNav({
 	onPrev,
 	onNext,
 	onFinish,
+	saving = false,
 }: {
 	step: number;
 	onPrev: () => void;
 	onNext: () => void;
 	onFinish: () => void;
+	saving?: boolean;
 }) {
 	const last = step === STEPS.length;
 	return (
@@ -166,8 +168,8 @@ export function WizardNav({
 				<span className="text-xs text-mute">Dry run incluído</span>
 				<Cost>$0.00</Cost>
 				{last ? (
-					<Button variant="primary" onClick={onFinish}>
-						Criar campanha
+					<Button variant="primary" onClick={onFinish} disabled={saving}>
+						{saving ? "A criar…" : "Criar campanha"}
 					</Button>
 				) : (
 					<Button variant="primary" onClick={onNext}>

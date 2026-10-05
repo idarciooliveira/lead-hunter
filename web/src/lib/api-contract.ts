@@ -35,6 +35,39 @@ export const BackendCampaign = z.object({
 export type BackendCampaign = z.infer<typeof BackendCampaign>;
 export const BackendCampaignList = z.array(BackendCampaign);
 
+/**
+ * What a write endpoint answers (docs/api.md Writes): the saved thing plus
+ * the CLI's non-blocking warnings.
+ */
+export const BackendSaveResult = <S extends z.ZodType>(saved: S) => z.object({ saved, warnings: z.array(z.string()) });
+
+/**
+ * GET /api/company in full: the UI shape plus the fields only the CLI edits.
+ * The save merges the UI profile over this, so a PUT keeps them.
+ */
+export const BackendCompanyProfile = z.object({
+	name: z.string(),
+	intro: z.string().nullable(),
+	services: z.array(z.object({ name: z.string(), price: z.string().nullable(), deliveryTime: z.string().nullable() })),
+	entryOffer: z.string().nullable(),
+	area: z.array(z.string()),
+	clients: z.array(z.object({ name: z.string(), phone: z.string().nullable() })),
+	cases: z.array(
+		z.object({
+			sector: z.string().nullable(),
+			client: z.string().nullable(),
+			problem: z.string().nullable(),
+			built: z.string().nullable(),
+			result: z.string().nullable(),
+			mayName: z.boolean(),
+		}),
+	),
+	objections: z.array(z.object({ objection: z.string(), answer: z.string() })),
+	weeklyCapacity: z.number().int(),
+	quarterTarget: z.object({ newClients: z.number().int().nullable(), revenueKz: z.number().nullable() }).nullable(),
+});
+export type BackendCompanyProfile = z.infer<typeof BackendCompanyProfile>;
+
 /** GET /api/usage?month=YYYY-MM. */
 export const BackendUsage = z.object({
 	apify: z.object({ costUsd: z.number() }),

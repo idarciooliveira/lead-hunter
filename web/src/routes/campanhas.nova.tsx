@@ -5,7 +5,8 @@ import { Page, PageHeader } from "#/components/page-header";
 import { Button } from "#/components/ui/button";
 import { Segmented } from "#/components/ui/segmented";
 import { Question, StepDots, WizardNav, YamlImport, YamlPreview } from "#/features/campaigns/components/wizard";
-import { type Answers, SAMPLE_ANSWERS, SAMPLE_YAML, STEPS } from "#/features/campaigns/wizard";
+import { useCreateCampaign } from "#/features/campaigns/queries";
+import { type Answers, campaignFileFromAnswers, SAMPLE_ANSWERS, SAMPLE_YAML, STEPS } from "#/features/campaigns/wizard";
 import { companyQuery } from "#/features/company/queries";
 
 export const Route = createFileRoute("/campanhas/nova")({
@@ -22,8 +23,16 @@ function NewCampaignPage() {
 	const [answers, setAnswers] = useState<Answers>(SAMPLE_ANSWERS);
 	const [yaml, setYaml] = useState(SAMPLE_YAML);
 	const [yamlValid, setYamlValid] = useState(false);
-	// Saving is not wired yet; finishing shows where the new campaign will live.
-	const finish = () => navigate({ to: "/campanhas/$slug", params: { slug: "clinicas-talatona" } });
+	const create = useCreateCampaign();
+	const [saveError, setSaveError] = useState<string | null>(null);
+	// The guided answers become POST /api/campaigns; the new page reads the saved campaign back.
+	const finish = () => {
+		setSaveError(null);
+		create.mutate(campaignFileFromAnswers(answers), {
+			onSuccess: ({ saved }) => navigate({ to: "/campanhas/$slug", params: { slug: saved.slug } }),
+			onError: (e) => setSaveError(e.message),
+		});
+	};
 
 	return (
 		<Page>
@@ -63,7 +72,13 @@ function NewCampaignPage() {
 								onPrev={() => setStep((s) => Math.max(1, s - 1))}
 								onNext={() => setStep((s) => Math.min(STEPS.length, s + 1))}
 								onFinish={finish}
+								saving={create.isPending}
 							/>
+							{saveError && (
+								<div role="alert" className="text-sm text-bad">
+									{saveError}
+								</div>
+							)}
 						</>
 					) : (
 						<YamlImport

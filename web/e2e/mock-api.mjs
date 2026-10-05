@@ -1,8 +1,9 @@
 // Minimal stand-in for the backend API (docs/api.md), so the Playwright
 // `integration` project proves the web app renders real HTTP responses.
 // The MockMvc suite proves the real backend serves this shape. PATCH mirrors
-// LeadRepository.updateOutcome; POST /__reset restores the fixtures and only
-// exists for test isolation.
+// LeadRepository.updateOutcome, the campaign and company writes mirror their
+// controllers' status codes and messages; POST /__reset restores the fixtures
+// and only exists for test isolation.
 import http from "node:http";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 3330);
@@ -75,6 +76,9 @@ const CAMPAIGN = {
 
 const RUNS = [];
 
+// Created campaigns join this list, so the pages read them back like from the real API.
+const CAMPAIGNS = [CAMPAIGN];
+
 const COMPANY = {
 	name: "Mock Software, Lda.",
 	intro: null,
@@ -109,6 +113,8 @@ const ENTRIES = [
 ];
 
 const PRISTINE = structuredClone(LEADS);
+const PRISTINE_CAMPAIGNS = structuredClone(CAMPAIGNS);
+const PRISTINE_COMPANY = structuredClone(COMPANY);
 
 const server = http.createServer((req, res) => {
 	const url = new URL(req.url ?? "/", "http://localhost");
@@ -117,7 +123,7 @@ const server = http.createServer((req, res) => {
 			"content-type": "application/json",
 			// The mutations run in the browser from another origin, like against the real API (ApiCorsConfig).
 			"access-control-allow-origin": "*",
-			"access-control-allow-methods": "GET, PATCH, POST, OPTIONS",
+			"access-control-allow-methods": "GET, PATCH, POST, PUT, OPTIONS",
 			"access-control-allow-headers": "*",
 		});
 		res.end(JSON.stringify(body));
@@ -125,7 +131,7 @@ const server = http.createServer((req, res) => {
 	if (req.method === "OPTIONS") {
 		res.writeHead(204, {
 			"access-control-allow-origin": "*",
-			"access-control-allow-methods": "GET, PATCH, POST, OPTIONS",
+			"access-control-allow-methods": "GET, PATCH, POST, PUT, OPTIONS",
 			"access-control-allow-headers": "*",
 		});
 		return res.end();
@@ -145,7 +151,11 @@ const server = http.createServer((req, res) => {
 		LEADS.length = 0;
 		for (const lead of structuredClone(PRISTINE)) LEADS.push(lead);
 		RUNS.length = 0;
-		CAMPAIGN.latestRun = null;
+		CAMPAIGNS.length = 0;
+		for (const campaign of structuredClone(PRISTINE_CAMPAIGNS)) CAMPAIGNS.push(campaign);
+		const fresh = structuredClone(PRISTINE_COMPANY);
+		for (const key of Object.keys(COMPANY)) delete COMPANY[key];
+		Object.assign(COMPANY, fresh);
 		return json(200, { status: "ok" });
 	}
 	if (req.method === "GET" && url.pathname === "/api/health") return json(200, { status: "ok" });
@@ -155,9 +165,47 @@ const server = http.createServer((req, res) => {
 	if (req.method === "POST" && url.pathname === "/api/campaigns/mock-clinicas/enrichment") {
 		return json(400, { message: "nothing to enrich: every qualified lead of mock-clinicas is enriched" });
 	}
-	if (req.method === "GET" && url.pathname === "/api/campaigns") return json(200, [CAMPAIGN]);
-	if (req.method === "GET" && url.pathname === "/api/campaigns/mock-clinicas") return json(200, CAMPAIGN);
-	if (req.method === "GET" && url.pathname === "/api/campaigns/mock-clinicas/runs") return json(200, RUNS);
+	if (req.method === "GET" && url.pathname === "/api/campaigns") return json(200, CAMPAIGNS);
+	if (req.method === "POST" && url.pathname === "/api/campaigns") {
+		return readBody((body) => {
+			// Mirrors CampaignController + CampaignFileParser + CampaignChecks.requireFits.
+			const problems = campaignProblems(body);
+			if (problems.length > 0) return json(400, invalidBody("campaign file", problems));
+			if (CAMPAIGNS.some((c) => c.slug === body.slug)) {
+				return json(409, { message: `campaign '${body.slug}' already exists. Update it instead` });
+			}
+			if (!COMPANY.services.some((s) => s.name === body.answers.service)) {
+				const names = COMPANY.services.map((s) => s.name).join(", ");
+				return json(
+					400,
+					invalidBody("campaign file", [
+						`answers.service '${body.answers.service}' is not one of the company's services: ${names}`,
+					]),
+				);
+			}
+			const saved = {
+				slug: body.slug,
+				name: body.name,
+				answers: { sector: body.answers.sector, service: body.answers.service },
+				search: { terms: body.search.terms, locations: body.search.locations },
+				totalCostUsd: 0,
+				qualifiedCount: 0,
+				latestRun: null,
+			};
+			CAMPAIGNS.push(saved);
+			return json(201, { saved, warnings: [] });
+		});
+	}
+	const campaignRunsMatch = /^\/api\/campaigns\/([^/]+)\/runs$/.exec(url.pathname);
+	if (req.method === "GET" && campaignRunsMatch) {
+		if (!CAMPAIGNS.some((c) => c.slug === campaignRunsMatch[1])) {
+			return json(404, { message: `no campaign '${campaignRunsMatch[1]}'. Run: campaign list` });
+		}
+		return json(
+			200,
+			RUNS.filter((r) => r.campaignSlug === campaignRunsMatch[1]),
+		);
+	}
 	if (req.method === "POST" && url.pathname === "/api/campaigns/mock-clinicas/runs") {
 		// Mirrors RunController: the dry run is free and over the limit here, so a start needs the opt-in.
 		if (url.searchParams.get("dryRun") === "true") {
@@ -191,10 +239,23 @@ const server = http.createServer((req, res) => {
 			error: null,
 		};
 		RUNS.unshift(run);
-		CAMPAIGN.latestRun = run;
+		const campaign = CAMPAIGNS.find((c) => c.slug === run.campaignSlug);
+		if (campaign) campaign.latestRun = run;
 		return json(202, run);
 	}
 	if (req.method === "GET" && url.pathname === "/api/company") return json(200, COMPANY);
+	if (req.method === "PUT" && url.pathname === "/api/company") {
+		return readBody((body) => {
+			// Mirrors CompanyController: the UI shape merges over the stored
+			// profile, keeping the CLI-only fields the pages never edit.
+			Object.assign(COMPANY, body);
+			const problems = [];
+			if (!COMPANY.name?.trim()) problems.push("name is required");
+			if (!COMPANY.services?.length) problems.push("services needs at least one service");
+			if (problems.length > 0) return json(400, invalidBody("company profile", problems));
+			return json(200, { saved: COMPANY, warnings: companyWarnings() });
+		});
+	}
 	if (req.method === "GET" && url.pathname === "/api/usage") return json(200, USAGE);
 	if (req.method === "GET" && url.pathname === "/api/usage/entries") return json(200, ENTRIES);
 	if (req.method === "GET" && url.pathname === "/api/campaigns/mock-clinicas/leads") {
@@ -207,7 +268,9 @@ const server = http.createServer((req, res) => {
 	}
 	const campaignMatch = /^\/api\/campaigns\/([^/]+)$/.exec(url.pathname);
 	if (req.method === "GET" && campaignMatch) {
-		return json(404, { message: `no campaign '${campaignMatch[1]}'. Run: campaign list` });
+		const found = CAMPAIGNS.find((c) => c.slug === campaignMatch[1]);
+		if (!found) return json(404, { message: `no campaign '${campaignMatch[1]}'. Run: campaign list` });
+		return json(200, found);
 	}
 	const leadMatch = /^\/api\/leads\/(\d+)$/.exec(url.pathname);
 	if (leadMatch) {
@@ -253,5 +316,35 @@ const server = http.createServer((req, res) => {
 	}
 	return json(404, { message: `no mock for ${url.pathname}` });
 });
+
+// Mirrors CampaignFileParser.validate: each broken rule on its own, like InvalidInputException.
+const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+function campaignProblems(body) {
+	const problems = [];
+	if (!SLUG.test(body.slug ?? ""))
+		problems.push("slug must be lowercase letters, digits and dashes, like clinicas-luanda");
+	if (!body.name?.trim()) problems.push("name is required");
+	const answers = body.answers ?? {};
+	if (!answers.sector?.trim()) problems.push("answers.sector is required");
+	if (!answers.problem?.trim()) problems.push("answers.problem is required");
+	if (!answers.service?.trim()) problems.push("answers.service is required");
+	const search = body.search ?? {};
+	if (!search.terms?.length) problems.push("search.terms needs at least one term");
+	if (!search.locations?.length) problems.push("search.locations needs at least one location");
+	return problems;
+}
+
+function invalidBody(what, problems) {
+	return { message: `invalid ${what}:\n  - ${problems.join("\n  - ")}`, problems };
+}
+
+// Mirrors CompanyProfileParser.warnings.
+function companyWarnings() {
+	const withoutPhone = COMPANY.clients.filter((c) => !c.phone?.trim()).map((c) => c.name);
+	if (withoutPhone.length === 0) return [];
+	return [
+		`clients without a valid phone are matched by name only, which misses name variants on Google Maps: ${withoutPhone.join(", ")}`,
+	];
+}
 
 server.listen(PORT, () => console.log(`mock api on :${PORT}`));

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { NotFoundError } from "./fake-api";
-import { apiFetch } from "./http.server";
+import { apiFetch, apiMutate } from "./http.server";
 
 const Schema = z.object({ slug: z.string() });
 
@@ -59,5 +59,24 @@ describe("apiFetch", () => {
 		vi.stubGlobal("fetch", fetch);
 		await apiFetch(Schema, "/campaigns/x");
 		expect(fetch.mock.calls[0][1]?.headers).toEqual({ authorization: "Bearer secret" });
+	});
+});
+
+describe("apiMutate", () => {
+	it("sends a PUT with a JSON body and validates the response", async () => {
+		vi.stubEnv("LEADHUNTER_API_URL", "http://api:8080/api");
+		const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+			expect(url).toBe("http://api:8080/api/company");
+			expect(init?.method).toBe("PUT");
+			expect(init?.headers).toMatchObject({ "content-type": "application/json" });
+			expect(JSON.parse(init?.body as string)).toEqual({ name: "Nova" });
+			return response(200, { saved: { name: "Nova" }, warnings: [] });
+		});
+		vi.stubGlobal("fetch", fetch);
+		const schema = z.object({ saved: z.object({ name: z.string() }), warnings: z.array(z.string()) });
+		await expect(apiMutate(schema, "/company", "PUT", { name: "Nova" })).resolves.toEqual({
+			saved: { name: "Nova" },
+			warnings: [],
+		});
 	});
 });
