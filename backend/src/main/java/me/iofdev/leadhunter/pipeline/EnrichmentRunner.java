@@ -19,10 +19,10 @@ import me.iofdev.leadhunter.place.CrawlRepository;
 import me.iofdev.leadhunter.place.WebsiteCrawler;
 import me.iofdev.leadhunter.place.WebsiteCrawler.CrawlResult;
 import me.iofdev.leadhunter.place.WebsiteKind;
-import me.iofdev.leadhunter.cli.Format;
 import me.iofdev.leadhunter.scoring.Score;
 import me.iofdev.leadhunter.scoring.ScoreItem;
 import me.iofdev.leadhunter.scoring.Stage2Scorer;
+import me.iofdev.leadhunter.usage.Money;
 import org.springframework.stereotype.Service;
 
 /** Stage 2 of the pipeline in ADR 0006: crawl, fetch reviews, classify complaints, rescore. See ADR 0027. */
@@ -123,6 +123,6 @@ public class EnrichmentRunner {
             crawls.saveReviews(entry.getValue(), result.reviewsByUrl().getOrDefault(entry.getKey(), List.of()));
         }
         progress.accept("  reviews for " + result.reviewsByUrl().size() + " of " + urls.size()
-                + " places, " + Format.usd(result.costUsd()));
+                + " places, " + Money.usd(result.costUsd()));
     }
 }

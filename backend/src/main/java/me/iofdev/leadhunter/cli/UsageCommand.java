@@ -11,6 +11,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 
 import me.iofdev.leadhunter.campaign.CampaignRepository;
+import me.iofdev.leadhunter.usage.Money;
 import me.iofdev.leadhunter.usage.UsageFilter;
 import me.iofdev.leadhunter.usage.UsageProperties;
 import me.iofdev.leadhunter.usage.UsageReport;
@@ -71,7 +72,7 @@ class UsageCommand implements Runnable {
         UsageReport report = usage.report(filter);
         printApify(out, report.apify());
         printLlm(out, report.llm());
-        out.printf("%nTotal  %s%n", Format.usd(report.totalUsd()));
+        out.printf("%nTotal  %s%n", Money.usd(report.totalUsd()));
         printBudget(out, selected == null ? YearMonth.now() : selected);
         if (campaignId == null) {
             printCampaigns(out, report);
@@ -84,7 +85,7 @@ class UsageCommand implements Runnable {
     }
 
     private void printApify(PrintWriter out, UsageReport.Apify apify) {
-        out.printf("Apify  %s%n", Format.usd(apify.costUsd()));
+        out.printf("Apify  %s%n", Money.usd(apify.costUsd()));
         out.printf("  Runs          %d (%d failed)%n", apify.runs(), apify.failedRuns());
         out.printf("  Places found  %,d%n", apify.places());
         if (apify.unpricedRuns() > 0) {
@@ -95,11 +96,11 @@ class UsageCommand implements Runnable {
     }
 
     private void printLlm(PrintWriter out, UsageReport.Llm llm) {
-        out.printf("LLM  %s%n", Format.usd(llm.costUsd()));
+        out.printf("LLM  %s%n", Money.usd(llm.costUsd()));
         out.printf("  Calls   %d%n", llm.calls());
         out.printf("  Tokens  %s in, %s out%n", Format.tokens(llm.promptTokens()), Format.tokens(llm.completionTokens()));
         for (UsageReport.ModelSpend model : llm.models()) {
-            out.printf("  %-30s %s (%d calls)%n", model.model(), Format.usd(model.costUsd()), model.calls());
+            out.printf("  %-30s %s (%d calls)%n", model.model(), Money.usd(model.costUsd()), model.calls());
         }
         if (llm.unpricedCalls() > 0) {
             out.printf("  %d %s no cost from the provider, not counted%n", llm.unpricedCalls(),
@@ -113,7 +114,7 @@ class UsageCommand implements Runnable {
         BigDecimal spent = usage.report(monthOnly).totalUsd();
         BigDecimal budget = properties.monthlyBudgetUsd();
         double fraction = budget.signum() == 0 ? 0 : spent.divide(budget, 4, RoundingMode.HALF_UP).doubleValue();
-        out.printf("%nMonth %s, all campaigns  %s%n", budgetMonth, Format.usd(spent));
+        out.printf("%nMonth %s, all campaigns  %s%n", budgetMonth, Money.usd(spent));
         out.printf("  %s  %d%% of $%s monthly budget%n", Format.bar(fraction, BAR_WIDTH),
                 Math.round(fraction * 100), budget.setScale(2, RoundingMode.HALF_UP).toPlainString());
     }
@@ -125,11 +126,11 @@ class UsageCommand implements Runnable {
         out.printf("%nBy campaign%n");
         for (UsageReport.CampaignSpend campaign : report.byCampaign()) {
             out.printf("  %-28s Apify %-10s LLM %-10s Total %s%n", Format.truncate(campaign.slug(), 28),
-                    Format.usd(campaign.apifyUsd()), Format.usd(campaign.llmUsd()), Format.usd(campaign.totalUsd()));
+                    Money.usd(campaign.apifyUsd()), Money.usd(campaign.llmUsd()), Money.usd(campaign.totalUsd()));
         }
         if (report.llmWithoutCampaignUsd().signum() > 0) {
-            out.printf("  %-28s Apify %-10s LLM %-10s Total %s%n", "(no campaign)", Format.usd(BigDecimal.ZERO),
-                    Format.usd(report.llmWithoutCampaignUsd()), Format.usd(report.llmWithoutCampaignUsd()));
+            out.printf("  %-28s Apify %-10s LLM %-10s Total %s%n", "(no campaign)", Money.usd(BigDecimal.ZERO),
+                    Money.usd(report.llmWithoutCampaignUsd()), Money.usd(report.llmWithoutCampaignUsd()));
         }
     }
 
@@ -142,7 +143,7 @@ class UsageCommand implements Runnable {
         for (UsageReport.Entry entry : entries) {
             out.printf("%-16s %-6s %-22s %-44s %s%n", WHEN.format(entry.at().atZoneSameInstant(ZoneId.systemDefault())),
                     entry.kind(), Format.truncate(entry.campaignSlug(), 22), Format.truncate(entry.label(), 44),
-                    Format.usd(entry.costUsd()));
+                    Money.usd(entry.costUsd()));
         }
     }
 

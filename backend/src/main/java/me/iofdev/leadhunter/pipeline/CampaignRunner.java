@@ -7,7 +7,6 @@ import java.util.function.Consumer;
 
 import me.iofdev.leadhunter.apify.ApifyProperties;
 import me.iofdev.leadhunter.campaign.Campaign;
-import me.iofdev.leadhunter.cli.Format;
 import me.iofdev.leadhunter.campaign.CampaignFile;
 import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.company.CompanyRepository;
@@ -22,6 +21,7 @@ import me.iofdev.leadhunter.place.WebsiteKind;
 import me.iofdev.leadhunter.scoring.Exclusions;
 import me.iofdev.leadhunter.scoring.Score;
 import me.iofdev.leadhunter.scoring.Stage1Scorer;
+import me.iofdev.leadhunter.usage.Money;
 import org.springframework.stereotype.Service;
 
 /** Stage 1 of the pipeline in ADR 0006: discover, filter, score, cut. */
@@ -82,7 +82,7 @@ public class CampaignRunner {
                     cost = cost.add(e.costUsd());
                 }
                 progress.accept("  failed: " + e.getMessage()
-                        + (e.costUsd() == null ? "" : ", cost " + Format.usd(e.costUsd())));
+                        + (e.costUsd() == null ? "" : ", cost " + Money.usd(e.costUsd())));
                 failed++;
                 continue;
             } catch (RuntimeException e) {
@@ -114,7 +114,7 @@ public class CampaignRunner {
                     created++;
                 }
             }
-            progress.accept("  " + result.places().size() + " places, " + Format.usd(result.costUsd()));
+            progress.accept("  " + result.places().size() + " places, " + Money.usd(result.costUsd()));
         }
 
         leads.applyStage1Cut(campaign.id(), campaign.search().qualifyShare());
