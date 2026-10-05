@@ -25,13 +25,7 @@ export function LeadCards({ leads }: { leads: Lead[] }) {
 									{rating(lead.rating)} <span className="text-mute">({lead.reviewCount} avaliações)</span>
 								</div>
 							</Link>
-							<WhatsAppLink
-								phone={lead.phone}
-								message={lead.pitch}
-								iconOnly
-								size="touch-icon"
-								className="border-acc bg-acc text-on-acc hover:bg-acc-h"
-							/>
+							<WhatsAppLink phone={lead.phone} message={lead.pitch} iconOnly size="touch-icon" />
 						</div>
 						<div className="flex flex-wrap items-center gap-2">
 							<ProgressBar

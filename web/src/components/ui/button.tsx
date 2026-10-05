@@ -10,6 +10,7 @@ const buttonVariants = cva(
 			variant: {
 				default: "border-line2 bg-panel hover:bg-soft",
 				primary: "border-acc bg-acc text-on-acc hover:bg-acc-h",
+				wa: "border-wa bg-wa text-on-wa hover:bg-wa-h",
 				active: "border-acc bg-acc-soft text-acc-tx",
 				ghost: "border-transparent bg-transparent hover:bg-soft",
 			},

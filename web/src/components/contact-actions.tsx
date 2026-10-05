@@ -1,6 +1,7 @@
-import { MessageCircle, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 import { Button, type ButtonProps } from "#/components/ui/button";
 import { Kbd } from "#/components/ui/kbd";
+import { WhatsAppIcon } from "#/components/whatsapp-icon";
 import { telUrl, whatsappUrl } from "#/lib/format";
 
 type Size = ButtonProps["size"];
@@ -24,7 +25,7 @@ export function WhatsAppLink({
 	children?: React.ReactNode;
 }) {
 	return (
-		<Button asChild variant={iconOnly ? "default" : "primary"} size={size} className={className}>
+		<Button asChild variant="wa" size={size} className={className}>
 			<a
 				href={phone ? whatsappUrl(phone, message) : undefined}
 				aria-disabled={phone ? undefined : true}
@@ -32,7 +33,7 @@ export function WhatsAppLink({
 				rel="noopener"
 				aria-label={iconOnly ? "Abrir WhatsApp" : undefined}
 			>
-				<MessageCircle
+				<WhatsAppIcon
 					className={size === "touch" || size === "touch-icon" ? "size-[18px]" : "size-[13px]"}
 					aria-hidden
 				/>
