@@ -1,6 +1,6 @@
 /**
  * Where the backend JSON API lives (docs/api.md). Set `VITE_LEADHUNTER_API_URL`
- * to the backend origin, e.g. `http://localhost:8080`, and the feature `api.ts`
+ * to the API root, e.g. `http://localhost:8080/api`, and the feature `api.ts`
  * files fetch real responses. Unset, every page keeps reading its fixtures.
  */
 export function apiBaseUrl(): string | null {

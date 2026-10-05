@@ -155,6 +155,10 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString("unknown stage")));
 
+        mvc.perform(get("/api/campaigns/clinicas-teste/leads").param("limit", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").exists());
+
         mvc.perform(get("/api/campaigns/desconhecida/leads"))
                 .andExpect(status().isNotFound());
     }
@@ -169,6 +173,10 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
         mvc.perform(get("/api/leads/999999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("no lead with id")));
+
+        mvc.perform(get("/api/leads/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").exists());
     }
 
     @Test

@@ -21,9 +21,9 @@ describe("apiFetch", () => {
 	});
 
 	it("fetches and validates the response", async () => {
-		vi.stubEnv("VITE_LEADHUNTER_API_URL", "http://api:8080");
+		vi.stubEnv("VITE_LEADHUNTER_API_URL", "http://api:8080/api");
 		const fetch = vi.fn(async (url: string) => {
-			expect(url).toBe("http://api:8080/campaigns");
+			expect(url).toBe("http://api:8080/api/campaigns");
 			return response(200, [{ slug: "x", extra: 1 }]);
 		});
 		vi.stubGlobal("fetch", fetch);
@@ -31,7 +31,7 @@ describe("apiFetch", () => {
 	});
 
 	it("turns 404 into NotFoundError with the backend message", async () => {
-		vi.stubEnv("VITE_LEADHUNTER_API_URL", "http://api:8080");
+		vi.stubEnv("VITE_LEADHUNTER_API_URL", "http://api:8080/api");
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => response(404, { message: "no campaign 'x'" })),
@@ -44,7 +44,7 @@ describe("apiFetch", () => {
 	});
 
 	it("throws other failures with the backend message", async () => {
-		vi.stubEnv("VITE_LEADHUNTER_API_URL", "http://api:8080");
+		vi.stubEnv("VITE_LEADHUNTER_API_URL", "http://api:8080/api");
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => response(400, { message: "unknown stage 'BOGUS'" })),

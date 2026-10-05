@@ -3,7 +3,7 @@ package me.iofdev.leadhunter.api;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 
@@ -69,10 +69,11 @@ class UsageController {
 
     private UsageFilter filter(String month, String campaignSlug) {
         YearMonth selected = month == null ? null : parseMonth(month);
+        YearMonth next = selected == null ? null : selected.plusMonths(1);
         Long campaignId = campaignSlug == null ? null : campaigns.findBySlug(campaignSlug)
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + campaignSlug + "'. Run: campaign list"))
                 .id();
-        return new UsageFilter(start(selected), start(selected == null ? null : selected.plusMonths(1)), campaignId);
+        return new UsageFilter(start(selected), start(next), campaignId);
     }
 
     private static String scope(String month, String campaignSlug) {
@@ -89,6 +90,6 @@ class UsageController {
     }
 
     private static OffsetDateTime start(YearMonth month) {
-        return month == null ? null : month.atDay(1).atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
+        return month == null ? null : month.atDay(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
     }
 }

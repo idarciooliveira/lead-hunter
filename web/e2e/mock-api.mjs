@@ -64,6 +64,10 @@ const server = http.createServer((req, res) => {
 		const stage = url.searchParams.get("stage") ?? "QUALIFIED";
 		return json(200, stage === "ALL" ? LEADS : LEADS.filter((l) => l.stage === stage));
 	}
+	const campaignLeadsMatch = /^\/api\/campaigns\/([^/]+)\/leads$/.exec(url.pathname);
+	if (req.method === "GET" && campaignLeadsMatch) {
+		return json(404, { message: `no campaign '${campaignLeadsMatch[1]}'. Run: campaign list` });
+	}
 	const leadMatch = /^\/api\/leads\/(\d+)$/.exec(url.pathname);
 	if (req.method === "GET" && leadMatch) {
 		const lead = LEADS.find((l) => l.id === Number(leadMatch[1]));

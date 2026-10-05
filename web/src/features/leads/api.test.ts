@@ -32,11 +32,11 @@ afterEach(() => {
 });
 
 function stubApi(routes: Record<string, unknown>) {
-	vi.stubEnv("VITE_LEADHUNTER_API_URL", "http://api:8080");
+	vi.stubEnv("VITE_LEADHUNTER_API_URL", "http://api:8080/api");
 	vi.stubGlobal(
 		"fetch",
 		vi.fn(async (url: string) => {
-			const path = url.replace("http://api:8080", "");
+			const path = url.replace("http://api:8080/api", "");
 			if (!(path in routes)) return new Response("{}", { status: 404 });
 			return new Response(JSON.stringify(routes[path]), { status: 200 });
 		}),

@@ -2,8 +2,10 @@ package me.iofdev.leadhunter.api;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
  * Maps domain failures to JSON errors. Controllers throw the same
@@ -19,5 +21,11 @@ class ApiExceptionHandler {
         String message = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
         HttpStatus status = message.startsWith("no ") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
         return ResponseEntity.status(status).body(new ApiError(message));
+    }
+
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
+    ResponseEntity<ApiError> handleBadRequest(Exception ex) {
+        String message = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(message));
     }
 }
