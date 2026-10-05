@@ -1,7 +1,7 @@
 # 0031. Add a JSON HTTP API to the backend for the web client
 
 - Date: 2026-10-04
-- Status: Proposed
+- Status: Accepted
 - Amends: [0009](0009-cli-first.md)
 
 ## Context

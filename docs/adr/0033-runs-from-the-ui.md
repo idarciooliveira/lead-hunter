@@ -1,7 +1,7 @@
 # 0033. Start runs from the UI as background jobs that the client polls
 
 - Date: 2026-10-04
-- Status: Proposed
+- Status: Accepted
 - Amends: [0010](0010-postgres-flyway-jdbcclient.md), [0015](0015-on-demand-runs.md)
 
 ## Context

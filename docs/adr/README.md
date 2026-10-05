@@ -33,8 +33,8 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0027](0027-stage-two-website-crawl.md) | Enrich qualified leads with a website crawl and stage 2 scoring | Accepted |
 | [0028](0028-stage-two-no-issue-marker.md) | Mark a clean stage-2 run with a zero-point STAGE2_NO_ISSUES code | Accepted |
 | [0029](0029-database-is-the-only-campaign-store.md) | Store campaigns and the company profile only in the database | Accepted |
-| [0030](0030-web-client-with-tanstack-start.md) | Build the web client with TanStack Start in the same repository | Proposed |
-| [0031](0031-http-api-for-the-web-client.md) | Add a JSON HTTP API to the backend for the web client | Proposed |
+| [0030](0030-web-client-with-tanstack-start.md) | Build the web client with TanStack Start in the same repository | Accepted |
+| [0031](0031-http-api-for-the-web-client.md) | Add a JSON HTTP API to the backend for the web client | Accepted |
 | [0032](0032-shared-token-auth-for-the-web-client.md) | Protect the API with a shared token held by the web server | Proposed |
-| [0033](0033-runs-from-the-ui.md) | Start runs from the UI as background jobs that the client polls | Proposed |
+| [0033](0033-runs-from-the-ui.md) | Start runs from the UI as background jobs that the client polls | Accepted |
 | [0034](0034-check-script-and-ci-define-done.md) | Make `./check` and CI the definition of done | Accepted |
