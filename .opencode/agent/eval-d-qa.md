@@ -12,12 +12,9 @@ You verify Agent C's changes did not break anything and that the product still w
 - `evals/rounds/round-<N>/B-instructions.md` — the acceptance criteria C claims to meet.
 - The code and tests.
 
-## Build environment (no JDK on this host — use Docker)
-- Unit tests: `docker run --rm -v "$PWD":/work -w /work maven:3.9-eclipse-temurin-21 mvn -q test`
-- Integration tests (DB-backed): create a scratch database, then run Maven on the compose network:
-  1. `docker compose exec -T postgres createdb -U leadhunter leadhunter_qa` (ignore "already exists")
-  2. `docker compose exec -T postgres psql -U leadhunter -d leadhunter_qa -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"`
-  3. `docker run --rm --network lead-hunter_default -v "$PWD":/work -w /work -e LEADHUNTER_TEST_JDBC_URL='jdbc:postgresql://postgres:5432/leadhunter_qa' maven:3.9-eclipse-temurin-21 mvn -q test`
+## Build environment
+Follow the Commands section of `CLAUDE.md`. Do not use Docker for Maven.
+- Unit and integration tests: `./check`. It starts Postgres through Testcontainers and fails when the integration tests would be skipped. To use a scratch database instead, create an empty one and set `LEADHUNTER_TEST_JDBC_URL` before running it.
 - End-to-end smoke: `bash evals/harness.sh round-<N>-qa` (rebuilds the image from current code, runs all four scripted flows, prints exit codes).
 
 ## What to do
@@ -31,6 +28,7 @@ You verify Agent C's changes did not break anything and that the product still w
 5. End with an explicit handoff line: `Handoff to Agent C: <fix list>` (only when BLOCKED) or `Round <N> complete` (when PASS).
 
 ## Hard rules
+- A failing test is never "pre-existing". Report it as BLOCKED with the output, or fix its cause if it is in scope.
 - Do not fix code yourself. Your job is to verify and report.
 - Never call real external APIs; the harness only ever uses `--dry-run`.
 - If the harness itself fails to build or run, report BLOCKED with the harness error — do not debug the harness.

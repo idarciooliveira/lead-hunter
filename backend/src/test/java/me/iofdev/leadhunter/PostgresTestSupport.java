@@ -11,7 +11,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * Integration tests run against a Postgres started by Testcontainers. Without Docker, point
- * {@code LEADHUNTER_TEST_JDBC_URL} at an existing empty database instead. With neither, they are skipped.
+ * {@code LEADHUNTER_TEST_JDBC_URL} at an existing empty database instead. With neither, they are skipped, unless
+ * {@code LEADHUNTER_REQUIRE_DB=true} is set (as {@code ./check} and CI do), which makes them fail instead.
  * JUnit does not inherit {@code @EnabledIf} from a superclass, so each subclass must carry
  * {@code @EnabledIf("me.iofdev.leadhunter.PostgresTestSupport#databaseAvailable")}.
  */
@@ -25,7 +26,16 @@ public abstract class PostgresTestSupport {
     protected JdbcClient jdbc;
 
     public static boolean databaseAvailable() {
-        return EXTERNAL_URL != null || DockerClientFactory.instance().isDockerAvailable();
+        boolean available = EXTERNAL_URL != null || DockerClientFactory.instance().isDockerAvailable();
+        return databaseAvailable(available, Boolean.parseBoolean(System.getenv("LEADHUNTER_REQUIRE_DB")));
+    }
+
+    static boolean databaseAvailable(boolean available, boolean required) {
+        if (!available && required) {
+            throw new IllegalStateException("LEADHUNTER_REQUIRE_DB is set but no database is available. "
+                    + "Start Docker or set LEADHUNTER_TEST_JDBC_URL to an empty Postgres database.");
+        }
+        return available;
     }
 
     @DynamicPropertySource

@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+# The definition of done: environment checks, then build and every test, with the integration tests required.
+# Usage: ./check
+set -e
+cd "$(dirname "$0")"
+fail() { echo "check: $*" >&2; exit 1; }
+
+# Non-interactive shells (agents, IDEs) do not load SDKMAN, so pick up the JDK pinned in .sdkmanrc.
+sdk_java="$HOME/.sdkman/candidates/java/$(sed -n 's/^java=//p' .sdkmanrc 2>/dev/null)"
+if [ -z "$JAVA_HOME" ] && [ -x "$sdk_java/bin/javac" ]; then
+  JAVA_HOME="$sdk_java"
+  export JAVA_HOME
+  PATH="$JAVA_HOME/bin:$PATH"
+fi
+command -v javac >/dev/null 2>&1 || fail "javac not found. Install JDK 21 with SDKMAN (sdk env). See CLAUDE.md."
+version=$(javac -version 2>&1 | sed -n 's/^javac \([0-9]*\).*/\1/p')
+[ "$version" = "21" ] || fail "JDK 21 required, found $version. Run: sdk env"
+
+for script in lh check backend/mvnw; do
+  if grep -q "$(printf '\r')" "$script"; then
+    fail "$script has CRLF line endings. Run: git add --renormalize . and re-checkout the file."
+  fi
+done
+
+if [ -z "$LEADHUNTER_TEST_JDBC_URL" ] && ! docker info >/dev/null 2>&1; then
+  fail "no database for the integration tests. Start Docker or set LEADHUNTER_TEST_JDBC_URL to an empty Postgres database."
+fi
+
+# A skipped integration test can hide a broken query, so a missing database fails instead.
+LEADHUNTER_REQUIRE_DB=true ./backend/mvnw -B -f backend/pom.xml verify
+echo "check: ok"

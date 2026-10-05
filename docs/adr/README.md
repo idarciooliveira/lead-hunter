@@ -37,3 +37,4 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0031](0031-http-api-for-the-web-client.md) | Add a JSON HTTP API to the backend for the web client | Proposed |
 | [0032](0032-shared-token-auth-for-the-web-client.md) | Protect the API with a shared token held by the web server | Proposed |
 | [0033](0033-runs-from-the-ui.md) | Start runs from the UI as background jobs that the client polls | Proposed |
+| [0034](0034-check-script-and-ci-define-done.md) | Make `./check` and CI the definition of done | Accepted |

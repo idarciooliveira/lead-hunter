@@ -14,9 +14,18 @@ Every decision lives in `docs/adr/`. Read `docs/adr/README.md` before changing a
 
 Environment: building needs JDK 21 (a JRE is not enough). It is installed with SDKMAN and pinned in `.sdkmanrc`. Agent and IDE shells do not load SDKMAN, so start every build or test command with `source ~/.sdkman/bin/sdkman-init.sh && sdk env`, or set `JAVA_HOME=~/.sdkman/candidates/java/21.0.8-tem`. `./lh` does this itself. `mvnw` and `lh` must stay LF (`.gitattributes` enforces it); if one fails with `\r` errors, run `git add --renormalize .` and re-checkout the file. If you build in a Docker container, pass `--user $(id -u):$(id -g)`; otherwise `backend/target` ends up root-owned and host builds fail with "Error while storing the mojo status" until it is removed with `sudo rm -rf backend/target`. Postgres comes from `docker compose up -d postgres`, and Docker must be running for the integration tests.
 
+- Definition of done: `./check` from the repo root. It checks the JDK and line endings, then runs the build and every test with the integration tests required (ADR 0034). Report its result, not "tests pass".
 - Build: `cd backend && ./mvnw package -DskipTests`
 - Test: `cd backend && ./mvnw test`. Integration tests need Docker, or `LEADHUNTER_TEST_JDBC_URL` pointing at an empty Postgres database.
 - Run: `java -jar backend/target/lead-hunter.jar --help` (or `./lh --help`)
+
+## Working rules
+
+- A change is done when `./check` is green and, if it needs one, the ADR is written. Delete code that the change leaves unused.
+- A failing test is never "pre-existing". Fix its cause, or stop and report it with the output.
+- Reuse before writing. Shared helpers: `Money.usd` and `Format` (formatting), `YamlInput` (YAML reading and validation errors), `CliFiles` and `Prompter` (CLI file and stdin handling), `ApifyRuns` (Apify actor runs), `RunFailure` and `RunRepository` (recording run outcomes). Search the package before adding a second version of one of these.
+- Several agents may work at once. Use one branch and one git worktree per agent, keep pull requests small, and before adding a Flyway migration or an ADR check the next free number on `main` and in open pull requests.
+- If a doc, an agent file under `.opencode/`, or a README contradicts this file, fix it in the same change.
 
 ## Conventions
 
