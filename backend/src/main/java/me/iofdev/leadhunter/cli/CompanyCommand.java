@@ -30,8 +30,6 @@ import picocli.CommandLine.Spec;
                 CompanyCommand.Template.class})
 class CompanyCommand implements Runnable {
 
-    static final String DEFAULT_FILE = "campaigns/company.yml";
-
     @Spec
     CommandSpec spec;
 
@@ -42,7 +40,7 @@ class CompanyCommand implements Runnable {
 
     static CompanyProfile requireCompany(CompanyRepository company) {
         return company.find().orElseThrow(() -> new IllegalStateException(
-                "no company profile yet. Run: company setup, or company update -f " + DEFAULT_FILE));
+                "no company profile yet. Run: company setup, or company update -f <file>"));
     }
 
     static void printWarnings(PrintWriter out, Iterable<String> warnings) {
@@ -57,17 +55,9 @@ class CompanyCommand implements Runnable {
         @Spec
         CommandSpec spec;
 
-        @Option(names = "--file", defaultValue = DEFAULT_FILE, description = "Where to write the YAML. Default: ${DEFAULT-VALUE}.")
-        Path file;
-
-        @Option(names = "--no-file", description = "Save to the database only, without writing a YAML file.")
-        boolean noFile;
-
-        private final CompanyProfileParser parser;
         private final CompanyRepository company;
 
-        Setup(CompanyProfileParser parser, CompanyRepository company) {
-            this.parser = parser;
+        Setup(CompanyRepository company) {
             this.company = company;
         }
 
@@ -83,18 +73,9 @@ class CompanyCommand implements Runnable {
             CompanyProfileParser.validate(profile);
             out.println();
 
-            boolean writeFile = !noFile
-                    && (!Files.exists(file) || prompter.confirmOverwrite(file + " already exists. Overwrite it?"));
-            if (!noFile && !writeFile) {
-                return;
-            }
             company.save(profile);
             out.printf("Saved the company profile for %s.%n", profile.name());
             printWarnings(out, CompanyProfileParser.warnings(profile));
-            if (writeFile) {
-                write(parser, profile, file);
-                out.printf("Guardado em %s. Edita-o e grava as alterações com: company update -f %s%n", file, file);
-            }
             out.println("Next: campaign new");
         }
     }
@@ -152,7 +133,7 @@ class CompanyCommand implements Runnable {
         @Spec
         CommandSpec spec;
 
-        @Option(names = {"-f", "--file"}, defaultValue = DEFAULT_FILE, description = "Company YAML file. Default: ${DEFAULT-VALUE}.")
+        @Option(names = {"-f", "--file"}, required = true, description = "Company YAML file.")
         Path file;
 
         private final CompanyProfileParser parser;
@@ -193,17 +174,6 @@ class CompanyCommand implements Runnable {
             } catch (IOException e) {
                 throw new IllegalStateException("template missing from the jar", e);
             }
-        }
-    }
-
-    static void write(CompanyProfileParser parser, CompanyProfile profile, Path file) {
-        try {
-            if (file.getParent() != null) {
-                Files.createDirectories(file.getParent());
-            }
-            Files.writeString(file, parser.toYaml(profile));
-        } catch (IOException e) {
-            throw new IllegalStateException("profile saved, but writing " + file + " failed: " + e.getMessage());
         }
     }
 }

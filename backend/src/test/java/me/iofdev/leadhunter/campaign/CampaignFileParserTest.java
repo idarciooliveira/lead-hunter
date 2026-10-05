@@ -38,7 +38,7 @@ class CampaignFileParserTest {
 
     @Test
     void everyCampaignInTheRepoIsValid() throws IOException {
-        try (Stream<Path> files = Files.list(Path.of("campaigns"))) {
+        try (Stream<Path> files = Files.list(Path.of("src", "test", "resources", "campaigns"))) {
             List<Path> yamls = files.filter(p -> p.toString().endsWith(".yml"))
                     .filter(p -> !p.getFileName().toString().equals("company.yml"))
                     .toList();

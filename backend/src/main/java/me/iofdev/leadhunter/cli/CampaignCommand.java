@@ -59,25 +59,16 @@ class CampaignCommand implements Runnable {
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"));
     }
 
-    @Command(name = "new", description = "Answer the campaign questions in the terminal. Saves the campaign and writes its YAML file.")
+    @Command(name = "new", description = "Answer the campaign questions in the terminal. Saves the campaign.")
     static class New implements Runnable {
 
         @Spec
         CommandSpec spec;
 
-        @Option(names = "--dir", defaultValue = "campaigns",
-                description = "Folder for the YAML file. Default: ${DEFAULT-VALUE}.")
-        Path dir;
-
-        @Option(names = "--no-file", description = "Save to the database only, without writing a YAML file.")
-        boolean noFile;
-
-        private final CampaignFileParser parser;
         private final CampaignRepository campaigns;
         private final CompanyRepository company;
 
-        New(CampaignFileParser parser, CampaignRepository campaigns, CompanyRepository company) {
-            this.parser = parser;
+        New(CampaignRepository campaigns, CompanyRepository company) {
             this.campaigns = campaigns;
             this.company = company;
         }
@@ -105,21 +96,8 @@ class CampaignCommand implements Runnable {
                 out.println("Nothing saved.");
                 return;
             }
-            Path file = dir.resolve(campaign.slug() + ".yml");
-            boolean writeFile = !noFile
-                    && (!Files.exists(file) || wizard.confirm(file + " already exists. Overwrite it?"));
-
             campaigns.save(campaign);
             out.printf("Saved campaign '%s'.%n", campaign.slug());
-            if (writeFile) {
-                try {
-                    Files.createDirectories(dir);
-                    Files.writeString(file, parser.toYaml(campaign));
-                } catch (IOException e) {
-                    throw new IllegalStateException("campaign saved, but writing " + file + " failed: " + e.getMessage());
-                }
-                out.printf("Guardado em %s. Testa sem gastar: campaign run %s --dry-run%n", file, campaign.slug());
-            }
             out.printf("Next: campaign run %s --dry-run%n", campaign.slug());
         }
     }

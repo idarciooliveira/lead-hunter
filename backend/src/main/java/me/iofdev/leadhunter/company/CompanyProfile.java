@@ -7,7 +7,7 @@ import me.iofdev.leadhunter.scoring.Text;
 
 /**
  * Who we are and what we sell, answered once and shared by every campaign. See ADR 0019.
- * The same shape is stored as jsonb and written to {@code campaigns/company.yml}.
+ * Stored as jsonb in the {@code company} table.
  */
 public record CompanyProfile(
         String name,

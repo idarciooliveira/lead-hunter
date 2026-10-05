@@ -31,7 +31,7 @@ class CompanyProfileParserTest {
 
     @Test
     void theCompanyFileInTheRepoIsValid() throws IOException {
-        CompanyProfile profile = parser.parse(Files.readString(Path.of("campaigns", "company.yml")));
+        CompanyProfile profile = parser.parse(Files.readString(Path.of("src", "test", "resources", "campaigns", "company.yml")));
 
         assertThat(profile.name()).isNotBlank();
         assertThat(profile.services()).isNotEmpty();

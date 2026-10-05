@@ -1,11 +1,11 @@
 # Lead Hunter campaign. See docs/adr/0013-campaigns-as-yaml.md and docs/adr/0019-company-profile.md.
 # Needs the company profile first: lead-hunter company setup
-# Save with: lead-hunter campaign create --file campaigns/clinicas-luanda.yml
+# Save with: lead-hunter campaign create --file clinicas-luanda.yml
 
 slug: clinicas-luanda
 name: Clínicas em Luanda
 
-# The campaign questions. Facts about the company live in campaigns/company.yml.
+# The campaign questions. Facts about the company live in the company profile.
 answers:
   # 1. Sector, in a word or two.
   sector: clínicas

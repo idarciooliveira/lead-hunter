@@ -1,5 +1,5 @@
 # Lead Hunter company profile. See docs/adr/0019-company-profile.md.
-# Answered once and shared by every campaign. Save with: lead-hunter company update -f campaigns/company.yml
+# Answered once and shared by every campaign. Save with: lead-hunter company update -f company.yml
 
 # C1. Company name.
 name: Exemplo Software

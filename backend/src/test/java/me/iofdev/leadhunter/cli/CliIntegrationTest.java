@@ -20,6 +20,8 @@ import picocli.CommandLine;
 @EnabledIf("me.iofdev.leadhunter.PostgresTestSupport#databaseAvailable")
 class CliIntegrationTest extends PostgresTestSupport {
 
+    private static final Path EXAMPLES = Path.of("src", "test", "resources", "campaigns");
+
     @Autowired
     SpringCommandFactory factory;
 
@@ -47,26 +49,23 @@ class CliIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
-    void setsUpTheCompanyThenAsksOnlyTheCampaignQuestions(@TempDir Path dir) throws Exception {
-        assertThat(executeWithInput(CampaignWizardTest.ANSWERS, "campaign", "new", "--dir", dir.toString()).err())
+    void setsUpTheCompanyThenAsksOnlyTheCampaignQuestions() {
+        assertThat(executeWithInput(CampaignWizardTest.ANSWERS, "campaign", "new").err())
                 .contains("error: no company profile yet. Run: company setup");
 
-        Path companyFile = dir.resolve("company.yml");
-        Result company = executeWithInput(CompanyWizardTest.ANSWERS, "company", "setup", "--file", companyFile.toString());
+        Result company = executeWithInput(CompanyWizardTest.ANSWERS, "company", "setup");
         assertThat(company.exitCode()).as(company.err()).isZero();
         assertThat(company.out())
                 .contains("C1/10  Company name")
                 .contains("Saved the company profile for Exemplo Software.")
                 .contains("warning: clients without a valid phone are matched by name only")
                 .contains("Next: campaign new");
-        assertThat(execute("company", "update", "-f", companyFile.toString()).out())
-                .contains("Updated the company profile for Exemplo Software.");
         assertThat(execute("company", "show").out())
                 .contains("Site, 400 mil Kz  (entry offer)")
                 .contains("Clients: 2, never shown as leads")
                 .contains("Weekly capacity: 40 contacts");
 
-        Result result = executeWithInput(CampaignWizardTest.ANSWERS, "campaign", "new", "--dir", dir.toString());
+        Result result = executeWithInput(CampaignWizardTest.ANSWERS, "campaign", "new");
 
         assertThat(result.exitCode()).as(result.err()).isZero();
         assertThat(result.out())
@@ -77,25 +76,17 @@ class CliIntegrationTest extends PostgresTestSupport {
                 .contains("warning: the case is from 'clínica dentária', not 'escolas'")
                 .contains("Saved campaign 'escolas-em-luanda'")
                 .contains("Next: campaign run escolas-em-luanda --dry-run");
-        Path file = dir.resolve("escolas-em-luanda.yml");
-        assertThat(Files.readString(file)).contains("colégio").contains("service: Site");
-
-        // The written file feeds straight back into `campaign create`.
-        assertThat(execute("campaign", "create", "-f", file.toString()).out())
-                .contains("Updated campaign 'escolas-em-luanda'");
-
         // Running it again for the same slug asks first; answering no keeps the saved campaign.
         Result again = executeWithInput(CampaignWizardTest.ANSWERS.replace("Os pais só", "Outro problema") + "n\n",
-                "campaign", "new", "--dir", dir.toString());
+                "campaign", "new");
         assertThat(again.out()).contains("already exists. Replace it?").contains("Nothing saved.");
-        assertThat(Files.readString(file)).doesNotContain("Outro problema");
     }
 
     @Test
     void refusesACampaignForAServiceTheCompanyDoesNotSell(@TempDir Path dir) throws Exception {
-        execute("company", "update", "-f", "campaigns/company.yml");
+        execute("company", "update", "-f", EXAMPLES.resolve("company.yml").toString());
         Path file = dir.resolve("apps.yml");
-        Files.writeString(file, Files.readString(Path.of("campaigns", "clinicas-luanda.yml"))
+        Files.writeString(file, Files.readString(EXAMPLES.resolve("clinicas-luanda.yml"))
                 .replace("service: website standart", "service: Loja online"));
 
         Result result = execute("campaign", "create", "-f", file.toString());
@@ -106,8 +97,8 @@ class CliIntegrationTest extends PostgresTestSupport {
 
     @Test
     void createsAndPlansTheExampleCampaign() {
-        Path file = Path.of("campaigns", "clinicas-luanda.yml");
-        assertThat(execute("company", "update").out()).contains("Saved the company profile");
+        Path file = EXAMPLES.resolve("clinicas-luanda.yml");
+        assertThat(execute("company", "update", "-f", EXAMPLES.resolve("company.yml").toString()).out()).contains("Saved the company profile");
 
         Result created = execute("campaign", "create", "--file", file.toString());
         assertThat(created.exitCode()).isZero();
