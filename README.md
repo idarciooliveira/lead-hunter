@@ -96,6 +96,14 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 | `usage [--month YYYY-MM] [--campaign <slug>] [--runs] [--limit 30]` | What Apify and the LLM have cost, with a monthly budget bar and spend per campaign. `--runs` lists each run and call |
 | `llm test ["prompt"]` | Send one prompt to the configured model, print the answer, token usage and cost |
 
+## Web client
+
+The browser version lives in `web/` (ADR 0030). It has every screen from the prototype, running on sample data until the HTTP API lands (ADR 0035). See [web/README.md](web/README.md) to run it, and [docs/screenshots/web](docs/screenshots/web) for what each page looks like.
+
+```bash
+cd web && pnpm install && pnpm dev   # http://localhost:3000
+```
+
 ## Configuration
 
 Copy [.env.example](.env.example) to `.env` in the project root and replace the values. The app reads `.env` on startup from the directory you run it in, so there's nothing to export. Real environment variables override `.env`, which is how Railway's settings take over in production. `.env` is in `.gitignore`. New knobs are added to `.env.example` over time, so after pulling, re-copy or merge from `.env.example` into your `.env`.

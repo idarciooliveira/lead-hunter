@@ -38,3 +38,4 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0032](0032-shared-token-auth-for-the-web-client.md) | Protect the API with a shared token held by the web server | Proposed |
 | [0033](0033-runs-from-the-ui.md) | Start runs from the UI as background jobs that the client polls | Accepted |
 | [0034](0034-check-script-and-ci-define-done.md) | Make `./check` and CI the definition of done | Accepted |
+| [0035](0035-web-scaffold-on-sample-data.md) | Build the web screens on sample data behind a fake API, with the prototype's design tokens | Proposed |
