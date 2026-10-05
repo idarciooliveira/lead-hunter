@@ -17,6 +17,10 @@ export const BackendLead = z.object({
 	campaignSlug: z.string(),
 	stage: z.enum(["QUALIFIED", "BELOW_CUT", "EXCLUDED"]),
 	status: z.enum(["NEW", "CONTACTED", "NO_ANSWER", "INTERESTED", "MEETING", "PROPOSAL_SENT", "WON", "LOST"]),
+	/** Set when the lead was marked LOST: the five reasons from ADR 0012 and 0020. */
+	lostReason: z.enum(["NO_BUDGET", "WRONG_PERSON", "HAS_SUPPLIER", "NOT_INTERESTED", "NOT_NOW"]).nullable(),
+	/** Free-text note stored with the outcome. */
+	note: z.string().nullable(),
 	score: z.number().int(),
 	breakdown: z.array(z.object({ code: z.string(), points: z.number().int(), reason: z.string() })),
 	stageReason: z.string().nullable(),

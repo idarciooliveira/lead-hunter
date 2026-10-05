@@ -8,8 +8,19 @@ import { Label, NativeSelect, Textarea } from "#/components/ui/field";
 import { ProgressBar } from "#/components/ui/progress";
 import { Tooltip } from "#/components/ui/tooltip";
 import { rating } from "#/lib/format";
-import { bandOf, NOT_NOW_REASONS, OUTCOMES, type Outcome, points, scoreSummary } from "../model";
-import type { AuditResult, Lead, ScoreLine } from "../schema";
+import {
+	bandOf,
+	contactOf,
+	LOST_REASONS,
+	NOT_NOW_REASONS,
+	OUTCOMES,
+	type Outcome,
+	outcomeOf,
+	points,
+	scoreSummary,
+} from "../model";
+import { useMarkLead } from "../queries";
+import type { AuditResult, Lead, LostReason, ScoreLine } from "../schema";
 import { AreaMap } from "./area-map";
 import { StageChip } from "./status-chips";
 
@@ -199,42 +210,100 @@ export function SuggestedMessage({ lead }: { lead: Lead }) {
 	);
 }
 
-/** Outcome buttons and notes. Kept in component state until lead marking is in the API (planned step 5). */
+/**
+ * Outcome buttons and notes, saved through PATCH /api/leads/{id} (ADR 0012,
+ * 0020). Outcomes without a reason save at once; "Perdido" asks for one of the
+ * four terminal reasons and "Não agora" for its note first. Backend failures
+ * render verbatim, mirroring the CLI's `error: <message>`.
+ */
 export function ContactOutcome({ lead }: { lead: Lead }) {
-	const [outcome, setOutcome] = useState<Outcome | null>(null);
-	const [reason, setReason] = useState(NOT_NOW_REASONS[2]);
+	const mark = useMarkLead();
+	const saved = outcomeOf(lead.status, lead.lostReason);
+	const contact = contactOf(lead.status, lead.lostReason);
+	const [pending, setPending] = useState<Outcome | null>(null);
+	const [lostReason, setLostReason] = useState<LostReason>(
+		lead.lostReason !== null && lead.lostReason !== "NOT_NOW" ? lead.lostReason : "NOT_INTERESTED",
+	);
 	const [note, setNote] = useState(lead.note ?? "");
+	const active = pending ?? saved;
+
+	const save = (status: Lead["status"], reason: LostReason | null) =>
+		mark.mutate(
+			{ id: lead.id, input: { status, lostReason: reason, note: note || null } },
+			{ onSuccess: () => setPending(null) },
+		);
+
 	return (
 		<Card>
-			<CardHeader title="Resultado do contacto" aside={<PlannedChip step={5} />} />
+			<CardHeader title="Resultado do contacto" aside={<Chip tone={contact.tone}>{contact.label}</Chip>} />
 			<div className="flex flex-col gap-3 px-4 py-3">
 				<div className="flex flex-wrap gap-1.5">
 					{OUTCOMES.map((o) => (
 						<Button
 							key={o.value}
 							size="sm"
-							variant={outcome === o.value ? "active" : "default"}
-							aria-pressed={outcome === o.value}
-							onClick={() => setOutcome(o.value)}
+							variant={active === o.value ? "active" : "default"}
+							aria-pressed={active === o.value}
+							disabled={mark.isPending}
+							onClick={() => (o.value === "LOST" || o.value === "NOT_NOW" ? setPending(o.value) : save(o.value, null))}
 						>
 							{o.label}
 						</Button>
 					))}
 				</div>
-				{outcome === "NOT_NOW" && (
+				{pending === "LOST" && (
 					<div>
-						<Label htmlFor="not-now-reason">Motivo de "Não agora"</Label>
-						<NativeSelect id="not-now-reason" value={reason} onChange={(e) => setReason(e.target.value)}>
-							{NOT_NOW_REASONS.map((r) => (
-								<option key={r}>{r}</option>
+						<Label htmlFor="lost-reason">Motivo da perda</Label>
+						<NativeSelect
+							id="lost-reason"
+							value={lostReason}
+							onChange={(e) => setLostReason(e.target.value as LostReason)}
+						>
+							{LOST_REASONS.map((r) => (
+								<option key={r.value} value={r.value}>
+									{r.label}
+								</option>
 							))}
 						</NativeSelect>
+					</div>
+				)}
+				{pending === "NOT_NOW" && (
+					<div>
+						<Label htmlFor="not-now-reason">Motivo de "Não agora"</Label>
+						<NativeSelect id="not-now-reason" value={note} onChange={(e) => setNote(e.target.value)}>
+							{note !== "" && !NOT_NOW_REASONS.includes(note) && <option value={note}>{note}</option>}
+							{NOT_NOW_REASONS.map((r) => (
+								<option key={r} value={r}>
+									{r}
+								</option>
+							))}
+						</NativeSelect>
+					</div>
+				)}
+				{pending !== null && (
+					<div className="flex gap-2">
+						<Button
+							size="sm"
+							variant="primary"
+							disabled={mark.isPending}
+							onClick={() => save("LOST", pending === "NOT_NOW" ? "NOT_NOW" : lostReason)}
+						>
+							Guardar
+						</Button>
+						<Button size="sm" variant="ghost" onClick={() => setPending(null)}>
+							Cancelar
+						</Button>
 					</div>
 				)}
 				<div>
 					<Label htmlFor="lead-note">Notas</Label>
 					<Textarea id="lead-note" value={note} onChange={(e) => setNote(e.target.value)} />
 				</div>
+				{mark.isError && (
+					<div role="alert" className="text-sm text-bad">
+						{mark.error.message}
+					</div>
+				)}
 			</div>
 		</Card>
 	);

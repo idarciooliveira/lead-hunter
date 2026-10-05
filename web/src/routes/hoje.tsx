@@ -4,11 +4,11 @@ import { useState } from "react";
 import { Page, PageHeader } from "#/components/page-header";
 import { StatBar } from "#/components/stat-bar";
 import { Button } from "#/components/ui/button";
-import { Chip, PlannedChip } from "#/components/ui/chip";
+import { Chip } from "#/components/ui/chip";
 import { Kbd } from "#/components/ui/kbd";
 import { type QueueState, TodayQueue } from "#/features/leads/components/today-queue";
 import { DAILY_GOAL, type Outcome } from "#/features/leads/model";
-import { todayQueueQuery } from "#/features/leads/queries";
+import { todayQueueQuery, useMarkLead } from "#/features/leads/queries";
 import { longDay, percent } from "#/lib/format";
 import { useHotkeys } from "#/lib/use-hotkeys";
 
@@ -20,13 +20,20 @@ export const Route = createFileRoute("/hoje")({
 
 function TodayPage() {
 	const { data: leads } = useSuspenseQuery(todayQueueQuery());
-	const [state, setState] = useState<QueueState>({ done: {}, outcome: {} });
+	const [state, setState] = useState<QueueState>({ done: {} });
 	const [exported, setExported] = useState(false);
+	const mark = useMarkLead();
 	const done = leads.filter((l) => state.done[l.id]).length;
 	const today = new Date();
 	const fileDate = today.toISOString().slice(0, 10);
 
 	useHotkeys({ e: () => setExported(true) });
+
+	const onMark = (id: string, outcome: Outcome) =>
+		mark.mutate({
+			id,
+			input: outcome === "NOT_NOW" ? { status: "LOST", lostReason: "NOT_NOW" } : { status: outcome, lostReason: null },
+		});
 
 	return (
 		<Page>
@@ -34,12 +41,9 @@ function TodayPage() {
 				title="Hoje"
 				subtitle={`${longDay(today)}. Os ${leads.length} leads com melhor pontuação ainda por contactar.`}
 				actions={
-					<>
-						<PlannedChip step={4} />
-						<Button onClick={() => setExported(true)}>
-							Exportar Excel <Kbd>E</Kbd>
-						</Button>
-					</>
+					<Button onClick={() => setExported(true)}>
+						Exportar Excel <Kbd>E</Kbd>
+					</Button>
 				}
 			/>
 			{exported && (
@@ -57,10 +61,12 @@ function TodayPage() {
 			<TodayQueue
 				leads={leads}
 				state={state}
+				// A single mutation at a time: while one mark is in flight every
+				// button stays disabled, so a second click cannot overtake it.
+				pendingId={mark.isPending ? (mark.variables?.id ?? "") : null}
+				error={mark.isError ? mark.error.message : null}
 				onToggle={(id) => setState((s) => ({ ...s, done: { ...s.done, [id]: !s.done[id] } }))}
-				onMark={(id: string, outcome: Outcome) =>
-					setState((s) => ({ done: { ...s.done, [id]: true }, outcome: { ...s.outcome, [id]: outcome } }))
-				}
+				onMark={onMark}
 			/>
 			<div className="hidden flex-wrap gap-4 text-xs text-mute md:flex">
 				<span>

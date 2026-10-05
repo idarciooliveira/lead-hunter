@@ -8,7 +8,9 @@ import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.pipeline.LeadRepository;
 import me.iofdev.leadhunter.pipeline.LeadStage;
+import me.iofdev.leadhunter.pipeline.LeadStatus;
 import me.iofdev.leadhunter.pipeline.LeadView;
+import me.iofdev.leadhunter.pipeline.LostReason;
 import me.iofdev.leadhunter.scoring.ScoreItem;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
@@ -20,7 +22,7 @@ import picocli.CommandLine.Spec;
         name = "leads",
         description = "Browse ranked leads.",
         mixinStandardHelpOptions = true,
-        subcommands = {LeadsCommand.ListLeads.class, LeadsCommand.Show.class})
+        subcommands = {LeadsCommand.ListLeads.class, LeadsCommand.Show.class, LeadsCommand.Mark.class})
 class LeadsCommand implements Runnable {
 
     @Spec
@@ -121,6 +123,44 @@ class LeadsCommand implements Runnable {
                 for (ScoreItem item : lead.breakdown()) {
                     out.printf("  %+4d  %s%n", item.points(), item.reason());
                 }
+            }
+        }
+    }
+
+    @Command(name = "mark", description = "Mark a contact outcome on a lead. See ADR 0012 and ADR 0020.")
+    static class Mark implements Runnable {
+
+        @Spec
+        CommandSpec spec;
+
+        @Parameters(index = "0", description = "Lead id.")
+        long id;
+
+        @Option(names = "--status", required = true,
+                description = "NEW, CONTACTED, NO_ANSWER, INTERESTED, MEETING, PROPOSAL_SENT, WON or LOST.")
+        LeadStatus status;
+
+        @Option(names = "--lost-reason",
+                description = "Required when --status LOST: NO_BUDGET, WRONG_PERSON, HAS_SUPPLIER, NOT_INTERESTED or NOT_NOW.")
+        LostReason lostReason;
+
+        @Option(names = "--note", description = "Optional note stored with the outcome.")
+        String note;
+
+        private final LeadRepository leads;
+
+        Mark(LeadRepository leads) {
+            this.leads = leads;
+        }
+
+        @Override
+        public void run() {
+            PrintWriter out = spec.commandLine().getOut();
+            LeadView lead = leads.updateOutcome(id, status, lostReason, note);
+            if (lead.status() == LeadStatus.LOST) {
+                out.printf("Marked lead %d '%s' as LOST (%s).%n", lead.id(), lead.name(), lead.lostReason());
+            } else {
+                out.printf("Marked lead %d '%s' as %s.%n", lead.id(), lead.name(), lead.status());
             }
         }
     }

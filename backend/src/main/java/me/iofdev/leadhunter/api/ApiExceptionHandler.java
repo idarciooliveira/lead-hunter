@@ -2,6 +2,7 @@ package me.iofdev.leadhunter.api;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -27,5 +28,11 @@ class ApiExceptionHandler {
     ResponseEntity<ApiError> handleBadRequest(Exception ex) {
         String message = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(message));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        // Jackson's message is verbose internals; the mock API and the UI only need to know the body is broken.
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError("invalid JSON body"));
     }
 }

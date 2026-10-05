@@ -6,8 +6,12 @@ import java.util.Optional;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.pipeline.LeadRepository;
 import me.iofdev.leadhunter.pipeline.LeadStage;
+import me.iofdev.leadhunter.pipeline.LeadStatus;
+import me.iofdev.leadhunter.pipeline.LostReason;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -49,6 +53,43 @@ class LeadController {
     LeadDto get(@PathVariable long id) {
         return leads.findById(id).map(LeadDto::from)
                 .orElseThrow(() -> new IllegalArgumentException("no lead with id " + id));
+    }
+
+    /**
+     * Marks a contact outcome (ADR 0012, 0020). Same rules as {@code leads mark}:
+     * LOST needs one of the five lost reasons, a lost reason needs LOST, and a
+     * worked lead can never go back to NEW.
+     */
+    @PatchMapping("/leads/{id}")
+    LeadDto mark(@PathVariable long id, @RequestBody MarkLeadRequest request) {
+        if (request == null || request.status() == null) {
+            throw new IllegalArgumentException("status is required: "
+                    + "NEW, CONTACTED, NO_ANSWER, INTERESTED, MEETING, PROPOSAL_SENT, WON or LOST");
+        }
+        LeadStatus status = parseStatus(request.status());
+        LostReason lostReason = request.lostReason() == null ? null : parseLostReason(request.lostReason());
+        return LeadDto.from(leads.updateOutcome(id, status, lostReason, request.note()));
+    }
+
+    record MarkLeadRequest(String status, String lostReason, String note) {
+    }
+
+    private static LeadStatus parseStatus(String status) {
+        try {
+            return LeadStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("unknown status '" + status + "'. Use NEW, CONTACTED, NO_ANSWER, "
+                    + "INTERESTED, MEETING, PROPOSAL_SENT, WON or LOST");
+        }
+    }
+
+    private static LostReason parseLostReason(String lostReason) {
+        try {
+            return LostReason.valueOf(lostReason.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("unknown lost reason '" + lostReason + "'. Use NO_BUDGET, "
+                    + "WRONG_PERSON, HAS_SUPPLIER, NOT_INTERESTED or NOT_NOW");
+        }
     }
 
     private static Optional<LeadStage> stageFilter(String stage) {

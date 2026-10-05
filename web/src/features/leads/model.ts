@@ -20,8 +20,10 @@ export type Outcome = Exclude<LeadStatus, "NEW"> | "NOT_NOW";
 
 export const OUTCOMES: { value: Outcome; label: string }[] = [
 	{ value: "CONTACTED", label: "Contactado" },
+	{ value: "NO_ANSWER", label: "Sem resposta" },
 	{ value: "INTERESTED", label: "Respondeu" },
 	{ value: "MEETING", label: "Reunião" },
+	{ value: "PROPOSAL_SENT", label: "Proposta enviada" },
 	{ value: "WON", label: "Ganho" },
 	{ value: "LOST", label: "Perdido" },
 	{ value: "NOT_NOW", label: "Não agora" },
@@ -42,6 +44,21 @@ const CONTACT: Record<LeadStatus | "NOT_NOW", { label: string; tone: Tone }> = {
 export function contactOf(status: LeadStatus | Outcome, lostReason: LostReason | null = null) {
 	return CONTACT[status === "LOST" && lostReason === "NOT_NOW" ? "NOT_NOW" : status];
 }
+
+/** Which outcome button a marked lead shows as active. Null while nobody contacted it yet. */
+export function outcomeOf(status: LeadStatus, lostReason: LostReason | null): Outcome | null {
+	if (status === "NEW") return null;
+	if (status === "LOST" && lostReason === "NOT_NOW") return "NOT_NOW";
+	return status;
+}
+
+/** The four terminal lost reasons behind "Perdido" ("Não agora" is LOST + NOT_NOW, ADR 0020). */
+export const LOST_REASONS: { value: Exclude<LostReason, "NOT_NOW">; label: string }[] = [
+	{ value: "NO_BUDGET", label: "Sem orçamento" },
+	{ value: "WRONG_PERSON", label: "Pessoa errada" },
+	{ value: "HAS_SUPPLIER", label: "Já tem fornecedor" },
+	{ value: "NOT_INTERESTED", label: "Sem interesse" },
+];
 
 export const NOT_NOW_REASONS = [
 	"Sem orçamento este trimestre",
