@@ -171,7 +171,7 @@ class LeadOutcomeIntegrationTest extends PostgresTestSupport {
 
     @Test
     void browserMutationsPassThePreflight() throws Exception {
-        // Mutations run in the browser from another origin (ADR 0031), until ADR 0032 moves them server-side.
+        // Mutations run in the browser from another origin (ADR 0031), until ADR 0037 moves them into server functions.
         mvc.perform(options("/api/leads/{id}", leadId)
                         .header("Origin", "http://localhost:3000")
                         .header("Access-Control-Request-Method", "PATCH"))

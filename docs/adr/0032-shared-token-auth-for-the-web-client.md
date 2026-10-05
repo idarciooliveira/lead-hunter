@@ -1,7 +1,7 @@
 # 0032. Protect the API with a shared token held by the web server
 
 - Date: 2026-10-04
-- Status: Proposed
+- Status: Superseded by [0037](0037-api-calls-through-server-functions.md) and [0038](0038-logins-with-better-auth.md)
 
 ## Context
 
