@@ -1,5 +1,6 @@
 package me.iofdev.leadhunter.scoring;
 
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -22,6 +23,10 @@ public enum MapsSignal {
 
     /** Every place has exactly one of these, so disqualifying all of them would exclude everything. */
     public static final Set<MapsSignal> WEBSITE_SIGNALS = EnumSet.of(NO_WEBSITE, SOCIAL_ONLY, OWN_WEBSITE);
+
+    public static boolean excludesEverything(Collection<MapsSignal> disqualifying) {
+        return disqualifying.containsAll(WEBSITE_SIGNALS);
+    }
 
     /** Places below this many reviews show {@link #FEW_REVIEWS}. */
     public static final int FEW_REVIEWS_BELOW = Stage1Scorer.ACTIVE_MIN_REVIEWS;

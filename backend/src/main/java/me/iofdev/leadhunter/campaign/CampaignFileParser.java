@@ -60,7 +60,7 @@ public class CampaignFileParser {
             if (search.minReviews() < 0) {
                 problems.add("search.minReviews cannot be negative");
             }
-            if (search.disqualifyingSignals().containsAll(MapsSignal.WEBSITE_SIGNALS)) {
+            if (MapsSignal.excludesEverything(search.disqualifyingSignals())) {
                 problems.add("search.disqualifyingSignals cannot hold NO_WEBSITE, SOCIAL_ONLY and OWN_WEBSITE together, "
                         + "every place has one of them");
             }

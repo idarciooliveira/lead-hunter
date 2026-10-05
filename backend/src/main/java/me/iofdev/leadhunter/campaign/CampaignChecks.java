@@ -43,8 +43,8 @@ public final class CampaignChecks {
                                         LocalDate today) {
         List<String> warnings = new ArrayList<>();
         CampaignFile.Search search = campaign.search();
-        fewReviewsConflict(search).ifPresent(warnings::add);
-        caseSectorMismatch(campaign.answers()).ifPresent(warnings::add);
+        fewReviewsConflict(search.wantedSignals(), search.minReviews()).ifPresent(warnings::add);
+        caseSectorMismatch(campaign.answers().sector(), campaign.answers().caseStudy()).ifPresent(warnings::add);
         CampaignFile.Goal goal = campaign.answers().goal();
         if (goal != null && goal.leadsPerWeek() != null && (goal.endDate() == null || !goal.endDate().isBefore(today))) {
             int free = freeCapacity(company, campaigns, campaign.slug(), today);
@@ -56,20 +56,20 @@ public final class CampaignChecks {
         return warnings;
     }
 
-    static Optional<String> fewReviewsConflict(CampaignFile.Search search) {
-        if (search.wantedSignals().contains(MapsSignal.FEW_REVIEWS)
-                && search.minReviews() >= MapsSignal.FEW_REVIEWS_BELOW) {
+    public static Optional<String> fewReviewsConflict(List<MapsSignal> wanted, int minReviews) {
+        if (wanted.contains(MapsSignal.FEW_REVIEWS)
+                && minReviews >= MapsSignal.FEW_REVIEWS_BELOW) {
             return Optional.of("'" + MapsSignal.FEW_REVIEWS.label() + "' is wanted, but places need at least "
-                    + search.minReviews() + " reviews, so no wanted place can qualify");
+                    + minReviews + " reviews, so no wanted place can qualify");
         }
         return Optional.empty();
     }
 
-    static Optional<String> caseSectorMismatch(CampaignFile.Answers answers) {
-        if (answers.caseStudy() == null || answers.sector() == null || sectorsMatch(answers.sector(), answers.caseStudy().sector())) {
+    public static Optional<String> caseSectorMismatch(String sector, CompanyProfile.CaseStudy caseStudy) {
+        if (caseStudy == null || sector == null || sectorsMatch(sector, caseStudy.sector())) {
             return Optional.empty();
         }
-        return Optional.of("the case is from '" + answers.caseStudy().sector() + "', not '" + answers.sector()
+        return Optional.of("the case is from '" + caseStudy.sector() + "', not '" + sector
                 + "'. The pitch will present it as a case from another sector");
     }
 

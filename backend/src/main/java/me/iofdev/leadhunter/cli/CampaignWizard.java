@@ -73,10 +73,8 @@ final class CampaignWizard {
         askSignals(wanted, disqualifying);
         int minReviews = p.askInt("7/11  Minimum Google reviews for a business that can pay",
                 "places below it are excluded", 0, 0, 100_000);
-        if (wanted.contains(MapsSignal.FEW_REVIEWS) && minReviews >= MapsSignal.FEW_REVIEWS_BELOW) {
-            p.note("Warning: '" + MapsSignal.FEW_REVIEWS.label() + "' is wanted, but a minimum of " + minReviews
-                    + " reviews excludes every such place.");
-        }
+        CampaignChecks.fewReviewsConflict(wanted, minReviews)
+                .ifPresent(message -> p.note("Warning: " + message));
 
         p.section("The pitch");
         String phoneRoutine = p.ask("8/11  On the phone: who answers, who do you ask for, when not to call?",
@@ -147,7 +145,7 @@ final class CampaignWizard {
                 }
                 (answer == 'w' ? wanted : disqualifying).add(signal);
             }
-            if (!disqualifying.containsAll(MapsSignal.WEBSITE_SIGNALS)) {
+            if (!MapsSignal.excludesEverything(disqualifying)) {
                 return;
             }
             p.note("Every place has no website, a social page or its own website. Disqualifying all three "
@@ -170,10 +168,8 @@ final class CampaignWizard {
             return null;
         }
         CaseStudy chosen = cases.get(picked - 1);
-        if (!CampaignChecks.sectorsMatch(sector, chosen.sector())) {
-            p.note("Warning: the case is from '" + chosen.sector() + "', not '" + sector
-                    + "'. The pitch will present it as a case from another sector.");
-        }
+        CampaignChecks.caseSectorMismatch(sector, chosen)
+                .ifPresent(message -> p.note("Warning: " + message));
         return chosen;
     }
 

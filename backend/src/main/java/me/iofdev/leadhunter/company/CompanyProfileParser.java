@@ -71,7 +71,7 @@ public class CompanyProfileParser {
         return warnings;
     }
 
-    static boolean hasNumber(String value) {
+    public static boolean hasNumber(String value) {
         return value != null && value.chars().anyMatch(Character::isDigit);
     }
 }

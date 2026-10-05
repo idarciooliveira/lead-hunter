@@ -10,6 +10,7 @@ import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.company.CompanyProfile.CaseStudy;
 import me.iofdev.leadhunter.company.CompanyProfile.Client;
 import me.iofdev.leadhunter.company.CompanyProfile.Objection;
+import me.iofdev.leadhunter.company.CompanyProfileParser;
 import me.iofdev.leadhunter.company.CompanyProfile.QuarterTarget;
 import me.iofdev.leadhunter.company.CompanyProfile.Service;
 
@@ -120,7 +121,7 @@ final class CompanyWizard {
             while (true) {
                 result = p.ask("      The result, with a number", "e.g. marcações passaram de 40 para 90 por mês",
                         null, true);
-                if (result.chars().anyMatch(Character::isDigit)) {
+                if (CompanyProfileParser.hasNumber(result)) {
                     break;
                 }
                 p.note("A result without a number is not proof. Add one.");
