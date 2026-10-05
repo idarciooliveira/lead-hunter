@@ -61,7 +61,16 @@ describe("saveCompany", () => {
 			entryOffer: "Site",
 			area: ["Luanda"],
 			clients: [],
-			cases: [],
+			cases: [
+				{
+					sector: "Clínicas",
+					client: "Clínica Sol",
+					problem: "Demora",
+					built: "Marcações",
+					result: "2x mais consultas",
+					mayName: true,
+				},
+			],
 			objections: [],
 			weeklyCapacity: 35,
 			quarterTarget: null,
@@ -82,11 +91,15 @@ describe("saveCompany", () => {
 			services: stored.services,
 			area: ["Luanda"],
 			clients: [],
-			cases: [],
+			cases: [{ sector: "Clínicas", client: "Clínica Sol", result: "3x mais consultas", mayName: true }],
 		};
 		const res = await saveCompany(input);
 		expect(method).toBe("PUT");
 		expect(body).toMatchObject({ intro: "Fazemos software", entryOffer: "Site", name: "Mock Renomeada" });
+		// The UI never edits a case's problem or build, so they survive the merge.
+		expect(body).toMatchObject({
+			cases: [{ sector: "Clínicas", problem: "Demora", built: "Marcações", result: "3x mais consultas" }],
+		});
 		expect(res.saved.name).toBe("Mock Renomeada");
 	});
 

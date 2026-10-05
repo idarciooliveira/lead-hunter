@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Page, PageHeader } from "#/components/page-header";
 import { Button } from "#/components/ui/button";
+import { Card } from "#/components/ui/card";
 import { Segmented } from "#/components/ui/segmented";
 import { Question, StepDots, WizardNav, YamlImport, YamlPreview } from "#/features/campaigns/components/wizard";
 import { useCreateCampaign } from "#/features/campaigns/queries";
@@ -25,11 +26,16 @@ function NewCampaignPage() {
 	const [yamlValid, setYamlValid] = useState(false);
 	const create = useCreateCampaign();
 	const [saveError, setSaveError] = useState<string | null>(null);
-	// The guided answers become POST /api/campaigns; the new page reads the saved campaign back.
+	const [created, setCreated] = useState<{ slug: string; name: string; warnings: string[] } | null>(null);
+	// The guided answers become POST /api/campaigns. A clean save lands on the
+	// new page; warnings stay here first, since the detail page never shows them.
 	const finish = () => {
 		setSaveError(null);
 		create.mutate(campaignFileFromAnswers(answers), {
-			onSuccess: ({ saved }) => navigate({ to: "/campanhas/$slug", params: { slug: saved.slug } }),
+			onSuccess: ({ saved, warnings }) => {
+				if (warnings.length > 0) setCreated({ slug: saved.slug, name: saved.name, warnings });
+				else navigate({ to: "/campanhas/$slug", params: { slug: saved.slug } });
+			},
 			onError: (e) => setSaveError(e.message),
 		});
 	};
@@ -78,6 +84,23 @@ function NewCampaignPage() {
 								<div role="alert" className="text-sm text-bad">
 									{saveError}
 								</div>
+							)}
+							{created && (
+								<Card className="flex flex-col gap-2 p-4">
+									<span className="text-sm font-semibold">Campanha criada com avisos</span>
+									<ul className="m-0 flex flex-col gap-1 pl-5 text-sm text-mute">
+										{created.warnings.map((w) => (
+											<li key={w}>{w}</li>
+										))}
+									</ul>
+									<div>
+										<Button size="sm" variant="primary" asChild>
+											<Link to="/campanhas/$slug" params={{ slug: created.slug }}>
+												Ver {created.name}
+											</Link>
+										</Button>
+									</div>
+								</Card>
 							)}
 						</>
 					) : (

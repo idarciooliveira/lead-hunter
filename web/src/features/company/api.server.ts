@@ -38,7 +38,12 @@ export async function saveCompany(input: CompanyProfile): Promise<SaveCompany> {
 		if (e instanceof NotFoundError) return null;
 		throw e;
 	});
-	const body = current === null ? input : { ...current, ...input };
+	// The UI never edits a case's problem or what was built, but the backend
+	// requires them: merge each case over its stored counterpart by position.
+	const body =
+		current === null
+			? input
+			: { ...current, ...input, cases: input.cases.map((c, i) => ({ ...current.cases[i], ...c })) };
 	const res = await apiMutate(BackendSaveResult(CompanyProfile), "/company", "PUT", body);
 	return { saved: await fakeResponse(CompanyProfile, res.saved), warnings: res.warnings };
 }

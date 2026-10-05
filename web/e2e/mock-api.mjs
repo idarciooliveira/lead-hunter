@@ -248,11 +248,13 @@ const server = http.createServer((req, res) => {
 		return readBody((body) => {
 			// Mirrors CompanyController: the UI shape merges over the stored
 			// profile, keeping the CLI-only fields the pages never edit.
-			Object.assign(COMPANY, body);
+			// Validate the candidate first, so a 400 leaves stored state alone.
+			const candidate = { ...COMPANY, ...body };
 			const problems = [];
-			if (!COMPANY.name?.trim()) problems.push("name is required");
-			if (!COMPANY.services?.length) problems.push("services needs at least one service");
+			if (!candidate.name?.trim()) problems.push("name is required");
+			if (!candidate.services?.length) problems.push("services needs at least one service");
 			if (problems.length > 0) return json(400, invalidBody("company profile", problems));
+			Object.assign(COMPANY, body);
 			return json(200, { saved: COMPANY, warnings: companyWarnings() });
 		});
 	}
@@ -329,8 +331,9 @@ function campaignProblems(body) {
 	if (!answers.problem?.trim()) problems.push("answers.problem is required");
 	if (!answers.service?.trim()) problems.push("answers.service is required");
 	const search = body.search ?? {};
-	if (!search.terms?.length) problems.push("search.terms needs at least one term");
-	if (!search.locations?.length) problems.push("search.locations needs at least one location");
+	if (!Array.isArray(search.terms) || search.terms.length === 0) problems.push("search.terms needs at least one term");
+	if (!Array.isArray(search.locations) || search.locations.length === 0)
+		problems.push("search.locations needs at least one location");
 	return problems;
 }
 
