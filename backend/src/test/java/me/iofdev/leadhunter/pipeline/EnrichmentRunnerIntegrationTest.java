@@ -163,7 +163,6 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
                 .containsExactly("Talatona:SUCCEEDED:0.1000", "reviews:SUCCEEDED:0.1100");
         assertThat(progress).anyMatch(line -> line.contains("Clínica Girassol: 35 -> 80"));
 
-        // Enriching again finds nothing waiting.
         EnrichmentSummary second = enrichment.enrich(campaign, 10, 10, progress::add);
 
         assertThat(second.considered()).isZero();
@@ -194,7 +193,6 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
                 .isEqualTo("85:{booking,contact,waiting}");
         assertThat(progress).anyMatch(line -> line.contains("Clínica Sorriso: 65 -> 85 (+20 REVIEW_COMPLAINTS)"));
 
-        // The fetched review texts reached the review-analysis call that classified them.
         assertThat(llm.last.purpose()).isEqualTo("review-analysis");
         assertThat(llm.last.campaignId()).isEqualTo(campaign.id());
         assertThat(llm.last.user()).contains("Impossível marcar consulta");
