@@ -1,0 +1,84 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { Page, PageHeader } from "#/components/page-header";
+import { Button } from "#/components/ui/button";
+import { Segmented } from "#/components/ui/segmented";
+import { Question, StepDots, WizardNav, YamlImport, YamlPreview } from "#/features/campaigns/components/wizard";
+import { type Answers, SAMPLE_ANSWERS, SAMPLE_YAML, STEPS } from "#/features/campaigns/wizard";
+import { companyQuery } from "#/features/company/queries";
+
+export const Route = createFileRoute("/campanhas/nova")({
+	loader: ({ context }) => context.queryClient.ensureQueryData(companyQuery()),
+	head: () => ({ meta: [{ title: "Nova campanha · Lead Hunter" }] }),
+	component: NewCampaignPage,
+});
+
+function NewCampaignPage() {
+	const { data: company } = useSuspenseQuery(companyQuery());
+	const navigate = useNavigate();
+	const [mode, setMode] = useState<"guided" | "import">("guided");
+	const [step, setStep] = useState(1);
+	const [answers, setAnswers] = useState<Answers>(SAMPLE_ANSWERS);
+	const [yaml, setYaml] = useState(SAMPLE_YAML);
+	const [yamlValid, setYamlValid] = useState(false);
+	// Saving is not wired yet; finishing shows where the new campaign will live.
+	const finish = () => navigate({ to: "/campanhas/$slug", params: { slug: "clinicas-talatona" } });
+
+	return (
+		<Page>
+			<PageHeader
+				before={
+					<Button size="sm" asChild>
+						<Link to="/campanhas">Voltar às campanhas</Link>
+					</Button>
+				}
+				title="Nova campanha"
+				subtitle={`${STEPS.length} perguntas. O YAML à direita actualiza enquanto respondes.`}
+				actions={
+					<Segmented
+						label="Modo"
+						value={mode}
+						onChange={setMode}
+						options={[
+							{ value: "guided", label: "Guiado" },
+							{ value: "import", label: "Importar YAML" },
+						]}
+					/>
+				}
+			/>
+			<div className="flex flex-wrap items-start gap-4">
+				<div className="flex min-w-0 flex-[1_1_520px] flex-col gap-4">
+					{mode === "guided" ? (
+						<>
+							<StepDots step={step} onGo={setStep} />
+							<Question
+								step={step}
+								answers={answers}
+								services={company.services.map((s) => s.name)}
+								onChange={(patch) => setAnswers((a) => ({ ...a, ...patch }))}
+							/>
+							<WizardNav
+								step={step}
+								onPrev={() => setStep((s) => Math.max(1, s - 1))}
+								onNext={() => setStep((s) => Math.min(STEPS.length, s + 1))}
+								onFinish={finish}
+							/>
+						</>
+					) : (
+						<YamlImport
+							text={yaml}
+							onText={(t) => {
+								setYaml(t);
+								setYamlValid(false);
+							}}
+							valid={yamlValid}
+							onValidate={() => setYamlValid(true)}
+						/>
+					)}
+				</div>
+				<YamlPreview answers={answers} step={mode === "guided" ? step : 0} />
+			</div>
+		</Page>
+	);
+}

@@ -1,0 +1,200 @@
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design tokens from the Lead Hunter prototype. Components use the short names
+ * (bg-panel, text-mute, border-line, bg-acc...). The shadcn names below map onto
+ * the same values so Radix primitives match the rest of the UI.
+ */
+:root {
+	--bg: #f6f6f4;
+	--panel: #ffffff;
+	--soft: #f0f0ed;
+	--line: #e3e3de;
+	--line2: #cfcfc8;
+	--tx: #191918;
+	--mute: #53534d;
+	--acc: #c2410c;
+	--acc-h: #a8370a;
+	--acc-soft: #fff0e6;
+	--acc-tx: #d4400a;
+	--on-acc: #ffffff;
+	--ok: #0a8548;
+	--ok-soft: #e4f5ea;
+	--warn: #d4400a;
+	--warn-soft: #fdf1d3;
+	--bad: #dc2626;
+	--bad-soft: #fdeaea;
+	--info: #d4400a;
+	--info-soft: #fff0e6;
+	--ovl: rgba(15, 15, 14, 0.45);
+
+	--background: var(--bg);
+	--foreground: var(--tx);
+	--card: var(--panel);
+	--card-foreground: var(--tx);
+	--popover: var(--panel);
+	--popover-foreground: var(--tx);
+	--primary: var(--acc);
+	--primary-foreground: var(--on-acc);
+	--secondary: var(--soft);
+	--secondary-foreground: var(--tx);
+	--muted: var(--soft);
+	--muted-foreground: var(--mute);
+	--accent: var(--soft);
+	--accent-foreground: var(--tx);
+	--destructive: var(--bad);
+	--border: var(--line);
+	--input: var(--line2);
+	--ring: var(--acc);
+	--radius: 10px;
+}
+
+.dark {
+	--bg: #111110;
+	--panel: #191917;
+	--soft: #222220;
+	--line: #2d2d2a;
+	--line2: #41413c;
+	--tx: #f4f4f0;
+	--mute: #b0b0a8;
+	--acc: #f97316;
+	--acc-h: #fb8a3a;
+	--acc-soft: #2e1a0d;
+	--acc-tx: #ff8a3d;
+	--on-acc: #1a0a00;
+	--ok: #3ddc84;
+	--ok-soft: #12261a;
+	--warn: #ff8a3d;
+	--warn-soft: #2b2210;
+	--bad: #ff6b6b;
+	--bad-soft: #2e1614;
+	--info: #ff8a3d;
+	--info-soft: #2e1a0d;
+	--ovl: rgba(0, 0, 0, 0.6);
+}
+
+@theme inline {
+	--font-sans: "Geist Variable", system-ui, sans-serif;
+	--font-mono: "Geist Mono Variable", ui-monospace, monospace;
+
+	--color-bg: var(--bg);
+	--color-panel: var(--panel);
+	--color-soft: var(--soft);
+	--color-line: var(--line);
+	--color-line2: var(--line2);
+	--color-tx: var(--tx);
+	--color-mute: var(--mute);
+	--color-acc: var(--acc);
+	--color-acc-h: var(--acc-h);
+	--color-acc-soft: var(--acc-soft);
+	--color-acc-tx: var(--acc-tx);
+	--color-on-acc: var(--on-acc);
+	--color-ok: var(--ok);
+	--color-ok-soft: var(--ok-soft);
+	--color-warn: var(--warn);
+	--color-warn-soft: var(--warn-soft);
+	--color-bad: var(--bad);
+	--color-bad-soft: var(--bad-soft);
+	--color-info: var(--info);
+	--color-info-soft: var(--info-soft);
+	--color-ovl: var(--ovl);
+
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+
+	--radius-sm: 6px;
+	--radius-md: 8px;
+	--radius-lg: var(--radius);
+	--radius-xl: 12px;
+
+	--text-2xs: 11px;
+	--text-xs: 12px;
+	--text-sm: 13px;
+	--text-base: 14px;
+
+	--animate-pulse-soft: pulse-soft 1.3s ease-in-out infinite;
+
+	@keyframes pulse-soft {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.45;
+		}
+	}
+}
+
+@layer base {
+	* {
+		@apply border-line outline-acc/50;
+	}
+
+	html {
+		background: var(--bg);
+		color: var(--tx);
+		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+	}
+
+	/* 13px text on the body, so rem-based spacing keeps its 16px scale. */
+	body {
+		margin: 0;
+		min-height: 100vh;
+		font-size: 13px;
+		line-height: 1.45;
+	}
+
+	button,
+	input,
+	select,
+	textarea {
+		font: inherit;
+		color: inherit;
+	}
+
+	a {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	input[type="checkbox"],
+	input[type="range"] {
+		accent-color: var(--acc);
+	}
+}
+
+@utility tabular {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Uppercase column header used by every list grid. */
+@utility eyebrow {
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--mute);
+}
