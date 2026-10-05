@@ -1,6 +1,6 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, HeadContent, Link, Outlet, Scripts } from "@tanstack/react-router";
+import { createRootRouteWithContext, HeadContent, Link, Outlet, ScriptOnce, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { AppShell } from "#/components/app-shell";
 import { FoxState } from "#/components/states";
@@ -57,8 +57,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="pt" suppressHydrationWarning>
 			<head>
-				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: static script that applies the stored theme before paint. */}
-				<script dangerouslySetInnerHTML={{ __html: themeScript }} />
+				{/* SSR-only: applies the stored theme before paint, then removes itself. */}
+				<ScriptOnce>{themeScript}</ScriptOnce>
 				<HeadContent />
 			</head>
 			<body>
