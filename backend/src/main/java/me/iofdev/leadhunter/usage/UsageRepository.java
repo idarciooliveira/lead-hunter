@@ -22,14 +22,18 @@ public class UsageRepository {
         return new UsageReport(apify(filter), llm(filter), byCampaign(filter), llmWithoutCampaign(filter));
     }
 
-    /** The newest runs and calls first, both kinds together. */
+    /**
+     * The newest runs and calls first, both kinds together. Job parents (ADR
+     * 0033) are not runs themselves, so the run queries skip rows that have
+     * children and keep reading the per-location rows.
+     */
     public List<UsageReport.Entry> entries(UsageFilter filter, int limit) {
         return jdbc.sql("""
                         select * from (
                             select 'apify' as kind, r.started_at as at, c.slug, r.location || ', ' || r.status as label,
                                    r.cost_usd as cost
                             from campaign_run r join campaign c on c.id = r.campaign_id
-                            where %s
+                            where %s and not exists (select 1 from campaign_run c where c.parent_id = r.id)
                             union all
                             select 'llm', l.created_at, c.slug, l.model || ', ' || l.purpose, l.cost_usd
                             from llm_call l left join campaign c on c.id = l.campaign_id
@@ -57,7 +61,7 @@ public class UsageRepository {
                                coalesce(sum(places_found), 0) as places,
                                coalesce(sum(cost_usd), 0) as cost
                         from campaign_run
-                        where %s
+                        where %s and not exists (select 1 from campaign_run c where c.parent_id = campaign_run.id)
                         """.formatted(where("started_at", "campaign_id")))
                 .params(params(filter))
                 .query((rs, row) -> new UsageReport.Apify(

@@ -1,5 +1,7 @@
 package me.iofdev.leadhunter.api;
 
+import me.iofdev.leadhunter.pipeline.AlreadyRunningException;
+import me.iofdev.leadhunter.pipeline.BudgetExceededException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -22,6 +24,20 @@ class ApiExceptionHandler {
         String message = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
         HttpStatus status = message.startsWith("no ") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
         return ResponseEntity.status(status).body(new ApiError(message));
+    }
+
+    /**
+     * Budget errors reach the UI as a clear message, not a generic failure
+     * (ADR 0033). The second start of a campaign returns 409 while one runs.
+     */
+    @ExceptionHandler(BudgetExceededException.class)
+    ResponseEntity<ApiError> handleBudgetExceeded(BudgetExceededException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AlreadyRunningException.class)
+    ResponseEntity<ApiError> handleAlreadyRunning(AlreadyRunningException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(ex.getMessage()));
     }
 
     @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})

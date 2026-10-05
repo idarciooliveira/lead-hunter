@@ -4,7 +4,7 @@ JSON API for the web client (ADR 0031). Same domain code as the CLI; controllers
 
 Run it: `SPRING_PROFILES_ACTIVE=web java -jar backend/target/lead-hunter.jar`. The CLI stays the default mode. `GET /api/health` is open; auth follows ADR 0032 (not yet enforced).
 
-## Reads (implemented)
+## Endpoints (implemented)
 
 | Method | Path | Query | Notes |
 |---|---|---|---|
@@ -17,10 +17,14 @@ Run it: `SPRING_PROFILES_ACTIVE=web java -jar backend/target/lead-hunter.jar`. T
 | `GET` | `/api/usage` | `month=YYYY-MM`, `campaign=<slug>` | Totals (`apify`, `llm`, `byCampaign`, `totalUsd`) plus `budgetUsd`. Bad month → 400, unknown campaign → 404 |
 | `GET` | `/api/usage/entries` | same, plus `limit` (default 30, max 200) | Newest runs and calls first, like `usage --runs` |
 | `PATCH` | `/api/leads/{id}` | `{status, lostReason?, note?}` | Marks a contact outcome, like `leads mark` (ADR 0012, 0020). `LOST` needs one of `NO_BUDGET`, `WRONG_PERSON`, `HAS_SUPPLIER`, `NOT_INTERESTED`, `NOT_NOW`; a lost reason needs `LOST`; a worked lead can never go back to `NEW`. 404 `no lead with id <id>`, 400 otherwise |
+| `GET` | `/api/campaigns/{slug}/runs` | | Job history, newest first: parents of UI-started jobs plus the standalone rows the CLI wrote (ADR 0033) |
+| `GET` | `/api/runs/{id}` | | One job as the client polls it: `kind` (`SCRAPE`, `ENRICH`, `DRY_RUN`), `status` (`RUNNING`, `DONE`, `FAILED`), `startedAt`, `done`, `total` (known total for enrichment, null for scrapes), `costUsd`, `error`. 404 `no run with id <id>` |
+| `POST` | `/api/campaigns/{slug}/runs` | `dryRun` (default `false`), `allowOverLimit` (default `false`) | Starts a scrape job: 202 with the `RUNNING` job, like `campaign run`. With `dryRun` it returns the free estimate instead (`requests[{location, terms, maxPlaces}]`, `maxPlaces`, `estimatedMaxUsd`, `overLimit`, `dryRunId`), like `campaign run --dry-run`. `allowOverLimit` is the explicit opt-in past the limit. Second start while one runs → 409; over the limit without the flag → 400 with the budget message; 404 `no campaign '<slug>'. Run: campaign list` |
+| `POST` | `/api/campaigns/{slug}/enrichment` | `batchSize?`, `maxReviews?`, `dryRun` (default `false`) | Starts an enrichment job, same shape as a scrape, like `campaign enrich`. Batch and review counts default like the CLI. With `dryRun` it returns the free estimate (`pending`, `batch`, `maxReviews`, `dryRunId`). Nothing waiting → 400 `nothing to enrich: ...` |
 
 ## Writes (planned)
 
-`POST/PUT /api/campaigns[/{slug}]`, `PUT /api/company` with the CLI validation (ADR 0029), and run/enrichment starts as background jobs the client polls (ADR 0033).
+`POST/PUT /api/campaigns[/{slug}]` and `PUT /api/company` with the CLI validation (ADR 0029).
 
 ## Web client
 

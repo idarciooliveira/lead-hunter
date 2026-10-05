@@ -46,8 +46,13 @@ public class EnrichmentRunner {
     }
 
     public EnrichmentSummary enrich(Campaign campaign, int batchSize, int maxReviews, Consumer<String> progress) {
+        return enrich(campaign, batchSize, maxReviews, progress, null);
+    }
+
+    public EnrichmentSummary enrich(Campaign campaign, int batchSize, int maxReviews, Consumer<String> progress,
+                                    Long parentJobId) {
         List<EnrichmentTarget> targets = leads.unenrichedQualified(campaign.id(), batchSize);
-        fetchReviews(campaign, targets, maxReviews, progress);
+        fetchReviews(campaign, targets, maxReviews, progress, parentJobId);
 
         int enriched = 0;
         for (EnrichmentTarget target : targets) {
@@ -86,7 +91,7 @@ public class EnrichmentRunner {
      * run still records its cost and the batch keeps its crawl scores.
      */
     private void fetchReviews(Campaign campaign, List<EnrichmentTarget> targets, int maxReviews,
-                              Consumer<String> progress) {
+                              Consumer<String> progress, Long parentJobId) {
         Map<String, Long> placeIdsByUrl = new LinkedHashMap<>();
         for (EnrichmentTarget target : targets) {
             if (target.mapsUrl() != null && !target.mapsUrl().isBlank()) {
@@ -104,7 +109,8 @@ public class EnrichmentRunner {
             return;
         }
         progress.accept("Fetching up to " + maxReviews + " reviews for " + urls.size() + " places...");
-        long runId = runs.start(campaign.id(), RunRepository.REVIEWS_LOCATION, urls, urls.size());
+        long runId = runs.start(campaign.id(), RunRepository.REVIEWS_LOCATION, urls, urls.size(),
+                parentJobId, RunRepository.KIND_REVIEWS);
         ReviewsResult result;
         try {
             result = reviews.fetchReviews(urls, maxReviews, campaign.search().language());
