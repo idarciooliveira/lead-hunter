@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import me.iofdev.leadhunter.input.InvalidInputException;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 
@@ -62,7 +63,7 @@ class CompanyProfileParserTest {
                 objections: [{objection: É caro}]
                 weeklyCapacity: 0
                 """))
-                .isInstanceOfSatisfying(InvalidCompanyException.class, e -> assertThat(e.problems()).containsExactly(
+                .isInstanceOfSatisfying(InvalidInputException.class, e -> assertThat(e.problems()).containsExactly(
                         "intro is required",
                         "services[0].price is required",
                         "entryOffer 'App' must be the name of one of the services",

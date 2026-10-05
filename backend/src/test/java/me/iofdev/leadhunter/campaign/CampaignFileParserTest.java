@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Stream;
 
+import me.iofdev.leadhunter.input.InvalidInputException;
 import me.iofdev.leadhunter.scoring.MapsSignal;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -80,7 +81,7 @@ class CampaignFileParserTest {
                   wantedSignals: [LOW_RATING]
                   disqualifyingSignals: [NO_WEBSITE, SOCIAL_ONLY, OWN_WEBSITE, LOW_RATING]
                 """))
-                .isInstanceOfSatisfying(InvalidCampaignException.class, e -> assertThat(e.problems()).containsExactly(
+                .isInstanceOfSatisfying(InvalidInputException.class, e -> assertThat(e.problems()).containsExactly(
                         "slug must be lowercase letters, digits and dashes, like clinicas-luanda",
                         "name is required",
                         "answers.problem is required",
@@ -103,7 +104,7 @@ class CampaignFileParserTest {
                 answers: {sector: lojas, problem: vendem só no Instagram, service: Site}
                 search: {terms: [loja], locations: [Luanda], maxPlaces: 10}
                 """))
-                .isInstanceOf(InvalidCampaignException.class)
+                .isInstanceOf(InvalidInputException.class)
                 .hasMessageContaining("maxPlaces");
     }
 }

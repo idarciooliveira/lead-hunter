@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import me.iofdev.leadhunter.company.CompanyProfile;
+import me.iofdev.leadhunter.input.InvalidInputException;
 import me.iofdev.leadhunter.scoring.MapsSignal;
 import me.iofdev.leadhunter.scoring.Text;
 
@@ -19,7 +20,7 @@ public final class CampaignChecks {
     public static void requireFits(CampaignFile campaign, CompanyProfile company) {
         String service = campaign.answers().service();
         if (company.service(service).isEmpty()) {
-            throw new InvalidCampaignException(List.of("answers.service '" + service + "' is not one of the company's "
+            throw new InvalidInputException("campaign file", List.of("answers.service '" + service + "' is not one of the company's "
                     + "services: " + String.join(", ", company.services().stream().map(CompanyProfile.Service::name).toList())
                     + ". Add it with company update, or pick another"));
         }
