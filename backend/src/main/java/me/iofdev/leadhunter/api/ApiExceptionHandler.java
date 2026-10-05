@@ -2,6 +2,7 @@ package me.iofdev.leadhunter.api;
 
 import me.iofdev.leadhunter.pipeline.AlreadyRunningException;
 import me.iofdev.leadhunter.pipeline.BudgetExceededException;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -38,6 +39,13 @@ class ApiExceptionHandler {
     @ExceptionHandler(AlreadyRunningException.class)
     ResponseEntity<ApiError> handleAlreadyRunning(AlreadyRunningException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(ex.getMessage()));
+    }
+
+    /** The job queue is full; the job row it opened is already failed, so a retry can start. */
+    @ExceptionHandler(TaskRejectedException.class)
+    ResponseEntity<ApiError> handleQueueFull(TaskRejectedException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ApiError("too many jobs waiting. Try again when one finishes"));
     }
 
     @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})

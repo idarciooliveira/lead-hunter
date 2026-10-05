@@ -126,6 +126,9 @@ public class CampaignRunner {
                 }
             }
             progress.accept("  " + result.places().size() + " places, " + Money.usd(result.costUsd()));
+            if (parentJobId != null) {
+                runs.progressJob(parentJobId, found);
+            }
         }
 
         leads.applyStage1Cut(campaign.id(), campaign.search().qualifyShare());

@@ -1,6 +1,7 @@
 package me.iofdev.leadhunter.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,7 +17,12 @@ import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignFileParser;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.maps.ScrapedPlace;
+import me.iofdev.leadhunter.pipeline.CampaignRunner;
+import me.iofdev.leadhunter.pipeline.EnrichmentRunner;
 import me.iofdev.leadhunter.pipeline.FakeScraper;
+import me.iofdev.leadhunter.pipeline.JobLease;
+import me.iofdev.leadhunter.pipeline.LeadRepository;
+import me.iofdev.leadhunter.pipeline.RunJobService;
 import me.iofdev.leadhunter.pipeline.RunRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +35,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -85,6 +92,12 @@ class RunStartIntegrationTest extends PostgresTestSupport {
     FakeScraper scraper;
     @Autowired
     InterruptedRunRecovery recovery;
+    @Autowired
+    CampaignRunner scrapeRunner;
+    @Autowired
+    EnrichmentRunner enrichRunner;
+    @Autowired
+    LeadRepository leads;
 
     Campaign campaign;
 
@@ -120,7 +133,7 @@ class RunStartIntegrationTest extends PostgresTestSupport {
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.status").value("RUNNING"))
                 .andReturn();
-        long jobId = ((Number) JsonPath.read(started.getResponse().getContentAsString(), "$.id")).longValue();
+        long jobId = startedJobId(started);
 
         String finished = pollUntilDone(jobId);
         assertThatStatus(finished, "DONE");
@@ -132,14 +145,54 @@ class RunStartIntegrationTest extends PostgresTestSupport {
 
     @Test
     void secondStartWhileRunningReturns409() throws Exception {
-        runs.startJob(campaign.id(), RunRepository.KIND_SCRAPE, null);
+        seedQualifiedLead();
+        try (JobLease running = runs.startJob(campaign.id(), RunRepository.KIND_SCRAPE, null)) {
+            mvc.perform(post("/api/campaigns/{slug}/runs", campaign.slug()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message", containsString("already has a running job")));
 
-        mvc.perform(post("/api/campaigns/{slug}/runs", campaign.slug()))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message", containsString("already has a running job")));
+            mvc.perform(post("/api/campaigns/{slug}/enrichment", campaign.slug()))
+                    .andExpect(status().isConflict());
+        }
+    }
 
-        mvc.perform(post("/api/campaigns/{slug}/enrichment", campaign.slug()))
-                .andExpect(status().isConflict());
+    @Test
+    void aJobWhoseProcessDiedDoesNotBlockTheNextStart() throws Exception {
+        long dead = startAndAbandon();
+
+        long jobId = startedJobId(mvc.perform(post("/api/campaigns/{slug}/runs", campaign.slug()))
+                .andExpect(status().isAccepted())
+                .andReturn());
+
+        assertThatStatus(pollUntilDone(jobId), "DONE");
+        mvc.perform(get("/api/runs/{id}", dead))
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(jsonPath("$.error").value("interrupted before it finished"));
+    }
+
+    @Test
+    void aFullQueueFailsTheJobItOpened() {
+        RunJobService full = new RunJobService(scrapeRunner, enrichRunner, runs, leads, task -> {
+            throw new TaskRejectedException("queue full");
+        });
+
+        assertThatThrownBy(() -> full.startScrape(campaign, false)).isInstanceOf(TaskRejectedException.class);
+
+        RunRepository.JobView job = runs.listJobs(campaign.id()).getFirst();
+        assertThat(job.status()).isEqualTo("FAILED");
+        assertThat(job.error()).isEqualTo("too many jobs waiting");
+    }
+
+    @Test
+    void anErrorStillClosesTheJob() {
+        RunJobService inline = new RunJobService(scrapeRunner, enrichRunner, runs, leads, Runnable::run);
+        scraper.crashWith(new OutOfMemoryError("Java heap space"));
+
+        assertThatThrownBy(() -> inline.startScrape(campaign, false)).isInstanceOf(OutOfMemoryError.class);
+
+        RunRepository.JobView job = runs.listJobs(campaign.id()).getFirst();
+        assertThat(job.status()).isEqualTo("FAILED");
+        assertThat(job.error()).isEqualTo("Java heap space");
     }
 
     @Test
@@ -183,14 +236,31 @@ class RunStartIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
-    void restartMarksInterruptedRunsFailed() throws Exception {
-        long jobId = runs.startJob(campaign.id(), RunRepository.KIND_SCRAPE, null);
+    void restartFailsOnlyJobsWhoseProcessIsGone() throws Exception {
+        campaigns.save(parser.parse(BIG_CAMPAIGN));
+        long other = campaigns.findBySlug("clinicas-grande").orElseThrow().id();
+        long dead = startAndAbandon();
 
-        recovery.run(new DefaultApplicationArguments());
+        try (JobLease live = runs.startJob(other, RunRepository.KIND_SCRAPE, null)) {
+            recovery.run(new DefaultApplicationArguments());
 
-        mvc.perform(get("/api/runs/{id}", jobId))
-                .andExpect(jsonPath("$.status").value("FAILED"))
-                .andExpect(jsonPath("$.error").value("interrupted by restart"));
+            mvc.perform(get("/api/runs/{id}", dead))
+                    .andExpect(jsonPath("$.status").value("FAILED"))
+                    .andExpect(jsonPath("$.error").value("interrupted before it finished"));
+            mvc.perform(get("/api/runs/{id}", live.jobId()))
+                    .andExpect(jsonPath("$.status").value("RUNNING"));
+        }
+    }
+
+    /** A job whose process died: its row says RUNNING, but nothing holds its lease. */
+    private long startAndAbandon() {
+        try (JobLease lease = runs.startJob(campaign.id(), RunRepository.KIND_SCRAPE, null)) {
+            return lease.jobId();
+        }
+    }
+
+    private static long startedJobId(MvcResult started) throws Exception {
+        return ((Number) JsonPath.read(started.getResponse().getContentAsString(), "$.id")).longValue();
     }
 
     private void seedQualifiedLead() {

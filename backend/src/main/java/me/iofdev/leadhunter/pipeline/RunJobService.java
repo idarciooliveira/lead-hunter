@@ -1,18 +1,22 @@
 package me.iofdev.leadhunter.pipeline;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.LongFunction;
 
 import me.iofdev.leadhunter.campaign.Campaign;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 /**
- * Starts pipeline runs as background jobs the web client polls (ADR 0033).
- * The runners do the work on a bounded executor; this service only opens the
- * parent row, submits the job, and closes the parent with the verdict. Budget
- * and nothing-to-do rejections happen before any row is written, like the CLI.
+ * Runs the pipeline as jobs (ADR 0033, 0036): the CLI in the foreground, the
+ * web client on a bounded executor it polls. Either way the job holds a parent
+ * row and its lease from start to verdict, which is what keeps one job per
+ * campaign. Budget and nothing-to-do rejections happen before any row is
+ * written.
  */
 @Service
 public class RunJobService {
@@ -24,6 +28,10 @@ public class RunJobService {
     }
 
     public record EnrichPreview(int pending, int batch, int maxReviews, long dryRunId) {
+    }
+
+    /** How a job closes: {@code error} null means it succeeded with {@code done}. */
+    private record Verdict(long done, String error) {
     }
 
     private final CampaignRunner scrape;
@@ -48,24 +56,17 @@ public class RunJobService {
         return new ScrapePreview(plan, scrape.overLimit(plan), dryRunId);
     }
 
+    /** {@code campaign run}: the job runs on the calling thread and its summary comes back. */
+    public RunSummary runScrape(Campaign campaign, boolean allowOverLimit, Consumer<String> progress) {
+        scrape.checkOverLimit(scrape.plan(campaign), allowOverLimit);
+        return runJob(begin(campaign, RunRepository.KIND_SCRAPE, null),
+                jobId -> scrape.run(campaign, allowOverLimit, progress, jobId), RunJobService::scrapeVerdict);
+    }
+
     public long startScrape(Campaign campaign, boolean allowOverLimit) {
-        checkIdle(campaign);
-        SearchPlan plan = scrape.plan(campaign);
-        scrape.checkOverLimit(plan, allowOverLimit);
-        long jobId = begin(campaign, RunRepository.KIND_SCRAPE, null);
-        jobs.execute(() -> {
-            try {
-                RunSummary summary = scrape.run(campaign, allowOverLimit, SILENT, jobId);
-                if (summary.failedRuns() == summary.scraperRuns()) {
-                    runs.failJob(jobId, CampaignRunner.ALL_FAILED);
-                } else {
-                    runs.finishJob(jobId, summary.placesFound());
-                }
-            } catch (RuntimeException e) {
-                runs.failJob(jobId, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
-            }
-        });
-        return jobId;
+        scrape.checkOverLimit(scrape.plan(campaign), allowOverLimit);
+        return submit(begin(campaign, RunRepository.KIND_SCRAPE, null),
+                jobId -> scrape.run(campaign, allowOverLimit, SILENT, jobId), RunJobService::scrapeVerdict);
     }
 
     /** A free estimate that mirrors {@code campaign enrich --dry-run}: only counts, never touches a lead. */
@@ -75,43 +76,82 @@ public class RunJobService {
         return new EnrichPreview(pending, batchSize, maxReviews, dryRunId);
     }
 
+    /** {@code campaign enrich}, after it checked there is something to enrich. */
+    public EnrichmentSummary runEnrichment(Campaign campaign, int pending, int batchSize, int maxReviews,
+                                           Consumer<String> progress) {
+        return runJob(begin(campaign, RunRepository.KIND_ENRICH, Math.min(pending, batchSize)),
+                jobId -> enrich.enrich(campaign, batchSize, maxReviews, progress, jobId), RunJobService::enrichVerdict);
+    }
+
     public long startEnrichment(Campaign campaign, int batchSize, int maxReviews) {
-        checkIdle(campaign);
         int pending = leads.countUnenrichedQualified(campaign.id());
         if (pending == 0) {
             throw new IllegalArgumentException("nothing to enrich: every qualified lead of '"
                     + campaign.slug() + "' is already enriched.");
         }
-        long jobId = begin(campaign, RunRepository.KIND_ENRICH, Math.min(pending, batchSize));
-        jobs.execute(() -> {
-            try {
-                EnrichmentSummary summary = enrich.enrich(campaign, batchSize, maxReviews, SILENT, jobId);
-                runs.finishJob(jobId, summary.enriched());
-            } catch (RuntimeException e) {
-                runs.failJob(jobId, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
-            }
-        });
-        return jobId;
+        return submit(begin(campaign, RunRepository.KIND_ENRICH, Math.min(pending, batchSize)),
+                jobId -> enrich.enrich(campaign, batchSize, maxReviews, SILENT, jobId), RunJobService::enrichVerdict);
+    }
+
+    private static Verdict scrapeVerdict(RunSummary summary) {
+        return summary.failedRuns() == summary.scraperRuns()
+                ? new Verdict(summary.placesFound(), CampaignRunner.ALL_FAILED)
+                : new Verdict(summary.placesFound(), null);
+    }
+
+    private static Verdict enrichVerdict(EnrichmentSummary summary) {
+        return new Verdict(summary.enriched(), null);
     }
 
     /**
-     * The friendly path of the one-job promise. The unique index behind
-     * {@link #begin} is the backstop for two starts that race each other.
+     * Opens the job's parent row and lease. Jobs whose process died are
+     * failed first, so a killed run never blocks its campaign. The unique
+     * index behind {@link RunRepository#startJob} settles two starts that race.
      */
-    private void checkIdle(Campaign campaign) {
-        if (runs.runningExists(campaign.id())) {
+    private JobLease begin(Campaign campaign, String kind, Integer total) {
+        runs.failAbandoned(campaign.id());
+        try {
+            return runs.startJob(campaign.id(), kind, total);
+        } catch (DataIntegrityViolationException e) {
             throw new AlreadyRunningException("campaign '" + campaign.slug() + "' already has a running job");
         }
     }
 
-    private long begin(Campaign campaign, String kind, Integer total) {
-        checkIdle(campaign);
+    /** Runs the job on the executor. A full queue fails the job at once, so it never blocks its campaign. */
+    private <T> long submit(JobLease lease, LongFunction<T> work, Function<T, Verdict> verdict) {
         try {
-            return runs.startJob(campaign.id(), kind, total);
-        } catch (DataIntegrityViolationException e) {
-            // Lost a race with another start; the index kept the one-job promise.
-            throw new AlreadyRunningException(
-                    "campaign '" + campaign.slug() + "' already has a running job");
+            jobs.execute(() -> {
+                try {
+                    runJob(lease, work, verdict);
+                } catch (RuntimeException e) {
+                    // Recorded on the job row, which is what the client polls.
+                }
+            });
+        } catch (TaskRejectedException e) {
+            runs.failJob(lease.jobId(), "too many jobs waiting");
+            lease.close();
+            throw e;
+        }
+        return lease.jobId();
+    }
+
+    /** Runs one job to its verdict and closes its row and lease, whatever the work throws. */
+    private <T> T runJob(JobLease lease, LongFunction<T> work, Function<T, Verdict> verdict) {
+        try (lease) {
+            T result;
+            try {
+                result = work.apply(lease.jobId());
+            } catch (Throwable e) {
+                runs.failJob(lease.jobId(), e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+                throw e;
+            }
+            Verdict closing = verdict.apply(result);
+            if (closing.error() == null) {
+                runs.finishJob(lease.jobId(), closing.done());
+            } else {
+                runs.failJob(lease.jobId(), closing.error());
+            }
+            return result;
         }
     }
 }

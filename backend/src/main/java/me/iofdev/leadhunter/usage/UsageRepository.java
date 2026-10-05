@@ -24,9 +24,9 @@ public class UsageRepository {
 
     /**
      * The newest runs and calls first, both kinds together. Job parents (ADR
-     * 0033) are not runs themselves: the run queries skip rows that have
-     * children, and the DRY_RUN and ENRICH kinds that never get them, so only
-     * SCRAPE and REVIEWS rows count as Apify runs and places.
+     * 0033) are not runs themselves and never hold a location, so the run
+     * queries count only rows with one: the per-location searches and the
+     * review batches, whether or not the job ever reached them.
      */
     public List<UsageReport.Entry> entries(UsageFilter filter, int limit) {
         return jdbc.sql("""
@@ -34,8 +34,7 @@ public class UsageRepository {
                             select 'apify' as kind, r.started_at as at, c.slug, r.location || ', ' || r.status as label,
                                    r.cost_usd as cost
                             from campaign_run r join campaign c on c.id = r.campaign_id
-                            where %s and not exists (select 1 from campaign_run c where c.parent_id = r.id)
-                              and r.kind in ('SCRAPE', 'REVIEWS')
+                            where %s and r.location is not null
                             union all
                             select 'llm', l.created_at, c.slug, l.model || ', ' || l.purpose, l.cost_usd
                             from llm_call l left join campaign c on c.id = l.campaign_id
@@ -63,8 +62,7 @@ public class UsageRepository {
                                coalesce(sum(places_found), 0) as places,
                                coalesce(sum(cost_usd), 0) as cost
                         from campaign_run
-                        where %s and not exists (select 1 from campaign_run c where c.parent_id = campaign_run.id)
-                          and kind in ('SCRAPE', 'REVIEWS')
+                        where %s and location is not null
                         """.formatted(where("started_at", "campaign_id")))
                 .params(params(filter))
                 .query((rs, row) -> new UsageReport.Apify(

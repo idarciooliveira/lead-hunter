@@ -5,14 +5,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Component;
 
 /**
- * A run interrupted by a restart is marked failed on startup (ADR 0033).
- * There is no resume. This also keeps the CLI working after a killed web
- * run: stale RUNNING rows would trip the one-job-per-campaign index.
+ * Jobs a restart interrupted are marked failed when the web server boots (ADR
+ * 0033). There is no resume. Only jobs with no live owner are touched (ADR
+ * 0036), so a CLI run or another server keeps its jobs; the CLI fails
+ * abandoned jobs of a campaign itself before it starts one.
  */
 @Component
+@ConditionalOnWebApplication
 class InterruptedRunRecovery implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(InterruptedRunRecovery.class);
@@ -25,7 +28,7 @@ class InterruptedRunRecovery implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        int marked = runs.markInterrupted();
+        int marked = runs.failAbandoned(null);
         if (marked > 0) {
             log.warn("Marked {} interrupted run(s) as failed", marked);
         }

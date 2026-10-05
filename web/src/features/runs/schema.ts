@@ -16,7 +16,8 @@ export const Run = z.object({
 	total: z.number().int().nullable(),
 	/** True when `done` is a dry-run estimate. */
 	estimated: z.boolean(),
-	costUsd: z.number(),
+	/** Null when a finished part of the run has no known cost. */
+	costUsd: z.number().nullable(),
 	error: z.string().nullable(),
 });
 export type Run = z.infer<typeof Run>;

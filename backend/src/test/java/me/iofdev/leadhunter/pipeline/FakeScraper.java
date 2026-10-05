@@ -18,6 +18,7 @@ public class FakeScraper implements GoogleMapsScraper {
     private final Map<String, List<ScrapedPlace>> byLocation = new HashMap<>();
     private final List<ScrapeRequest> requests = new ArrayList<>();
     private boolean ready = true;
+    private Error crash;
 
     public void willReturn(String location, List<ScrapedPlace> places) {
         byLocation.put(location, places);
@@ -27,6 +28,12 @@ public class FakeScraper implements GoogleMapsScraper {
         byLocation.clear();
         requests.clear();
         ready = true;
+        crash = null;
+    }
+
+    /** The next search throws this, like the JVM giving up mid-run. */
+    public void crashWith(Error error) {
+        crash = error;
     }
 
     public void notReady() {
@@ -47,6 +54,9 @@ public class FakeScraper implements GoogleMapsScraper {
     @Override
     public ScrapeResult search(ScrapeRequest request) {
         requests.add(request);
+        if (crash != null) {
+            throw crash;
+        }
         List<ScrapedPlace> places = byLocation.get(request.location());
         if (places == null) {
             throw new ScrapeException("Apify run fake-" + request.location() + " ended with status FAILED",

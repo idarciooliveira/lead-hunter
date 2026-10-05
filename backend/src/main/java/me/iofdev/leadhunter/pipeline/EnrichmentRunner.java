@@ -64,6 +64,9 @@ public class EnrichmentRunner {
             Score combined = Score.of(all);
             leads.saveStage2(target.leadId(), combined, kinds);
             enriched++;
+            if (parentJobId != null) {
+                runs.progressJob(parentJobId, enriched);
+            }
             String added = stage2.items().stream()
                     .map(item -> "+" + item.points() + " " + item.code())
                     .collect(Collectors.joining(", "));
