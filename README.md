@@ -38,7 +38,7 @@ There are two ways to run commands. Both use the same database, so you can mix t
 
 ### Option A: Java on your machine
 
-Needs Java 21. `./lh` builds the jar the first time, then runs it.
+Needs a JDK 21 (a JRE is not enough to build; `.sdkmanrc` pins it for SDKMAN, so `sdk env install` sets it up; then `sdk env` in each new shell, or enable `sdkman_auto_env=true` in `sdk config`). `./lh` finds the pinned JDK on its own, but `mvnw` needs `sdk env` or `JAVA_HOME`. Line endings are pinned by `.gitattributes`, so `./lh` and `backend/mvnw` stay LF even with `core.autocrlf=true`. `./lh` builds the jar the first time, then runs it.
 
 ```bash
 ./lh                                                # no arguments in a terminal: the interactive menu

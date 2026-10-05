@@ -3,7 +3,18 @@
 # Usage: ./lh campaign list
 set -e
 cd "$(dirname "$0")"
+# Non-interactive shells (agents, IDEs) do not load SDKMAN, so pick up the JDK pinned in .sdkmanrc.
+sdk_java="$HOME/.sdkman/candidates/java/$(sed -n 's/^java=//p' .sdkmanrc 2>/dev/null)"
+if [ -z "$JAVA_HOME" ] && [ -x "$sdk_java/bin/javac" ]; then
+  JAVA_HOME="$sdk_java"
+  export JAVA_HOME
+  PATH="$JAVA_HOME/bin:$PATH"
+fi
 if [ ! -f backend/target/lead-hunter.jar ]; then
+  if ! command -v javac >/dev/null 2>&1; then
+    echo "error: building needs a JDK 21 (javac not found). A JRE only runs an existing jar. See README.md." >&2
+    exit 1
+  fi
   ./backend/mvnw -q -B -f backend/pom.xml package -DskipTests
 fi
 exec java -jar backend/target/lead-hunter.jar "$@"

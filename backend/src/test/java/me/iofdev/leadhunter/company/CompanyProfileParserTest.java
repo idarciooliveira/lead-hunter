@@ -84,14 +84,4 @@ class CompanyProfileParserTest {
         assertThat(CompanyProfileParser.warnings(profile)).singleElement().asString().endsWith(": Kintexia");
     }
 
-    @Test
-    void writesYamlThatParsesBackToTheSameProfile() throws IOException {
-        CompanyProfile profile = parser.parse(
-                new ClassPathResource("company-template.yml").getContentAsString(StandardCharsets.UTF_8));
-
-        String yaml = parser.toYaml(profile);
-
-        assertThat(yaml).doesNotContain("null").doesNotContain("---");
-        assertThat(parser.parse(yaml)).isEqualTo(profile);
-    }
 }

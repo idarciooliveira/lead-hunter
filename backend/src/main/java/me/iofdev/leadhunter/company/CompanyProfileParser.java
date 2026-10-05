@@ -3,22 +3,17 @@ package me.iofdev.leadhunter.company;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import me.iofdev.leadhunter.place.PhoneNumber;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.dataformat.yaml.YAMLMapper;
-import tools.jackson.dataformat.yaml.YAMLWriteFeature;
 
 @Component
 public class CompanyProfileParser {
 
     private final YAMLMapper yaml = YAMLMapper.builder()
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            .disable(YAMLWriteFeature.WRITE_DOC_START_MARKER)
-            .enable(YAMLWriteFeature.MINIMIZE_QUOTES)
-            .changeDefaultPropertyInclusion(inclusion -> inclusion.withValueInclusion(JsonInclude.Include.NON_NULL))
             .build();
 
     public CompanyProfile parse(String content) {
@@ -33,13 +28,6 @@ public class CompanyProfileParser {
         }
         validate(profile);
         return profile;
-    }
-
-    /** Writes the profile back to YAML that {@link #parse} accepts. */
-    public String toYaml(CompanyProfile profile) {
-        return "# Company profile. See docs/adr/0019-company-profile.md.\n"
-                + "# Edit it, then save changes with `company update -f <this file>`.\n"
-                + yaml.writeValueAsString(profile);
     }
 
     public static void validate(CompanyProfile profile) {

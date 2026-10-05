@@ -103,15 +103,12 @@ class CampaignWizardTest {
     }
 
     @Test
-    void writesYamlThatParsesBackToTheSameCampaign() {
-        CampaignFileParser parser = new CampaignFileParser();
+    void buildsACampaignThatPassesValidation() {
         CampaignFile file = wizard(ANSWERS, 25).run();
 
-        String yaml = parser.toYaml(file);
+        CampaignFileParser.validate(file);
 
-        assertThat(yaml).startsWith("# Created with `campaign new`").doesNotContain("---").doesNotContain("null")
-                .contains("endDate: 2026-11-09");
-        assertThat(parser.parse(yaml)).isEqualTo(file);
+        assertThat(output.toString()).contains("Required.");
     }
 
     @Test
