@@ -98,13 +98,20 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
         assertThat(report.llmWithoutCampaignUsd()).isZero();
     }
 
+    private void moveTo(OffsetDateTime at, long campaignId) {
+        jdbc.sql("update campaign_run set started_at = :at where campaign_id = :id")
+                .param("at", at).param("id", campaignId).update();
+        jdbc.sql("update llm_call set created_at = :at where campaign_id = :id")
+                .param("at", at).param("id", campaignId).update();
+    }
+
     @Test
     void filtersByTimeWindowWithAnExclusiveEnd() {
         OffsetDateTime august = OffsetDateTime.of(2026, 8, 15, 12, 0, 0, 0, ZoneOffset.UTC);
-        jdbc.sql("update campaign_run set started_at = :at where campaign_id = :id")
-                .param("at", august).param("id", schools).update();
-        jdbc.sql("update llm_call set created_at = :at where campaign_id = :id")
-                .param("at", august).param("id", schools).update();
+        OffsetDateTime midSeptember = OffsetDateTime.of(2026, 9, 15, 12, 0, 0, 0, ZoneOffset.UTC);
+        // Pin both campaigns to fixed dates; the seed rows are stamped with now().
+        moveTo(august, schools);
+        moveTo(midSeptember, clinics);
         OffsetDateTime september = OffsetDateTime.of(2026, 9, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime october = OffsetDateTime.of(2026, 10, 1, 0, 0, 0, 0, ZoneOffset.UTC);
 
