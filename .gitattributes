@@ -1,0 +1,9 @@
+# Normalise line endings so shell scripts run on Linux, macOS, WSL and containers
+# whatever core.autocrlf is set to on the machine.
+* text=auto
+*.sh text eol=lf
+lh text eol=lf
+backend/mvnw text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.jar binary

@@ -12,6 +12,8 @@ Every decision lives in `docs/adr/`. Read `docs/adr/README.md` before changing a
 
 ## Commands
 
+Environment: building needs JDK 21 (a JRE is not enough). It is installed with SDKMAN and pinned in `.sdkmanrc`. Agent and IDE shells do not load SDKMAN, so start every build or test command with `source ~/.sdkman/bin/sdkman-init.sh && sdk env`, or set `JAVA_HOME=~/.sdkman/candidates/java/21.0.8-tem`. `./lh` does this itself. `mvnw` and `lh` must stay LF (`.gitattributes` enforces it); if one fails with `\r` errors, run `git add --renormalize .` and re-checkout the file. Postgres comes from `docker compose up -d postgres`, and Docker must be running for the integration tests.
+
 - Build: `cd backend && ./mvnw package -DskipTests`
 - Test: `cd backend && ./mvnw test`. Integration tests need Docker, or `LEADHUNTER_TEST_JDBC_URL` pointing at an empty Postgres database.
 - Run: `java -jar backend/target/lead-hunter.jar --help` (or `./lh --help`)
