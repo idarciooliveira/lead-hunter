@@ -17,7 +17,7 @@ services:
 
   # The CLI in a container. Only starts with `docker compose run --rm app <command>`.
   app:
-    build: .
+    build: ./backend
     image: lead-hunter
     profiles: ["cli"]
     env_file:

@@ -16,7 +16,7 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0010](0010-postgres-flyway-jdbcclient.md) | PostgreSQL with Flyway and JdbcClient; no job queue in v1 | Accepted |
 | [0011](0011-railway-and-docker-compose.md) | Deploy on Railway; run locally with Docker Compose | Accepted |
 | [0012](0012-track-outcomes.md) | Track contact outcomes per lead to calibrate scoring | Accepted |
-| [0013](0013-campaigns-as-yaml.md) | Define campaigns as YAML files built on the 10 questions | Accepted |
+| [0013](0013-campaigns-as-yaml.md) | Define campaigns as YAML files built on the 10 questions | Superseded by 0029 |
 | [0014](0014-claude-haiku.md) | Use Claude Haiku 4.5 for review analysis and pitches | Superseded by 0017 |
 | [0015](0015-on-demand-runs.md) | Run campaigns on demand | Accepted |
 | [0016](0016-testing-strategy.md) | Test SQL against real Postgres; fake the scraper | Accepted |
@@ -32,3 +32,8 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0026](0026-soft-clear-the-screen-in-interactive-mode.md) | Soft-clear the screen in interactive mode | Accepted |
 | [0027](0027-stage-two-website-crawl.md) | Enrich qualified leads with a website crawl and stage 2 scoring | Accepted |
 | [0028](0028-stage-two-no-issue-marker.md) | Mark a clean stage-2 run with a zero-point STAGE2_NO_ISSUES code | Accepted |
+| [0029](0029-database-is-the-only-campaign-store.md) | Store campaigns and the company profile only in the database | Accepted |
+| [0030](0030-web-client-with-tanstack-start.md) | Build the web client with TanStack Start in the same repository | Proposed |
+| [0031](0031-http-api-for-the-web-client.md) | Add a JSON HTTP API to the backend for the web client | Proposed |
+| [0032](0032-shared-token-auth-for-the-web-client.md) | Protect the API with a shared token held by the web server | Proposed |
+| [0033](0033-runs-from-the-ui.md) | Start runs from the UI as background jobs that the client polls | Proposed |

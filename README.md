@@ -45,7 +45,7 @@ Needs Java 21. `./lh` builds the jar the first time, then runs it.
 ./lh --help
 ./lh company setup                                  # once: your company, services, clients, cases
 ./lh campaign new                                   # answer the campaign questions, no file needed
-./lh campaign create -f campaigns/clinicas-luanda.yml  # or load a ready file
+./lh campaign create -f my-campaign.yml            # or load a file (see `campaign template`)
 ./lh campaign run clinicas-luanda --dry-run
 ./lh campaign run clinicas-luanda
 ./lh campaign enrich clinicas-luanda --dry-run
@@ -56,7 +56,7 @@ Needs Java 21. `./lh` builds the jar the first time, then runs it.
 ./lh llm test
 ```
 
-After changing code, rebuild with `./mvnw package -DskipTests`. `./lh` only builds when the jar is missing. On Windows, use `mvnw.cmd package -DskipTests` and then `java -jar target\lead-hunter.jar <command>`.
+After changing code, rebuild with `./backend/mvnw -f backend/pom.xml package -DskipTests`. `./lh` only builds when the jar is missing. On Windows, use `backend\mvnw.cmd -f backend\pom.xml package -DskipTests` and then `java -jar backend\target\lead-hunter.jar <command>`.
 
 ### Option B: everything in Docker
 
@@ -67,12 +67,12 @@ docker compose run --rm app                          # the interactive menu
 docker compose run --rm app --help
 docker compose run --rm app company setup
 docker compose run --rm app campaign new
-docker compose run --rm app campaign create -f campaigns/clinicas-luanda.yml
+docker compose run --rm app campaign create -f campaigns/my-campaign.yml
 docker compose run --rm app campaign run clinicas-luanda
 docker compose run --rm app leads list clinicas-luanda
 ```
 
-The `app` service reads `.env`, connects to the `postgres` service by name, and mounts `./campaigns` into the container, so campaign files and `campaigns/company.yml` you edit on your machine are visible inside. After changing code, rebuild with `docker compose build app`.
+The `app` service reads `.env`, connects to the `postgres` service by name, and mounts `./campaigns` into the container, so YAML files you put there (for `campaign create -f` and `company update -f`) are visible inside. The database holds the campaigns and the company profile; these files are only a way to load them. After changing code, rebuild with `docker compose build app`.
 
 A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list clinicas-luanda`.
 
@@ -81,11 +81,11 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 | Command | What it does |
 |---|---|
 | `menu` | Numbered menu to run a campaign, browse leads, create a campaign, see the company profile and usage. Opens by itself when you run with no arguments in a terminal. Greets you with a shaded fox illustration (monochrome text without color; honor `NO_COLOR`) |
-| `company setup [--file campaigns/company.yml] [--no-file]` | Ask the company questions and save the profile. Run it again to change answers |
-| `company update [-f campaigns/company.yml]` | Save the profile from its YAML file |
+| `company setup` | Ask the company questions and save the profile. Run it again to change answers |
+| `company update -f <file>` | Save the profile from a YAML file |
 | `company show` | Print the saved profile |
 | `company template` | Print an example company file |
-| `campaign new [--dir campaigns] [--no-file]` | Ask the campaign questions, save the campaign, and write `campaigns/<slug>.yml`. Needs a company profile |
+| `campaign new` | Ask the campaign questions and save the campaign. Needs a company profile |
 | `campaign template` | Print an example campaign file |
 | `campaign create -f <file>` | Save a campaign. Same slug again updates it. The service must be one the company sells |
 | `campaign list` | Campaigns and how much each has spent on Apify |
@@ -121,19 +121,19 @@ The budget is $10 a month for scraping and LLM calls, see [ADR 0006](docs/adr/00
 
 Create a Railway project with a Postgres database and a service built from the `Dockerfile`. The image's default command prints help and exits, so either:
 
-- run the CLI from your laptop against Railway's database: `railway run java -jar target/lead-hunter.jar leads list clinicas-luanda`, or
+- run the CLI from your laptop against Railway's database: `railway run java -jar backend/target/lead-hunter.jar leads list clinicas-luanda`, or
 - set the service's start command to a campaign run and give it a cron schedule, with restart policy "Never".
 
 ## Tests
 
 ```bash
-./mvnw test
+(cd backend && ./mvnw test)
 ```
 
 Integration tests need Postgres. They use Testcontainers when Docker is running. Without Docker, point them at an empty database:
 
 ```bash
-LEADHUNTER_TEST_JDBC_URL=jdbc:postgresql://localhost:5432/leadhunter_test ./mvnw test
+(cd backend && LEADHUNTER_TEST_JDBC_URL=jdbc:postgresql://localhost:5432/leadhunter_test ./mvnw test)
 ```
 
 See [ADR 0016](docs/adr/0016-testing-strategy.md).

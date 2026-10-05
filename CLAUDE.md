@@ -12,9 +12,9 @@ Every decision lives in `docs/adr/`. Read `docs/adr/README.md` before changing a
 
 ## Commands
 
-- Build: `./mvnw package -DskipTests`
-- Test: `./mvnw test`. Integration tests need Docker, or `LEADHUNTER_TEST_JDBC_URL` pointing at an empty Postgres database.
-- Run: `java -jar target/lead-hunter.jar --help`
+- Build: `cd backend && ./mvnw package -DskipTests`
+- Test: `cd backend && ./mvnw test`. Integration tests need Docker, or `LEADHUNTER_TEST_JDBC_URL` pointing at an empty Postgres database.
+- Run: `java -jar backend/target/lead-hunter.jar --help` (or `./lh --help`)
 
 ## Conventions
 

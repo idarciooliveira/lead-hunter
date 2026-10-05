@@ -14,7 +14,7 @@ v4, below, is what `company setup` and `campaign new` ask today.
 
 ### Company profile
 
-Answered once with `company setup`, about 10 minutes. Running it again offers the saved answers as defaults. Stored in `campaigns/company.yml`.
+Answered once with `company setup`, about 10 minutes. Running it again offers the saved answers as defaults. Stored in the database.
 
 | # | Question | Default | Used by |
 |---|---|---|---|
