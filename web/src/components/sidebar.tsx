@@ -12,13 +12,17 @@ export function Sidebar({ companyName }: { companyName: string }) {
 	return (
 		<aside className="hidden w-[232px] flex-none border-r border-line bg-panel md:block">
 			<div className="sticky top-0 flex h-screen flex-col gap-1 px-3 py-4">
-				<div className="flex items-center gap-2.5 px-2 pt-1 pb-4">
+				<Link
+					to="/"
+					aria-label="Ir para a página inicial"
+					className="flex items-center gap-2.5 rounded-md px-2 pt-1 pb-4"
+				>
 					<FoxLogo />
 					<div>
 						<div className="text-base font-semibold tracking-[-0.01em]">Lead Hunter</div>
 						<div className="text-[11px] text-mute">{companyName}</div>
 					</div>
-				</div>
+				</Link>
 				<nav aria-label="Principal" className="flex flex-col gap-1">
 					{NAV.map((item) => (
 						<Link key={item.to} to={item.to} className={navItem} activeProps={navActive}>
