@@ -14,7 +14,7 @@
 		"lint": "biome check",
 		"format": "biome check --write",
 		"test": "vitest run",
-		"test:e2e": "playwright test --project=smoke",
+		"test:e2e": "playwright test --project=smoke && playwright test -c playwright.integration.config.ts",
 		"screenshots": "playwright test --project=screenshots"
 	},
 	"dependencies": {

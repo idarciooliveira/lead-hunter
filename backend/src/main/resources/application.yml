@@ -39,3 +39,17 @@ leadhunter:
   usage:
     # The bar in `usage`. ADR 0006 sets the budget at $10 a month.
     monthly-budget-usd: ${LEADHUNTER_USAGE_MONTHLY_BUDGET_USD:10}
+
+---
+# The JSON API for the web client (ADR 0031). The CLI keeps running as a non-web
+# application: start with `SPRING_PROFILES_ACTIVE=web` to serve `/api` instead.
+spring:
+  config:
+    activate:
+      on-profile: web
+  main:
+    web-application-type: servlet
+
+leadhunter:
+  cli:
+    enabled: false
