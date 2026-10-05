@@ -9,7 +9,11 @@ import { ThemeToggle } from "./theme-toggle";
 export function MobileTopBar({ onSearch }: { onSearch: () => void }) {
 	return (
 		<header className="sticky top-0 z-30 flex items-center gap-2.5 border-b border-line bg-panel px-4 py-2 md:hidden">
-			<Link to="/" aria-label="Ir para a página inicial" className="flex min-w-0 flex-1 items-center gap-2.5">
+			<Link
+				to="/hoje"
+				aria-label="Ir para a página inicial"
+				className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5"
+			>
 				<FoxLogo size={24} />
 				<div className="flex-1">
 					<div className="text-base font-semibold tracking-[-0.01em]">Lead Hunter</div>
