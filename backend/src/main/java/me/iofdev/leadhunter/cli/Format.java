@@ -1,8 +1,16 @@
 package me.iofdev.leadhunter.cli;
 
+import java.io.PrintWriter;
+
 public final class Format {
 
     private Format() {
+    }
+
+    static void printWarnings(PrintWriter out, Iterable<String> warnings) {
+        for (String warning : warnings) {
+            out.println("warning: " + warning);
+        }
     }
 
     static String truncate(String value, int width) {

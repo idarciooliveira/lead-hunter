@@ -1,19 +1,12 @@
 package me.iofdev.leadhunter.cli;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
 import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.company.CompanyProfileParser;
 import me.iofdev.leadhunter.company.CompanyRepository;
-import org.springframework.core.io.ClassPathResource;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
@@ -43,12 +36,6 @@ class CompanyCommand implements Runnable {
                 "no company profile yet. Run: company setup, or company update -f <file>"));
     }
 
-    static void printWarnings(PrintWriter out, Iterable<String> warnings) {
-        for (String warning : warnings) {
-            out.println("warning: " + warning);
-        }
-    }
-
     @Command(name = "setup", description = "Answer the company questions. Run it again to change answers.")
     static class Setup implements Runnable {
 
@@ -64,8 +51,7 @@ class CompanyCommand implements Runnable {
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            Prompter prompter = new Prompter(
-                    new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)), out,
+            Prompter prompter = Prompter.stdin(out,
                     "input ended before the company profile was complete. "
                             + "In Docker, run it with: docker compose run --rm app company setup");
             Optional<CompanyProfile> existing = company.find();
@@ -75,7 +61,7 @@ class CompanyCommand implements Runnable {
 
             company.save(profile);
             out.printf("Saved the company profile for %s.%n", profile.name());
-            printWarnings(out, CompanyProfileParser.warnings(profile));
+            Format.printWarnings(out, CompanyProfileParser.warnings(profile));
             out.println("Next: campaign new");
         }
     }
@@ -119,7 +105,7 @@ class CompanyCommand implements Runnable {
                 out.printf("Quarter target: %s new clients, %s Kz%n", Format.orDash(str(target.newClients())),
                         Format.orDash(str(target.revenueKz())));
             }
-            printWarnings(out, CompanyProfileParser.warnings(profile));
+            Format.printWarnings(out, CompanyProfileParser.warnings(profile));
         }
 
         private static String str(Object value) {
@@ -146,17 +132,12 @@ class CompanyCommand implements Runnable {
 
         @Override
         public void run() {
-            String content;
-            try {
-                content = Files.readString(file);
-            } catch (IOException e) {
-                throw new IllegalArgumentException("cannot read " + file + ": " + e.getMessage());
-            }
+            String content = CliFiles.read(file);
             CompanyProfile profile = parser.parse(content);
             boolean created = company.save(profile);
             PrintWriter out = spec.commandLine().getOut();
             out.printf("%s the company profile for %s.%n", created ? "Saved" : "Updated", profile.name());
-            printWarnings(out, CompanyProfileParser.warnings(profile));
+            Format.printWarnings(out, CompanyProfileParser.warnings(profile));
         }
     }
 
@@ -168,12 +149,7 @@ class CompanyCommand implements Runnable {
 
         @Override
         public void run() {
-            try (InputStream in = new ClassPathResource("company-template.yml").getInputStream()) {
-                spec.commandLine().getOut().print(new String(in.readAllBytes(), StandardCharsets.UTF_8));
-                spec.commandLine().getOut().flush();
-            } catch (IOException e) {
-                throw new IllegalStateException("template missing from the jar", e);
-            }
+            CliFiles.printResource(spec.commandLine().getOut(), "company-template.yml");
         }
     }
 }

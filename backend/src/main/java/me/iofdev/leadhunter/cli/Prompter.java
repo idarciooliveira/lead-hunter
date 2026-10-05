@@ -2,8 +2,10 @@ package me.iofdev.leadhunter.cli;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -22,6 +24,12 @@ final class Prompter {
         this.in = in;
         this.out = out;
         this.inputEndedMessage = inputEndedMessage;
+    }
+
+    static Prompter stdin(PrintWriter out, String inputEndedMessage) {
+        return new Prompter(
+                new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)), out,
+                inputEndedMessage);
     }
 
     PrintWriter out() {

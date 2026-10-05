@@ -1,9 +1,6 @@
 package me.iofdev.leadhunter.cli;
 
-import java.io.BufferedReader;
 import java.io.Console;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import picocli.CommandLine;
@@ -30,9 +27,7 @@ class MenuCommand implements Runnable {
     public void run() {
         CommandLine self = spec.commandLine();
         CommandLine root = self.getParent() != null ? self.getParent() : self;
-        Prompter prompter = new Prompter(
-                new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)), self.getOut(),
-                "input ended");
+        Prompter prompter = Prompter.stdin(self.getOut(), "input ended");
         new Menu(prompter, root::execute, campaigns::findAll).run();
     }
 
