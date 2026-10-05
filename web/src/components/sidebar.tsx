@@ -13,9 +13,9 @@ export function Sidebar({ companyName }: { companyName: string }) {
 		<aside className="hidden w-[232px] flex-none border-r border-line bg-panel md:block">
 			<div className="sticky top-0 flex h-screen flex-col gap-1 px-3 py-4">
 				<Link
-					to="/"
+					to="/hoje"
 					aria-label="Ir para a página inicial"
-					className="flex items-center gap-2.5 rounded-md px-2 pt-1 pb-4"
+					className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 pt-1 pb-4"
 				>
 					<FoxLogo />
 					<div>
