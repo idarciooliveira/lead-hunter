@@ -53,13 +53,28 @@ public class CampaignRunner {
         return new SearchPlan(requests, maxPlaces, apify.estimatedUsdPerPlace().multiply(BigDecimal.valueOf(maxPlaces)));
     }
 
-    public RunSummary run(Campaign campaign, boolean allowOverLimit, Consumer<String> progress) {
-        SearchPlan plan = plan(campaign);
-        if (plan.maxPlaces() > apify.maxPlacesPerRun() && !allowOverLimit) {
+    /** The verdict when every location failed. The CLI points at its progress lines; the API trims that tail. */
+    static final String ALL_FAILED = "every scraper run failed";
+
+    public boolean overLimit(SearchPlan plan) {
+        return plan.maxPlaces() > apify.maxPlacesPerRun();
+    }
+
+    public void checkOverLimit(SearchPlan plan, boolean allowOverLimit) {
+        if (overLimit(plan) && !allowOverLimit) {
             throw new BudgetExceededException("this run could return up to " + plan.maxPlaces()
                     + " places, above the limit of " + apify.maxPlacesPerRun()
                     + ". Lower search.maxPlacesPerSearch, split the campaign, or pass --allow-over-limit");
         }
+    }
+
+    public RunSummary run(Campaign campaign, boolean allowOverLimit, Consumer<String> progress) {
+        return run(campaign, allowOverLimit, progress, null);
+    }
+
+    public RunSummary run(Campaign campaign, boolean allowOverLimit, Consumer<String> progress, Long parentJobId) {
+        SearchPlan plan = plan(campaign);
+        checkOverLimit(plan, allowOverLimit);
         scraper.checkReady();
         List<CompanyProfile.Client> clients = company.find().map(CompanyProfile::clients).orElse(List.of());
 
@@ -71,7 +86,8 @@ public class CampaignRunner {
 
         for (ScrapeRequest request : plan.requests()) {
             progress.accept("Searching " + request.terms().size() + " terms in " + request.location() + "...");
-            long runId = runs.start(campaign.id(), request.location(), request.terms(), request.maxPlaces());
+            long runId = runs.start(campaign.id(), request.location(), request.terms(), request.maxPlaces(),
+                    parentJobId, RunRepository.KIND_SCRAPE);
             ScrapeResult result;
             try {
                 result = scraper.search(request);
@@ -110,6 +126,9 @@ public class CampaignRunner {
                 }
             }
             progress.accept("  " + result.places().size() + " places, " + Money.usd(result.costUsd()));
+            if (parentJobId != null) {
+                runs.progressJob(parentJobId, found);
+            }
         }
 
         leads.applyStage1Cut(campaign.id(), campaign.search().qualifyShare());

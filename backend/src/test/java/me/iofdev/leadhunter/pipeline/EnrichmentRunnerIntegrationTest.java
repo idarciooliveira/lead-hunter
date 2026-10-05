@@ -15,6 +15,9 @@ import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignFileParser;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.llm.FakeLlmClient;
+import me.iofdev.leadhunter.llm.LlmCallRepository;
+import me.iofdev.leadhunter.llm.LlmClient;
+import me.iofdev.leadhunter.llm.RecordingLlmClient;
 import me.iofdev.leadhunter.maps.ScrapedPlace;
 import me.iofdev.leadhunter.place.CrawlRepository;
 import me.iofdev.leadhunter.place.PlaceReview;
@@ -47,9 +50,15 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
         }
 
         @Bean
-        @Primary
         FakeLlmClient fakeLlm() {
             return new FakeLlmClient();
+        }
+
+        /** Recorded like the real client, so jobs see their LLM spend. */
+        @Bean
+        @Primary
+        LlmClient recordingFakeLlm(FakeLlmClient fake, LlmCallRepository calls) {
+            return new RecordingLlmClient(fake, calls);
         }
     }
 
@@ -83,6 +92,10 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
     FakeReviewFetcher reviewFetcher;
     @Autowired
     FakeLlmClient llm;
+    @Autowired
+    RunJobService jobs;
+    @Autowired
+    RunRepository runs;
 
     private HttpServer site;
     private final List<String> progress = new ArrayList<>();
@@ -129,6 +142,20 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
     @AfterEach
     void stopSite() {
         site.stop(0);
+    }
+
+    @Test
+    void anEnrichmentJobCountsEnrichedLeadsAndItsLlmSpend() {
+        jobs.runEnrichment(campaign, 2, 10, 10, progress::add);
+
+        RunRepository.JobView job = runs.listJobs(campaign.id()).getFirst();
+        assertThat(job.kind()).isEqualTo(RunRepository.KIND_ENRICH);
+        assertThat(job.status()).isEqualTo("SUCCEEDED");
+        assertThat(job.done()).isEqualTo(2);
+        assertThat(job.total()).isEqualTo(2);
+        BigDecimal llmSpend = jdbc.sql("select sum(cost_usd) from llm_call").query(BigDecimal.class).single();
+        assertThat(llmSpend).isPositive();
+        assertThat(job.costUsd()).isEqualByComparingTo(new BigDecimal("0.11").add(llmSpend));
     }
 
     @Test

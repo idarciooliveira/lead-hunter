@@ -13,6 +13,7 @@ import me.iofdev.leadhunter.llm.LlmCallRepository;
 import me.iofdev.leadhunter.llm.LlmRequest;
 import me.iofdev.leadhunter.llm.LlmResponse;
 import me.iofdev.leadhunter.maps.ScrapeResult;
+import me.iofdev.leadhunter.pipeline.JobLease;
 import me.iofdev.leadhunter.pipeline.RunFailure;
 import me.iofdev.leadhunter.pipeline.RunRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +44,16 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
         runs.fail(run(schools), new RunFailure("run-x", "boom", new BigDecimal("0.03")));
         // A crash before Apify answered leaves a failed run with no cost.
         runs.fail(run(schools), new RunFailure(null, "connection reset", null));
+        // Job parents are not Apify runs: dry runs store projected places, an
+        // enrich batch without a review fetch closes with no child row, and a
+        // scrape can fail before its first search.
+        runs.recordDryRun(clinics, 120, 4);
+        try (JobLease enrich = runs.startJob(schools, RunRepository.KIND_ENRICH, 25)) {
+            runs.finishJob(enrich.jobId(), 3);
+        }
+        try (JobLease scrape = runs.startJob(clinics, RunRepository.KIND_SCRAPE, null)) {
+            runs.failJob(scrape.jobId(), "APIFY_TOKEN is not set");
+        }
 
         call(clinics, "pitch", "google/gemma-4-26b-a4b-it", 1000, 200, "0.00200000");
         call(clinics, "pitch", "anthropic/claude-haiku-4.5", 500, 100, "0.00100000");
@@ -54,6 +65,7 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
     void sumsApifySpendIncludingFailedRuns() {
         UsageReport.Apify apify = usage.report(UsageFilter.all()).apify();
 
+        // The DRY_RUN row (projected 120) and the childless parents stay out.
         assertThat(apify.runs()).isEqualTo(4);
         assertThat(apify.failedRuns()).isEqualTo(2);
         assertThat(apify.unpricedRuns()).isEqualTo(1);
@@ -130,9 +142,12 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
     void listsEntriesNewestFirstWithUnknownCostsAsNull() {
         List<UsageReport.Entry> entries = usage.entries(UsageFilter.all(), 100);
 
-        assertThat(entries).hasSize(8);
+        // The DRY_RUN row and the childless parents stay out of the list too.
+        assertThat(entries).filteredOn(e -> e.kind().equals("apify"))
+                .extracting(e -> e.label().endsWith(", SUCCEEDED") || e.label().endsWith(", FAILED"))
+                .containsOnly(true);
         assertThat(entries).extracting(UsageReport.Entry::at).isSortedAccordingTo(Comparator.reverseOrder());
-        assertThat(entries).filteredOn(e -> e.costUsd() == null).hasSize(2);
+        assertThat(entries).filteredOn(e -> e.kind().equals("llm") && e.costUsd() == null).hasSize(1);
         assertThat(usage.entries(UsageFilter.all(), 3)).hasSize(3);
         assertThat(usage.entries(new UsageFilter(null, null, schools), 100))
                 .extracting(UsageReport.Entry::kind).containsOnly("apify", "llm");

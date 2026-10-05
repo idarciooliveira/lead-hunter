@@ -11,6 +11,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import me.iofdev.leadhunter.PostgresTestSupport;
+import me.iofdev.leadhunter.pipeline.JobLease;
+import me.iofdev.leadhunter.pipeline.RunRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.io.TempDir;
@@ -24,6 +26,8 @@ class CliIntegrationTest extends PostgresTestSupport {
 
     @Autowired
     SpringCommandFactory factory;
+    @Autowired
+    RunRepository runs;
 
     private record Result(int exitCode, String out, String err) {
     }
@@ -118,6 +122,20 @@ class CliIntegrationTest extends PostgresTestSupport {
         assertThat(leads.out()).contains("No qualified leads");
         assertThat(execute("leads", "list", "clinicas-luanda", "--stage", "ALL").out())
                 .startsWith("No leads in 'clinicas-luanda'");
+    }
+
+    @Test
+    void refusesToRunACampaignWhileItHasARunningJob() {
+        execute("company", "update", "-f", EXAMPLES.resolve("company.yml").toString());
+        execute("campaign", "create", "--file", EXAMPLES.resolve("clinicas-luanda.yml").toString());
+        long campaignId = jdbc.sql("select id from campaign where slug = 'clinicas-luanda'").query(Long.class).single();
+
+        try (JobLease running = runs.startJob(campaignId, RunRepository.KIND_ENRICH, 5)) {
+            Result result = execute("campaign", "run", "clinicas-luanda");
+
+            assertThat(result.exitCode()).isEqualTo(1);
+            assertThat(result.err()).contains("error: campaign 'clinicas-luanda' already has a running job");
+        }
     }
 
     @Test

@@ -19,7 +19,17 @@ const columns = col.columns([
 		header: "Lugares",
 		cell: ({ row }) => <span className="font-mono">{runPlaces(row.original)}</span>,
 	}),
-	col.accessor("costUsd", { header: "Custo", cell: (c) => <span className="font-mono">{usd(c.getValue())}</span> }),
+	col.accessor("costUsd", {
+		header: "Custo",
+		cell: (c) => {
+			const cost = c.getValue();
+			return cost === null ? (
+				<span className="text-mute">sem preço</span>
+			) : (
+				<span className="font-mono">{usd(cost)}</span>
+			);
+		},
+	}),
 ]);
 
 export function RunTable({ runs }: { runs: Run[] }) {

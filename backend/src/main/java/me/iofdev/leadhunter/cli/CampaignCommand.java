@@ -15,9 +15,9 @@ import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.maps.ScrapeRequest;
 import me.iofdev.leadhunter.pipeline.CampaignRunner;
 import me.iofdev.leadhunter.pipeline.EnrichmentProperties;
-import me.iofdev.leadhunter.pipeline.EnrichmentRunner;
 import me.iofdev.leadhunter.pipeline.EnrichmentSummary;
 import me.iofdev.leadhunter.pipeline.LeadRepository;
+import me.iofdev.leadhunter.pipeline.RunJobService;
 import me.iofdev.leadhunter.pipeline.RunSummary;
 import me.iofdev.leadhunter.pipeline.SearchPlan;
 import me.iofdev.leadhunter.usage.Money;
@@ -185,24 +185,25 @@ class CampaignCommand implements Runnable {
 
         private final CampaignRepository campaigns;
         private final CampaignRunner runner;
+        private final RunJobService jobs;
 
-        Run(CampaignRepository campaigns, CampaignRunner runner) {
+        Run(CampaignRepository campaigns, CampaignRunner runner, RunJobService jobs) {
             this.campaigns = campaigns;
             this.runner = runner;
+            this.jobs = jobs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
             Campaign campaign = requireCampaign(campaigns, slug);
-            SearchPlan plan = runner.plan(campaign);
 
             if (dryRun) {
-                printDryRun(out, campaign, plan);
+                printDryRun(out, campaign, runner.plan(campaign));
                 return;
             }
 
-            RunSummary summary = runner.run(campaign, allowOverLimit, message -> {
+            RunSummary summary = jobs.runScrape(campaign, allowOverLimit, message -> {
                 out.println(message);
                 out.flush();
             });
@@ -254,14 +255,14 @@ class CampaignCommand implements Runnable {
         Integer maxReviews;
 
         private final CampaignRepository campaigns;
-        private final EnrichmentRunner runner;
+        private final RunJobService jobs;
         private final LeadRepository leads;
         private final EnrichmentProperties enrichment;
 
-        Enrich(CampaignRepository campaigns, EnrichmentRunner runner, LeadRepository leads,
+        Enrich(CampaignRepository campaigns, RunJobService jobs, LeadRepository leads,
                EnrichmentProperties enrichment) {
             this.campaigns = campaigns;
-            this.runner = runner;
+            this.jobs = jobs;
             this.leads = leads;
             this.enrichment = enrichment;
         }
@@ -283,7 +284,7 @@ class CampaignCommand implements Runnable {
                 return;
             }
 
-            EnrichmentSummary summary = runner.enrich(campaign, batch, reviews, message -> {
+            EnrichmentSummary summary = jobs.runEnrichment(campaign, pending, batch, reviews, message -> {
                 out.println(message);
                 out.flush();
             });
