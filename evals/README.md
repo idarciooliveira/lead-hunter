@@ -25,8 +25,8 @@ agent in a fresh session and tells it only which files to read, so every round s
 
 ## Notes
 
-- The repo's `mvnw` has CRLF endings and this host has no javac, so builds/tests run in Docker
-  (`maven:3.9-eclipse-temurin-21`); see the agent definitions for exact commands.
+- Builds and tests use the pinned JDK 21 through `./check` (see `CLAUDE.md`). Only `harness.sh` uses Docker, to
+  run the built CLI image against the scratch database.
 - `campaign run` is only ever executed with `--dry-run` — evals never spend Apify money.
 - Wizard question changes may shift the scripted-answer alignment; the harness appends a blank-line
   buffer so trailing confirms still default, but mid-wizard shifts show up as refused inputs in the

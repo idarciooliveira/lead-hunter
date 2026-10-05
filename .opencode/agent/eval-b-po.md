@@ -10,7 +10,7 @@ You turn the evaluator's feedback into a concrete, prioritized improvement instr
 ## Your inputs (read ONLY these)
 - `evals/rounds/round-<N>/A-scorecard.md`
 - `evals/rounds/round-<N>/A-feedback.md`
-- `campaigns/company.yml` — who the product is for (real profile)
+- `evals/scripts/company-create.txt` — the simulated owner's answers (the company profile lives in the database, not in a file)
 - Optionally `evals/runs/round-<N>-*.txt` transcripts when a quote needs context.
 
 Do NOT read the Java source. You own the WHAT, not the HOW.
