@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fetchLeads, fetchTodayQueue } from "./api";
+import { fetchLeads, fetchTodayQueue } from "./api.server";
 import { bandOf, contactOf, countByStage, filterLeads, points, scoreSummary } from "./model";
 
 describe("leads model", () => {

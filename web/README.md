@@ -1,6 +1,6 @@
 # Lead Hunter web
 
-The browser client for Lead Hunter (ADR 0030). TanStack Start with Router, Query and Table, Tailwind and shadcn/ui primitives, Zod, Biome, Vitest and Playwright. With `VITE_LEADHUNTER_API_URL` set every page reads the HTTP API (ADR 0031); without it the pages run on sample data (ADR 0035).
+The browser client for Lead Hunter (ADR 0030). TanStack Start with Router, Query and Table, Tailwind and shadcn/ui primitives, Zod, Biome, Vitest and Playwright. With `LEADHUNTER_API_URL` set on the web server every page reads the HTTP API through server functions (ADR 0031, 0037); without it the pages run on sample data (ADR 0035).
 
 ## Run it
 
@@ -16,7 +16,7 @@ Point the pages at the backend instead of the fixtures (needs the `web`
 Spring profile running, see `../docs/api.md`):
 
 ```bash
-VITE_LEADHUNTER_API_URL=http://localhost:8080/api pnpm dev
+LEADHUNTER_API_URL=http://localhost:8080/api pnpm dev
 ```
 
 ## Commands
@@ -38,7 +38,8 @@ VITE_LEADHUNTER_API_URL=http://localhost:8080/api pnpm dev
 - `src/routes/` file-based routes, one per page. Loaders prefetch the page's queries for server rendering.
 - `src/features/<feature>/` one folder per feature (`leads`, `campaigns`, `runs`, `usage`, `company`):
   - `schema.ts` Zod schemas for the API responses, mirroring the backend enums.
-  - `api.ts` the only file that knows where data comes from: the HTTP API through `lib/http.ts` when `VITE_LEADHUNTER_API_URL` is set, `fixtures.ts` through `lib/fake-api.ts` otherwise. It maps the backend shapes in `lib/api-contract.ts` to the feature schema.
+  - `api.ts` the TanStack Start server functions (`createServerFn`) the queries call. The browser only ever calls these; only the web server talks to the backend (ADR 0037).
+  - `api.server.ts` the only file that knows where data comes from: the HTTP API through `lib/http.server.ts` when `LEADHUNTER_API_URL` is set (with `LEADHUNTER_API_TOKEN` as a bearer token when set), `fixtures.ts` through `lib/fake-api.ts` otherwise. It maps the backend shapes in `lib/api-contract.ts` to the feature schema. Plain functions, so the unit tests call them directly.
   - `queries.ts` TanStack Query options. Pages read data only through these.
   - `model.ts` labels, tones and formatting helpers. Never scoring: scores and reasons come from the API (ADR 0007).
   - `components/` the feature's UI.

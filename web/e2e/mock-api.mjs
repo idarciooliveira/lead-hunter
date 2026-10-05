@@ -6,6 +6,8 @@
 import http from "node:http";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 3330);
+// When set, every /api call but health needs it, like the backend under ADR 0037.
+const TOKEN = process.env.MOCK_API_TOKEN;
 
 const STATUSES = ["NEW", "CONTACTED", "NO_ANSWER", "INTERESTED", "MEETING", "PROPOSAL_SENT", "WON", "LOST"];
 const LOST_REASONS = ["NO_BUDGET", "WRONG_PERSON", "HAS_SUPPLIER", "NOT_INTERESTED", "NOT_NOW"];
@@ -147,6 +149,12 @@ const server = http.createServer((req, res) => {
 		return json(200, { status: "ok" });
 	}
 	if (req.method === "GET" && url.pathname === "/api/health") return json(200, { status: "ok" });
+	if (TOKEN && url.pathname.startsWith("/api/") && req.headers.authorization !== `Bearer ${TOKEN}`) {
+		return json(401, { message: "missing or wrong API token" });
+	}
+	if (req.method === "POST" && url.pathname === "/api/campaigns/mock-clinicas/enrichment") {
+		return json(400, { message: "nothing to enrich: every qualified lead of mock-clinicas is enriched" });
+	}
 	if (req.method === "GET" && url.pathname === "/api/campaigns") return json(200, [CAMPAIGN]);
 	if (req.method === "GET" && url.pathname === "/api/campaigns/mock-clinicas") return json(200, CAMPAIGN);
 	if (req.method === "GET" && url.pathname === "/api/campaigns/mock-clinicas/runs") return json(200, RUNS);

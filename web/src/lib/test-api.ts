@@ -7,7 +7,7 @@ import type { BackendCampaign } from "./api-contract";
  * Pair it with `vi.unstubAllEnvs()` and `vi.unstubAllGlobals()` in `afterEach`.
  */
 export function stubApi(routes: Record<string, unknown>) {
-	vi.stubEnv("VITE_LEADHUNTER_API_URL", "http://api:8080/api");
+	vi.stubEnv("LEADHUNTER_API_URL", "http://api:8080/api");
 	const fetch = vi.fn(async (url: string, _init?: RequestInit) => {
 		const path = url.replace("http://api:8080/api", "");
 		if (!(path in routes)) return new Response(JSON.stringify({ message: `no route ${path}` }), { status: 404 });

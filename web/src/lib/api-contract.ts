@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * The backend shapes `docs/api.md` serves. Only the fields the UI reads are
  * listed; Zod strips the rest. As the API grows (pitches, audits, funnels),
- * the mappers in each feature's `api.ts` pick the new fields up here.
+ * the mappers in each feature's `api.server.ts` pick the new fields up here.
  */
 
 /** One job of GET /api/campaigns/{slug}/runs and GET /api/runs/{id} (ADR 0033). */

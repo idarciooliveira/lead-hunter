@@ -1,6 +1,6 @@
 # Lead Hunter
 
-Internal CLI that finds and ranks PME leads from Google Maps for a software factory in Luanda. Java 21, Spring Boot 4.1, Maven, picocli, PostgreSQL with Flyway and JdbcClient, Apify for scraping, LLM calls through the Vercel AI Gateway behind `LlmClient`. The web client in `web/` is TanStack Start with Query, Router and Table, Tailwind, Zod and Biome. It reads the HTTP API when `VITE_LEADHUNTER_API_URL` is set and sample data otherwise (ADR 0030, 0031, 0035). See README.md and web/README.md.
+Internal CLI that finds and ranks PME leads from Google Maps for a software factory in Luanda. Java 21, Spring Boot 4.1, Maven, picocli, PostgreSQL with Flyway and JdbcClient, Apify for scraping, LLM calls through the Vercel AI Gateway behind `LlmClient`. The web client in `web/` is TanStack Start with Query, Router and Table, Tailwind, Zod and Biome. It reads the HTTP API through server functions when `LEADHUNTER_API_URL` is set on the web server, and sample data otherwise (ADR 0030, 0031, 0035, 0037). See README.md and web/README.md.
 
 ## Decisions
 
@@ -30,7 +30,7 @@ Environment: building needs JDK 21 (a JRE is not enough). It is installed with S
 
 ## Conventions
 
-- Web: one folder per feature under `web/src/features` with `schema.ts` (Zod), `api.ts`, `queries.ts` and `components/`. Pages read data only through the query options; only `api.ts` knows where data comes from. Build screens from `web/src/components/ui` and the token classes in `web/src/styles.css` (`bg-panel`, `text-mute`, `bg-acc`...), never raw colours. The UI shows scores and reasons from the API and never computes them.
+- Web: one folder per feature under `web/src/features` with `schema.ts` (Zod), `api.ts` (server functions), `api.server.ts`, `queries.ts` and `components/`. Pages read data only through the query options, the queries call only the server functions, and only `api.server.ts` knows where data comes from. The browser never calls the backend (ADR 0037). Build screens from `web/src/components/ui` and the token classes in `web/src/styles.css` (`bg-panel`, `text-mute`, `bg-acc`...), never raw colours. The UI shows scores and reasons from the API and never computes them.
 - Package by feature under `me.iofdev.leadhunter`: `company`, `campaign`, `maps`, `apify`, `place`, `scoring`, `pipeline`, `llm`, `cli`, `input`.
 - SQL is hand-written with `JdbcClient`. Schema changes are new Flyway migrations; never edit an applied one.
 - Jackson 3: packages are `tools.jackson.*`, and `JsonNode.asString()` replaces `asText()`.

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BackendLead } from "#/lib/api-contract";
 import { BACKEND_CAMPAIGN, stubApi } from "#/lib/test-api";
-import { fetchLead, fetchLeads, markLead, rankBackendLeads, toLead } from "./api";
+import { fetchLead, fetchLeads, markLead, rankBackendLeads, toLead } from "./api.server";
 
 const QUALIFIED: BackendLead = {
 	id: 9001,
@@ -107,7 +107,7 @@ describe("markLead", () => {
 	});
 
 	it("PATCHes the lead over HTTP", async () => {
-		vi.stubEnv("VITE_LEADHUNTER_API_URL", "http://api:8080/api");
+		vi.stubEnv("LEADHUNTER_API_URL", "http://api:8080/api");
 		let method: string | undefined;
 		let body: unknown;
 		vi.stubGlobal(
