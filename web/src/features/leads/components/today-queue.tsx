@@ -19,6 +19,7 @@ const QUICK: { value: Outcome; label: string }[] = [
 type Props = {
 	leads: Lead[];
 	state: QueueState;
+	/** Non-null while a mark is in flight; every quick button stays disabled until it lands. */
 	pendingId: string | null;
 	error: string | null;
 	onToggle: (id: string) => void;
@@ -71,7 +72,7 @@ export function TodayQueue({ leads, state, pendingId, error, onToggle, onMark }:
 												key={q.value}
 												size="sm"
 												variant="default"
-												disabled={pendingId === lead.id}
+												disabled={pendingId !== null}
 												onClick={() => onMark(lead.id, q.value)}
 											>
 												{q.label}
@@ -121,7 +122,7 @@ export function TodayQueue({ leads, state, pendingId, error, onToggle, onMark }:
 											size="touch"
 											className="flex-1"
 											variant="default"
-											disabled={pendingId === lead.id}
+											disabled={pendingId !== null}
 											onClick={() => onMark(lead.id, q.value)}
 										>
 											{q.label}

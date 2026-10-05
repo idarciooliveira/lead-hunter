@@ -37,7 +37,8 @@ test.describe
 	.serial("contact outcomes", () => {
 		test.beforeEach(async ({ request }) => {
 			// The mock API port matches playwright.integration.config.ts.
-			await request.post("http://localhost:3330/__reset");
+			const port = process.env.MOCK_API_PORT ?? "3330";
+			await request.post(`http://localhost:${port}/__reset`);
 		});
 
 		test("lead outcome saves through the API and the chip changes", async ({ page }) => {

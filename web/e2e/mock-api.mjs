@@ -122,6 +122,11 @@ const server = http.createServer((req, res) => {
 				const status = typeof body.status === "string" ? body.status.toUpperCase() : null;
 				const lostReason =
 					body.lostReason === null || body.lostReason === undefined ? null : String(body.lostReason).toUpperCase();
+				// Mirrors LeadController + LeadRepository.updateOutcome.
+				if (status === null)
+					return json(400, {
+						message: "status is required: NEW, CONTACTED, NO_ANSWER, INTERESTED, MEETING, PROPOSAL_SENT, WON or LOST",
+					});
 				if (!STATUSES.includes(status)) return json(400, { message: `unknown status '${body.status}'` });
 				if (status === "LOST" && !LOST_REASONS.includes(lostReason)) {
 					if (lostReason === null) {
@@ -141,7 +146,7 @@ const server = http.createServer((req, res) => {
 				}
 				lead.status = status;
 				lead.lostReason = status === "LOST" ? lostReason : null;
-				lead.note = typeof body.note === "string" && body.note !== "" ? body.note : null;
+				lead.note = typeof body.note === "string" && body.note.trim() !== "" ? body.note : null;
 				return json(200, lead);
 			});
 		}

@@ -152,6 +152,15 @@ class LeadOutcomeIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
+    void malformedJsonIsABadRequest() throws Exception {
+        mvc.perform(patch("/api/leads/{id}", leadId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("invalid JSON body"));
+    }
+
+    @Test
     void unknownLeadIsANotFound() throws Exception {
         mvc.perform(patch("/api/leads/{id}", 999999)
                         .contentType(MediaType.APPLICATION_JSON)

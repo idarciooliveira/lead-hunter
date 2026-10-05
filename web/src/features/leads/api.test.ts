@@ -101,13 +101,16 @@ describe("leads over HTTP", () => {
 describe("markLead", () => {
 	it("saves the outcome on the fixtures without an API", async () => {
 		const before = (await fetchLeads()).find((l) => l.id === "l1");
-		const lead = await markLead("l1", { status: "CONTACTED", note: "ligou" });
-		expect(lead).toMatchObject({ status: "CONTACTED", note: "ligou" });
-		await markLead("l1", {
-			status: before?.status ?? "NEW",
-			lostReason: before?.lostReason ?? null,
-			note: before?.note ?? null,
-		});
+		try {
+			const lead = await markLead("l1", { status: "CONTACTED", note: "ligou" });
+			expect(lead).toMatchObject({ status: "CONTACTED", note: "ligou" });
+		} finally {
+			await markLead("l1", {
+				status: before?.status ?? "NEW",
+				lostReason: before?.lostReason ?? null,
+				note: before?.note ?? null,
+			});
+		}
 		await expect(fetchLead("l1")).resolves.toMatchObject({
 			status: before?.status,
 			note: before?.note ?? null,

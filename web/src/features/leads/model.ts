@@ -20,8 +20,10 @@ export type Outcome = Exclude<LeadStatus, "NEW"> | "NOT_NOW";
 
 export const OUTCOMES: { value: Outcome; label: string }[] = [
 	{ value: "CONTACTED", label: "Contactado" },
+	{ value: "NO_ANSWER", label: "Sem resposta" },
 	{ value: "INTERESTED", label: "Respondeu" },
 	{ value: "MEETING", label: "Reunião" },
+	{ value: "PROPOSAL_SENT", label: "Proposta enviada" },
 	{ value: "WON", label: "Ganho" },
 	{ value: "LOST", label: "Perdido" },
 	{ value: "NOT_NOW", label: "Não agora" },

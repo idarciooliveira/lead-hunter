@@ -221,7 +221,9 @@ export function ContactOutcome({ lead }: { lead: Lead }) {
 	const saved = outcomeOf(lead.status, lead.lostReason);
 	const contact = contactOf(lead.status, lead.lostReason);
 	const [pending, setPending] = useState<Outcome | null>(null);
-	const [lostReason, setLostReason] = useState<LostReason>("NOT_INTERESTED");
+	const [lostReason, setLostReason] = useState<LostReason>(
+		lead.lostReason !== null && lead.lostReason !== "NOT_NOW" ? lead.lostReason : "NOT_INTERESTED",
+	);
 	const [note, setNote] = useState(lead.note ?? "");
 	const active = pending ?? saved;
 

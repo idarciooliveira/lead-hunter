@@ -61,7 +61,9 @@ function TodayPage() {
 			<TodayQueue
 				leads={leads}
 				state={state}
-				pendingId={mark.isPending ? (mark.variables?.id ?? null) : null}
+				// A single mutation at a time: while one mark is in flight every
+				// button stays disabled, so a second click cannot overtake it.
+				pendingId={mark.isPending ? (mark.variables?.id ?? "") : null}
 				error={mark.isError ? mark.error.message : null}
 				onToggle={(id) => setState((s) => ({ ...s, done: { ...s.done, [id]: !s.done[id] } }))}
 				onMark={onMark}

@@ -59,7 +59,8 @@ export async function markLead(id: string, input: MarkLeadInput): Promise<Lead> 
 		if (input.status === "LOST") lead.lostReason = input.lostReason ?? null;
 		else lead.lostReason = null;
 		lead.status = input.status;
-		lead.note = input.note ?? null;
+		// Like the backend (LeadRepository.updateOutcome): a blank note is no note.
+		lead.note = typeof input.note === "string" && input.note.trim() !== "" ? input.note : null;
 		return fakeResponse(Lead, lead);
 	}
 	const updated = await apiMutate(BackendLead, `/leads/${encodeURIComponent(id)}`, "PATCH", {

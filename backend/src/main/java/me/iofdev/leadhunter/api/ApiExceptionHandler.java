@@ -24,10 +24,15 @@ class ApiExceptionHandler {
         return ResponseEntity.status(status).body(new ApiError(message));
     }
 
-    @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class,
-            HttpMessageNotReadableException.class})
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
     ResponseEntity<ApiError> handleBadRequest(Exception ex) {
         String message = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(message));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        // Jackson's message is verbose internals; the mock API and the UI only need to know the body is broken.
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError("invalid JSON body"));
     }
 }
