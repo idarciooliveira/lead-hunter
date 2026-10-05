@@ -10,6 +10,9 @@ sdk_java="$HOME/.sdkman/candidates/java/$(sed -n 's/^java=//p' .sdkmanrc 2>/dev/
 if [ -z "$JAVA_HOME" ] && [ -x "$sdk_java/bin/javac" ]; then
   JAVA_HOME="$sdk_java"
   export JAVA_HOME
+fi
+# Align PATH with JAVA_HOME so the javac validated below is the one Maven will use.
+if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/javac" ]; then
   PATH="$JAVA_HOME/bin:$PATH"
 fi
 command -v javac >/dev/null 2>&1 || fail "javac not found. Install JDK 21 with SDKMAN (sdk env). See CLAUDE.md."
