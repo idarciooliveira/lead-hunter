@@ -13,11 +13,13 @@ import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.maps.ScrapeRequest;
+import me.iofdev.leadhunter.pipeline.AlreadyRunningException;
 import me.iofdev.leadhunter.pipeline.CampaignRunner;
 import me.iofdev.leadhunter.pipeline.EnrichmentProperties;
 import me.iofdev.leadhunter.pipeline.EnrichmentRunner;
 import me.iofdev.leadhunter.pipeline.EnrichmentSummary;
 import me.iofdev.leadhunter.pipeline.LeadRepository;
+import me.iofdev.leadhunter.pipeline.RunRepository;
 import me.iofdev.leadhunter.pipeline.RunSummary;
 import me.iofdev.leadhunter.pipeline.SearchPlan;
 import me.iofdev.leadhunter.usage.Money;
@@ -185,16 +187,24 @@ class CampaignCommand implements Runnable {
 
         private final CampaignRepository campaigns;
         private final CampaignRunner runner;
+        private final RunRepository runs;
 
-        Run(CampaignRepository campaigns, CampaignRunner runner) {
+        Run(CampaignRepository campaigns, CampaignRunner runner, RunRepository runs) {
             this.campaigns = campaigns;
             this.runner = runner;
+            this.runs = runs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
             Campaign campaign = requireCampaign(campaigns, slug);
+
+            if (!dryRun && runs.runningExists(campaign.id())) {
+                throw new AlreadyRunningException(
+                        "campaign '" + campaign.slug() + "' already has a running job");
+            }
+
             SearchPlan plan = runner.plan(campaign);
 
             if (dryRun) {

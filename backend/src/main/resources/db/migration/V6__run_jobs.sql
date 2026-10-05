@@ -1,7 +1,9 @@
 -- Job parents for runs started from the UI. See ADR 0033.
 -- A POST creates one parent row (kind SCRAPE, ENRICH or DRY_RUN); the
 -- per-location scraper rows and the reviews row become its children via
--- parent_id. Usage reporting keeps reading the children and ignores parents.
+-- parent_id. Usage reporting keeps reading the children and ignores parents,
+-- by parent_id for scrape jobs and by kind for dry runs and enrich jobs
+-- without a review fetch.
 -- At most one run per campaign at a time: the partial unique index below is
 -- the backstop behind the pre-check in RunJobService.
 
