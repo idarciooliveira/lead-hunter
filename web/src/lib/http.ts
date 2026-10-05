@@ -9,15 +9,41 @@ import { NotFoundError } from "./fake-api";
  * backend's message (`docs/api.md` mirrors the CLI's `error: <message>`).
  */
 export async function apiFetch<T extends z.ZodType>(schema: T, path: string): Promise<z.infer<T>> {
+	const res = await request(path);
+	if (!res.ok) throw await toError(res, path);
+	return schema.parse(await res.json());
+}
+
+/**
+ * Sends a JSON body (`PATCH` today) and validates the response like `apiFetch`.
+ * Backend-shaped errors reach the UI verbatim, never as a generic failure.
+ */
+export async function apiMutate<T extends z.ZodType>(
+	schema: T,
+	path: string,
+	method: "PATCH",
+	body: unknown,
+): Promise<z.infer<T>> {
+	const res = await request(path, method, body);
+	if (!res.ok) throw await toError(res, path);
+	return schema.parse(await res.json());
+}
+
+async function request(path: string, method?: "PATCH", body?: unknown): Promise<Response> {
 	const base = apiBaseUrl();
 	if (!base) throw new Error(`no API configured: set VITE_LEADHUNTER_API_URL to fetch ${path}`);
-	const res = await fetch(`${base}${path}`);
-	if (!res.ok) {
-		const message = await errorMessage(res, path);
-		if (res.status === 404) throw new NotFoundError(message);
-		throw new Error(message);
-	}
-	return schema.parse(await res.json());
+	return fetch(
+		`${base}${path}`,
+		method === undefined
+			? undefined
+			: { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+	);
+}
+
+async function toError(res: Response, path: string): Promise<Error> {
+	const message = await errorMessage(res, path);
+	if (res.status === 404) return new NotFoundError(message);
+	return new Error(message);
 }
 
 async function errorMessage(res: Response, path: string): Promise<string> {

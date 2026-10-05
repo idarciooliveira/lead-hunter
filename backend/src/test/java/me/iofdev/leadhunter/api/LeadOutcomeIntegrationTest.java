@@ -2,7 +2,9 @@ package me.iofdev.leadhunter.api;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -156,5 +158,15 @@ class LeadOutcomeIntegrationTest extends PostgresTestSupport {
                         .content("{\"status\":\"CONTACTED\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("no lead with id")));
+    }
+
+    @Test
+    void browserMutationsPassThePreflight() throws Exception {
+        // Mutations run in the browser from another origin (ADR 0031), until ADR 0032 moves them server-side.
+        mvc.perform(options("/api/leads/{id}", leadId)
+                        .header("Origin", "http://localhost:3000")
+                        .header("Access-Control-Request-Method", "PATCH"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"));
     }
 }

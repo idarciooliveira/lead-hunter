@@ -7,8 +7,8 @@ import { contactOf, type Outcome } from "../model";
 import type { Lead } from "../schema";
 import { ScoreCell } from "./score";
 
-/** Local, unsaved progress on the queue until lead marking exists in the API. */
-export type QueueState = { done: Record<string, boolean>; outcome: Record<string, Outcome> };
+/** Local "done for today" ticks. Outcomes save through PATCH /api/leads/{id}; the queue refetches. */
+export type QueueState = { done: Record<string, boolean> };
 
 const QUICK: { value: Outcome; label: string }[] = [
 	{ value: "CONTACTED", label: "Contactado" },
@@ -19,19 +19,25 @@ const QUICK: { value: Outcome; label: string }[] = [
 type Props = {
 	leads: Lead[];
 	state: QueueState;
+	pendingId: string | null;
+	error: string | null;
 	onToggle: (id: string) => void;
 	onMark: (id: string, outcome: Outcome) => void;
 };
 
-export function TodayQueue({ leads, state, onToggle, onMark }: Props) {
+export function TodayQueue({ leads, state, pendingId, error, onToggle, onMark }: Props) {
 	return (
 		<>
+			{error !== null && (
+				<div role="alert" className="mb-3 text-sm text-bad">
+					{error}
+				</div>
+			)}
 			<Card className="hidden overflow-hidden md:block">
 				<div className="overflow-x-auto">
 					<ul className="m-0 min-w-[900px] list-none p-0" aria-label="Fila de contacto">
 						{leads.map((lead) => {
-							const outcome = state.outcome[lead.id];
-							const contact = outcome ? contactOf(outcome) : contactOf(lead.status, lead.lostReason);
+							const contact = contactOf(lead.status, lead.lostReason);
 							return (
 								<li
 									key={lead.id}
@@ -64,7 +70,8 @@ export function TodayQueue({ leads, state, onToggle, onMark }: Props) {
 											<Button
 												key={q.value}
 												size="sm"
-												variant={outcome === q.value ? "active" : "default"}
+												variant="default"
+												disabled={pendingId === lead.id}
 												onClick={() => onMark(lead.id, q.value)}
 											>
 												{q.label}
@@ -80,7 +87,6 @@ export function TodayQueue({ leads, state, onToggle, onMark }: Props) {
 
 			<ul className="m-0 flex list-none flex-col gap-2.5 p-0 md:hidden" aria-label="Fila de contacto">
 				{leads.map((lead) => {
-					const outcome = state.outcome[lead.id];
 					const done = !!state.done[lead.id];
 					return (
 						<li key={lead.id}>
@@ -114,7 +120,8 @@ export function TodayQueue({ leads, state, onToggle, onMark }: Props) {
 											key={q.value}
 											size="touch"
 											className="flex-1"
-											variant={outcome === q.value ? "active" : "default"}
+											variant="default"
+											disabled={pendingId === lead.id}
 											onClick={() => onMark(lead.id, q.value)}
 										>
 											{q.label}
