@@ -28,7 +28,11 @@ public enum MapsSignal {
         return disqualifying.containsAll(WEBSITE_SIGNALS);
     }
 
-    /** Places below this many reviews show {@link #FEW_REVIEWS}. */
+    /**
+     * Places below this many reviews show {@link #FEW_REVIEWS}. The FEW_REVIEWS signal (below 20)
+     * and the stage-1 penalty (below 5, Stage1Scorer.FEW_REVIEWS_BELOW) are different thresholds
+     * on purpose.
+     */
     public static final int FEW_REVIEWS_BELOW = Stage1Scorer.ACTIVE_MIN_REVIEWS;
 
     private final String label;
@@ -47,7 +51,7 @@ public enum MapsSignal {
             case NO_WEBSITE -> website == WebsiteKind.NONE;
             case SOCIAL_ONLY -> website == WebsiteKind.SOCIAL_ONLY;
             case OWN_WEBSITE -> website == WebsiteKind.OWN;
-            case FEW_REVIEWS -> place.reviewsCount() < Stage1Scorer.ACTIVE_MIN_REVIEWS;
+            case FEW_REVIEWS -> place.reviewsCount() < FEW_REVIEWS_BELOW;
             case MANY_REVIEWS -> place.reviewsCount() > Stage1Scorer.SWEET_SPOT_MAX_REVIEWS;
             case LOW_RATING -> place.rating() != null && place.reviewsCount() > 0
                     && place.rating().doubleValue() < 4.0;

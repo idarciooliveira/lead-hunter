@@ -1,5 +1,6 @@
 package me.iofdev.leadhunter.place;
 
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -25,16 +26,13 @@ final class WebsiteSignals {
     static boolean stale(String html) {
         String lower = html.toLowerCase(Locale.ROOT);
         int newest = 0;
-        int index = lower.indexOf("copyright");
-        while (index >= 0 && newest < currentYear() - 1) {
-            newest = Math.max(newest, yearAfter(lower, index));
-            index = lower.indexOf("copyright", index + 9);
-        }
-        if (newest == 0) {
-            index = lower.indexOf("&copy;");
-            while (index >= 0 && newest < currentYear() - 1) {
-                newest = Math.max(newest, yearAfter(lower, index));
-                index = lower.indexOf("&copy;", index + 6);
+        for (String marker : List.of("copyright", "&copy;")) {
+            if (newest == 0) {
+                int index = lower.indexOf(marker);
+                while (index >= 0 && newest < currentYear() - 1) {
+                    newest = Math.max(newest, yearAfter(lower, index));
+                    index = lower.indexOf(marker, index + marker.length());
+                }
             }
         }
         return newest > 0 && newest <= currentYear() - 2;

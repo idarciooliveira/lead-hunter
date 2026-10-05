@@ -29,6 +29,13 @@ public class LeadRepository {
             join campaign c on c.id = l.campaign_id
             """;
 
+    private static final String UNENRICHED_QUALIFIED = """
+            where l.campaign_id = :campaignId
+              and l.status = 'NEW'
+              and l.stage = 'QUALIFIED'
+              and l.enriched_at is null
+            """;
+
     private final JdbcClient jdbc;
     private final JsonMapper json;
 
@@ -127,10 +134,9 @@ public class LeadRepository {
                                p.name, p.website, p.website_kind, p.maps_url
                         from lead l
                         join place p on p.id = l.place_id
-                        where l.campaign_id = :campaignId
-                          and l.status = 'NEW'
-                          and l.stage = 'QUALIFIED'
-                          and l.enriched_at is null
+                        """
+                        + UNENRICHED_QUALIFIED
+                        + """
                         order by l.score desc, p.reviews_count desc, l.id
                         limit :limit
                         """)
@@ -152,11 +158,8 @@ public class LeadRepository {
         return jdbc.sql("""
                         select count(*)
                         from lead l
-                        where l.campaign_id = :campaignId
-                          and l.status = 'NEW'
-                          and l.stage = 'QUALIFIED'
-                          and l.enriched_at is null
-                        """)
+                        """
+                        + UNENRICHED_QUALIFIED)
                 .param("campaignId", campaignId)
                 .query(Integer.class)
                 .single();
