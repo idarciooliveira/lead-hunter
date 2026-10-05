@@ -1,0 +1,229 @@
+package me.iofdev.leadhunter.api;
+
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.List;
+
+import me.iofdev.leadhunter.PostgresTestSupport;
+import me.iofdev.leadhunter.campaign.Campaign;
+import me.iofdev.leadhunter.campaign.CampaignFileParser;
+import me.iofdev.leadhunter.campaign.CampaignRepository;
+import me.iofdev.leadhunter.company.CompanyProfile;
+import me.iofdev.leadhunter.company.CompanyRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.servlet.MockMvc;
+
+/**
+ * HTTP end-to-end coverage for the read API: every endpoint against real
+ * Postgres, no Apify or LLM calls. Mirrors the CLI behaviour in ADR 0031.
+ */
+@EnabledIf("me.iofdev.leadhunter.PostgresTestSupport#databaseAvailable")
+@SpringBootTest(properties = {"leadhunter.cli.enabled=false", "spring.main.web-application-type=servlet"})
+@AutoConfigureMockMvc
+class ApiReadIntegrationTest extends PostgresTestSupport {
+
+    private static final String CAMPAIGN = """
+            slug: clinicas-teste
+            name: Clínicas teste
+            answers: {sector: clínicas, problem: marcações só por telefone, service: Site}
+            search:
+              terms: [clínica]
+              locations: [Talatona]
+            """;
+
+    @Autowired
+    MockMvc mvc;
+    @Autowired
+    CampaignRepository campaigns;
+    @Autowired
+    CampaignFileParser parser;
+    @Autowired
+    CompanyRepository companies;
+
+    Campaign campaign;
+    long qualifiedLeadId;
+
+    @BeforeEach
+    void seed() {
+        campaigns.save(parser.parse(CAMPAIGN));
+        campaign = campaigns.findBySlug("clinicas-teste").orElseThrow();
+
+        long place = jdbc.sql("""
+                        insert into place (google_place_id, name, category, address, neighborhood,
+                            phone_e164, phone_mobile, website, website_kind, rating, reviews_count, maps_url, raw)
+                        values ('p1', 'Clínica Sorriso', 'Clínica', 'Rua 1', 'Talatona',
+                            '+244923456789', true, null, 'NONE', 4.3, 142, 'https://maps.example/p1', '{}')
+                        returning id
+                        """)
+                .query(Long.class)
+                .single();
+        long other = jdbc.sql("""
+                        insert into place (google_place_id, name, category, address, neighborhood,
+                            phone_e164, phone_mobile, website, website_kind, rating, reviews_count, maps_url, raw)
+                        values ('p2', 'Clínica Nova', 'Clínica', 'Rua 2', 'Maianga',
+                            '+244923000111', false, 'https://nova.ao', 'OWN', 4.0, 2, 'https://maps.example/p2', '{}')
+                        returning id
+                        """)
+                .query(Long.class)
+                .single();
+        qualifiedLeadId = jdbc.sql("""
+                        insert into lead (campaign_id, place_id, stage, score, score_breakdown)
+                        values (:campaignId, :placeId, 'QUALIFIED', 65,
+                            cast(:breakdown as jsonb))
+                        returning id
+                        """)
+                .param("campaignId", campaign.id())
+                .param("placeId", place)
+                .param("breakdown", "[{\"code\":\"MOBILE_PHONE\",\"points\":5,\"reason\":\"Telefone móvel\"}]")
+                .query(Long.class)
+                .single();
+        jdbc.sql("""
+                        insert into lead (campaign_id, place_id, stage, score, score_breakdown, stage_reason)
+                        values (:campaignId, :placeId, 'BELOW_CUT', 20, cast('[]' as jsonb), 'Ranked 2 of 2')
+                        """)
+                .param("campaignId", campaign.id())
+                .param("placeId", other)
+                .update();
+
+        jdbc.sql("""
+                        insert into campaign_run (campaign_id, location, search_terms, max_places, status, places_found, cost_usd)
+                        values (:campaignId, 'Talatona', :terms, 40, 'SUCCEEDED', 8, 0.20)
+                        """)
+                .param("campaignId", campaign.id())
+                .param("terms", new String[]{"clínica"})
+                .update();
+        jdbc.sql("""
+                        insert into llm_call (campaign_id, purpose, model, prompt_tokens, completion_tokens, cost_usd)
+                        values (:campaignId, 'review-analysis', 'google/gemma-4-26b-a4b-it', 100, 50, 0.01)
+                        """)
+                .param("campaignId", campaign.id())
+                .update();
+    }
+
+    @Test
+    void healthIsOpen() throws Exception {
+        mvc.perform(get("/api/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ok"));
+    }
+
+    @Test
+    void listsAndShowsCampaigns() throws Exception {
+        mvc.perform(get("/api/campaigns"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].slug").value("clinicas-teste"))
+                .andExpect(jsonPath("$[0].answers.sector").value("clínicas"));
+
+        mvc.perform(get("/api/campaigns/clinicas-teste"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Clínicas teste"))
+                .andExpect(jsonPath("$.search.terms[0]").value("clínica"));
+
+        mvc.perform(get("/api/campaigns/desconhecida"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("no campaign 'desconhecida'")));
+    }
+
+    @Test
+    void listsLeadsWithTheSameDefaultsAsTheCli() throws Exception {
+        // Default stage is QUALIFIED, like `leads list`.
+        mvc.perform(get("/api/campaigns/clinicas-teste/leads"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Clínica Sorriso"))
+                .andExpect(jsonPath("$[0].score").value(65))
+                .andExpect(jsonPath("$[0].breakdown[0].code").value("MOBILE_PHONE"))
+                .andExpect(jsonPath("$[0].whatsappLink").value("https://wa.me/244923456789"));
+
+        mvc.perform(get("/api/campaigns/clinicas-teste/leads").param("stage", "ALL"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+
+        mvc.perform(get("/api/campaigns/clinicas-teste/leads").param("stage", "BELOW_CUT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].stageReason").value("Ranked 2 of 2"));
+
+        mvc.perform(get("/api/campaigns/clinicas-teste/leads").param("stage", "BOGUS"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("unknown stage")));
+
+        mvc.perform(get("/api/campaigns/clinicas-teste/leads").param("limit", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").exists());
+
+        mvc.perform(get("/api/campaigns/desconhecida/leads"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void showsOneLead() throws Exception {
+        mvc.perform(get("/api/leads/{id}", qualifiedLeadId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.campaignSlug").value("clinicas-teste"))
+                .andExpect(jsonPath("$.stage").value("QUALIFIED"));
+
+        mvc.perform(get("/api/leads/999999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("no lead with id")));
+
+        mvc.perform(get("/api/leads/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void showsTheCompanyProfile() throws Exception {
+        companies.save(new CompanyProfile(
+                "Exemplo Software",
+                "Fazemos sites",
+                List.of(new CompanyProfile.Service("Site", "400 mil Kz", "2 semanas")),
+                "Site",
+                List.of("Luanda"),
+                List.of(),
+                List.of(),
+                List.of(),
+                40,
+                null));
+
+        mvc.perform(get("/api/company"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Exemplo Software"))
+                .andExpect(jsonPath("$.services[0].price").value("400 mil Kz"));
+    }
+
+    @Test
+    void missingCompanyProfileIsANotFound() throws Exception {
+        mvc.perform(get("/api/company"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("no company profile yet")));
+    }
+
+    @Test
+    void reportsUsage() throws Exception {
+        mvc.perform(get("/api/usage"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.apify.costUsd").value(0.20))
+                .andExpect(jsonPath("$.llm.calls").value(1))
+                .andExpect(jsonPath("$.totalUsd").value(0.21))
+                .andExpect(jsonPath("$.byCampaign[0].slug").value("clinicas-teste"));
+
+        mvc.perform(get("/api/usage/entries"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+
+        mvc.perform(get("/api/usage").param("month", "2026-13"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("--month must look like")));
+
+        mvc.perform(get("/api/usage").param("campaign", "desconhecida"))
+                .andExpect(status().isNotFound());
+    }
+}

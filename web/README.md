@@ -12,6 +12,13 @@ pnpm install
 pnpm dev                    # http://localhost:3000
 ```
 
+Point the leads pages at the backend instead of the fixtures (needs the `web`
+Spring profile running, see `../docs/api.md`):
+
+```bash
+VITE_LEADHUNTER_API_URL=http://localhost:8080/api pnpm dev
+```
+
 ## Commands
 
 | Command | What |
@@ -21,7 +28,7 @@ pnpm dev                    # http://localhost:3000
 | `pnpm lint` / `pnpm format` | Biome check / Biome fix |
 | `pnpm typecheck` | Generate the route tree, then `tsc` |
 | `pnpm test` | Vitest unit tests |
-| `pnpm test:e2e` | Playwright smoke tests against a production build. Needs `pnpm exec playwright install chromium` once |
+| `pnpm test:e2e` | Smoke tests (fixtures build) plus the API integration tests (mock-API build, `playwright.integration.config.ts`). Needs `pnpm exec playwright install chromium` once |
 | `pnpm screenshots` | Writes one image per page to `../docs/screenshots/web` |
 
 `./check web` from the repo root runs everything the definition of done needs.
