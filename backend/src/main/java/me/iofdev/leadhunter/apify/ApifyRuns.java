@@ -3,13 +3,32 @@ package me.iofdev.leadhunter.apify;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 import me.iofdev.leadhunter.maps.ScrapeException;
+import tools.jackson.databind.JsonNode;
 
 /** Starts an actor run, polls it to the end, and settles the cost. Shared by discovery and review runs. */
 final class ApifyRuns {
 
     private ApifyRuns() {
+    }
+
+    record Finished(ApifyRun run, List<JsonNode> items) {
+    }
+
+    static Finished run(ApifyClient client, ApifyProperties properties, Object input) {
+        properties.requireToken();
+        ApifyRun run = awaitFinished(client, properties, client.startRun(properties.actorId(), input));
+        JsonNode result = client.datasetItems(run.defaultDatasetId());
+        List<JsonNode> items = new ArrayList<>();
+        if (result != null && result.isArray()) {
+            for (JsonNode item : result) {
+                items.add(item);
+            }
+        }
+        return new Finished(run, items);
     }
 
     static ApifyRun awaitFinished(ApifyClient client, ApifyProperties properties, ApifyRun run) {

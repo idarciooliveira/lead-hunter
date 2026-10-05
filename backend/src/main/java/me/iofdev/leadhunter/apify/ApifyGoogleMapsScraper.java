@@ -30,22 +30,16 @@ class ApifyGoogleMapsScraper implements GoogleMapsScraper {
 
     @Override
     public void checkReady() {
-        if (!properties.hasToken()) {
-            throw new IllegalStateException("APIFY_TOKEN is not set. Get a token at console.apify.com and export it");
-        }
+        properties.requireToken();
     }
 
     @Override
     public ScrapeResult search(ScrapeRequest request) {
-        checkReady();
-        ApifyRun run = ApifyRuns.awaitFinished(client, properties,
-                client.startRun(properties.actorId(), input(request)));
-        JsonNode items = client.datasetItems(run.defaultDatasetId());
+        ApifyRuns.Finished finished = ApifyRuns.run(client, properties, input(request));
+        ApifyRun run = finished.run();
         List<ScrapedPlace> places = new ArrayList<>();
-        if (items != null && items.isArray()) {
-            for (JsonNode item : items) {
-                ApifyPlaceMapper.map(item).ifPresent(places::add);
-            }
+        for (JsonNode item : finished.items()) {
+            ApifyPlaceMapper.map(item).ifPresent(places::add);
         }
         return new ScrapeResult(run.id(), run.defaultDatasetId(), run.usageTotalUsd(), places);
     }

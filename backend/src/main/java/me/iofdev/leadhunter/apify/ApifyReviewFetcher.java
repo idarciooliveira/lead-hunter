@@ -28,25 +28,19 @@ public class ApifyReviewFetcher implements ReviewFetcher {
 
     @Override
     public void checkReady() {
-        if (!properties.hasToken()) {
-            throw new IllegalStateException("APIFY_TOKEN is not set. Get a token at console.apify.com and export it");
-        }
+        properties.requireToken();
     }
 
     @Override
     public ReviewsResult fetchReviews(List<String> placeUrls, int maxReviews, String language) {
-        checkReady();
-        ApifyRun run = ApifyRuns.awaitFinished(client, properties,
-                client.startRun(properties.actorId(), input(placeUrls, maxReviews, language)));
+        ApifyRuns.Finished finished = ApifyRuns.run(client, properties, input(placeUrls, maxReviews, language));
+        ApifyRun run = finished.run();
         Map<String, List<PlaceReview>> reviewsByUrl = new LinkedHashMap<>();
-        JsonNode items = client.datasetItems(run.defaultDatasetId());
-        if (items != null && items.isArray()) {
-            for (JsonNode item : items) {
-                String url = item.path("url").asString(null);
-                if (url != null && placeUrls.contains(url)) {
-                    reviewsByUrl.computeIfAbsent(url, key -> new ArrayList<>())
-                            .addAll(ApifyPlaceMapper.reviews(item));
-                }
+        for (JsonNode item : finished.items()) {
+            String url = item.path("url").asString(null);
+            if (url != null && placeUrls.contains(url)) {
+                reviewsByUrl.computeIfAbsent(url, key -> new ArrayList<>())
+                        .addAll(ApifyPlaceMapper.reviews(item));
             }
         }
         return new ReviewsResult(run.id(), run.defaultDatasetId(), run.usageTotalUsd(), reviewsByUrl);

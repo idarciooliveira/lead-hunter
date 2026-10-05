@@ -29,4 +29,10 @@ public record ApifyProperties(
     public boolean hasToken() {
         return token != null && !token.isBlank();
     }
+
+    public void requireToken() {
+        if (!hasToken()) {
+            throw new IllegalStateException("APIFY_TOKEN is not set. Get a token at console.apify.com and export it");
+        }
+    }
 }
