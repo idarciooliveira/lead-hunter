@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+# Starts Postgres, the HTTP API and the web client for local work, with hot reload on the web side.
+# Usage: ./dev   (Ctrl+C stops the API and the web server; Postgres keeps running)
+set -e
+cd "$(dirname "$0")"
+# Non-interactive shells (agents, IDEs) do not load SDKMAN, so pick up the JDK pinned in .sdkmanrc.
+sdk_java="$HOME/.sdkman/candidates/java/$(sed -n 's/^java=//p' .sdkmanrc 2>/dev/null)"
+if [ -z "$JAVA_HOME" ] && [ -x "$sdk_java/bin/javac" ]; then
+  JAVA_HOME="$sdk_java"
+  export JAVA_HOME
+  PATH="$JAVA_HOME/bin:$PATH"
+fi
+command -v javac >/dev/null 2>&1 || { echo "error: building needs a JDK 21 (javac not found). See README.md." >&2; exit 1; }
+command -v pnpm >/dev/null 2>&1 || { echo "error: pnpm not found. Run: corepack enable" >&2; exit 1; }
+
+docker compose up -d --wait postgres
+# Rebuild every time so the API runs the code on disk.
+./backend/mvnw -q -B -f backend/pom.xml package -DskipTests
+(cd web && pnpm install --frozen-lockfile --silent)
+
+SPRING_PROFILES_ACTIVE=web java -jar backend/target/lead-hunter.jar &
+api_pid=$!
+trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+trap 'exit 130' INT TERM
+
+echo "dev: API on http://localhost:8080/api, web on http://localhost:3000"
+cd web
+LEADHUNTER_API_URL="${LEADHUNTER_API_URL:-http://localhost:8080/api}" pnpm dev

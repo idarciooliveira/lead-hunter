@@ -12,12 +12,13 @@ Every decision lives in `docs/adr/`. Read `docs/adr/README.md` before changing a
 
 ## Commands
 
-Environment: building needs JDK 21 (a JRE is not enough). It is installed with SDKMAN and pinned in `.sdkmanrc`. Agent and IDE shells do not load SDKMAN, so start every build or test command with `source ~/.sdkman/bin/sdkman-init.sh && sdk env`, or set `JAVA_HOME=~/.sdkman/candidates/java/21.0.8-tem`. `./lh` does this itself. `mvnw` and `lh` must stay LF (`.gitattributes` enforces it); if one fails with `\r` errors, run `git add --renormalize .` and re-checkout the file. If you build in a Docker container, pass `--user $(id -u):$(id -g)`; otherwise `backend/target` ends up root-owned and host builds fail with "Error while storing the mojo status" until it is removed with `sudo rm -rf backend/target`. Postgres comes from `docker compose up -d postgres`, and Docker must be running for the integration tests.
+Environment: building needs JDK 21 (a JRE is not enough). It is installed with SDKMAN and pinned in `.sdkmanrc`. Agent and IDE shells do not load SDKMAN, so start every build or test command with `source ~/.sdkman/bin/sdkman-init.sh && sdk env`, or set `JAVA_HOME=~/.sdkman/candidates/java/21.0.8-tem`. `./lh` does this itself. `mvnw`, `lh`, `check` and `dev` must stay LF (`.gitattributes` enforces it); if one fails with `\r` errors, run `git add --renormalize .` and re-checkout the file. If you build in a Docker container, pass `--user $(id -u):$(id -g)`; otherwise `backend/target` ends up root-owned and host builds fail with "Error while storing the mojo status" until it is removed with `sudo rm -rf backend/target`. Postgres comes from `docker compose up -d postgres`, and Docker must be running for the integration tests.
 
 - Definition of done: `./check` from the repo root. It checks the JDK and line endings, then runs the build and every test with the integration tests required (ADR 0034), then the web lint, typecheck, unit tests, build and Playwright smoke tests (ADR 0035). `./check backend` or `./check web` runs one half; finish with the half you touched, or both if you touched both. Report its result, not "tests pass".
 - Build: `cd backend && ./mvnw package -DskipTests`
 - Test: `cd backend && ./mvnw test`. Integration tests need Docker, or `LEADHUNTER_TEST_JDBC_URL` pointing at an empty Postgres database.
 - Run: `java -jar backend/target/lead-hunter.jar --help` (or `./lh --help`)
+- API and web together: `./dev` (Postgres in Docker, the API and `pnpm dev` on the host), or `docker compose up --build` for everything in containers (ADR 0039).
 - Web: needs Node 22+ and pnpm (`corepack enable`), plus `pnpm exec playwright install chromium` once for the smoke tests. `cd web && pnpm install && pnpm dev`. After a visual change, `pnpm screenshots` refreshes `docs/screenshots/web`.
 
 ## Working rules

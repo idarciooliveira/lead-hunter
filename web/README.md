@@ -19,6 +19,8 @@ Spring profile running, see `../docs/api.md`):
 LEADHUNTER_API_URL=http://localhost:8080/api pnpm dev
 ```
 
+Or start Postgres, the API and the web together from the repo root with `./dev`, or all three in containers with `docker compose up --build` (ADR 0039).
+
 ## Commands
 
 | Command | What |

@@ -102,8 +102,19 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 The browser version lives in `web/` (ADR 0030). It has every screen from the prototype and reads the HTTP API through server functions when `LEADHUNTER_API_URL` is set on the web server, or sample data without it (ADR 0031, 0035, 0037). See [web/README.md](web/README.md) to run it, and [docs/screenshots/web](docs/screenshots/web) for what each page looks like.
 
 ```bash
-cd web && pnpm install && pnpm dev   # http://localhost:3000
+cd web && pnpm install && pnpm dev   # http://localhost:3000, on sample data
 ```
+
+### API and web with one command
+
+Both read `.env` and use the same database as the CLI. See [ADR 0039](docs/adr/0039-full-stack-in-docker-compose-and-a-dev-script.md).
+
+```bash
+docker compose up --build   # everything in Docker: Postgres, the API on :8080, the web on :3000
+./dev                       # Postgres in Docker, the API and `pnpm dev` (hot reload) on your machine
+```
+
+`docker compose up` needs only Docker; after changing code, run it again with `--build`. `./dev` needs JDK 21, Node 22+ and pnpm, rebuilds the jar each time it starts, and Ctrl+C stops the API and the web server. Both use ports 5432, 8080 and 3000, so run one at a time.
 
 ## Configuration
 

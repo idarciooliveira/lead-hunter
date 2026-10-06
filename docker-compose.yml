@@ -15,6 +15,44 @@ services:
       timeout: 3s
       retries: 20
 
+  # The HTTP API (ADR 0031): the backend image with the `web` Spring profile.
+  api:
+    build: ./backend
+    image: lead-hunter
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: web
+      PGHOST: postgres
+      PGPORT: "5432"
+    command: []
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/api/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  # The web client (ADR 0030). Only its server talks to the API (ADR 0037).
+  web:
+    build: ./web
+    image: lead-hunter-web
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      LEADHUNTER_API_URL: http://api:8080/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
   # The CLI in a container. Only starts with `docker compose run --rm app <command>`.
   app:
     build: ./backend

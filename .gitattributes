@@ -8,3 +8,4 @@ backend/mvnw text eol=lf
 *.bat text eol=crlf
 *.jar binary
 check text eol=lf
+dev text eol=lf
