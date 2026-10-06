@@ -61,7 +61,7 @@ public abstract class PostgresTestSupport {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbc.sql("truncate lead, campaign_run, llm_call, website_crawl, place_review, place, campaign, company restart identity cascade").update();
+        jdbc.sql("truncate invitation, member, auth_session, auth_account, auth_verification, app_user, organization, lead, campaign_run, llm_call, website_crawl, place_review, place, campaign, company restart identity cascade").update();
     }
 
     private static String env(String name, String fallback) {

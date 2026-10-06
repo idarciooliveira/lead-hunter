@@ -19,8 +19,10 @@ final class Menu {
 
     private static final List<String> MAIN = List.of(
             "Run a campaign", "Browse leads", "New campaign", "Company profile", "Usage and costs",
-            "Enrich leads");
+            "Enrich leads", "Users and organizations");
     private static final List<String> COMPANY = List.of("Show the profile", "Set up or change it");
+    private static final List<String> ACCOUNTS = List.of("List users", "Add a user", "List organizations",
+            "Add an organization");
     private static final String STAGE_LETTERS = "qbea";
 
     private final Prompter prompter;
@@ -68,6 +70,7 @@ final class Menu {
                     case 4 -> companyProfile();
                     case 5 -> executor.execute("usage");
                     case 6 -> enrichLeads();
+                    case 7 -> accounts();
                     default -> {
                         return;
                     }
@@ -145,6 +148,31 @@ final class Menu {
             case 2 -> executor.execute("company", "setup");
             default -> {
             }
+        }
+    }
+
+    private void accounts() {
+        switch (prompter.choose("Users and organizations. Enter or 0 goes back.", ACCOUNTS)) {
+            case 1 -> executor.execute("users", "list");
+            case 2 -> addUser();
+            case 3 -> executor.execute("orgs", "list");
+            case 4 -> {
+                String name = prompter.ask("Organization name?", null, null, true);
+                executor.execute("orgs", "add", name);
+            }
+            default -> {
+            }
+        }
+    }
+
+    private void addUser() {
+        String email = prompter.ask("Email?", null, null, true);
+        String name = prompter.ask("Name?", null, null, true);
+        String org = prompter.ask("Organization slug? Enter for none.", null, null, false);
+        if (org == null) {
+            executor.execute("users", "add", email, "--name", name);
+        } else {
+            executor.execute("users", "add", email, "--name", name, "--org", org);
         }
     }
 

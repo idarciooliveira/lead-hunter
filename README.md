@@ -140,7 +140,7 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 
 | Command | What it does |
 |---|---|
-| `menu` | Numbered menu to run a campaign, browse leads, create a campaign, see the company profile and usage. Opens by itself when you run with no arguments in a terminal. Greets you with a shaded fox illustration (monochrome text without color; honor `NO_COLOR`) |
+| `menu` | Numbered menu to run a campaign, browse leads, create a campaign, see the company profile, usage, users and organizations. Opens by itself when you run with no arguments in a terminal. Greets you with a shaded fox illustration (monochrome text without color; honor `NO_COLOR`) |
 | `company setup` | Ask the company questions and save the profile. Run it again to change answers |
 | `company update -f <file>` | Save the profile from a YAML file |
 | `company show` | Print the saved profile |
@@ -158,6 +158,10 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 | `leads pitch <id>` | Write a new pitch for a lead, replacing the old one. Spends LLM credit |
 | `leads mark <id> --status <status> [--lost-reason <reason>] [--note <text>]` | Mark a contact outcome. `LOST` needs one of `NO_BUDGET`, `WRONG_PERSON`, `HAS_SUPPLIER`, `NOT_INTERESTED`, `NOT_NOW` |
 | `usage [--month YYYY-MM] [--campaign <slug>] [--runs] [--limit 30]` | What Apify and the LLM have cost, with a monthly budget bar and spend per campaign. `--runs` lists each run and call |
+| `users add <email> --name <name> [--org <slug>] [--role owner\|admin\|member]` | Create an account for the web app. Asks for the password twice without showing it, and writes it the way Better Auth reads it (ADR 0042) |
+| `users list`, `users password <email>`, `users remove <email> [--yes]` | List accounts with their organizations, set a new password (it ends their sessions), delete an account |
+| `orgs add <name> [--slug <slug>]`, `orgs list` | Create and list organizations, the tenants (ADR 0043) |
+| `members add <org> <email> [--role owner\|admin\|member]` | Add a user to an organization, or change their role |
 | `llm test ["prompt"]` | Send one prompt to the configured model, print the answer, token usage and cost |
 
 ## Web client
@@ -242,7 +246,7 @@ No test calls a real external API. See [ADR 0016](docs/adr/0016-testing-strategy
 
 ```
 backend/    Spring Boot app and picocli CLI, package me.iofdev.leadhunter
-            (company, campaign, maps, apify, place, scoring, pipeline, llm, usage, api, cli, input)
+            (company, campaign, maps, apify, place, scoring, pipeline, llm, usage, auth, api, cli, input)
 web/        TanStack Start client, one folder per feature under src/features
 docs/       adr/ decisions, api.md, calibration.md, screenshots/
 evals/      harness and rounds for evaluating the LLM steps
