@@ -120,6 +120,21 @@ public class LeadRepository {
                 .list();
     }
 
+    /**
+     * The contact queue for today: qualified leads nobody has worked yet, across every campaign,
+     * best first. Same tie-breaks as {@link #list}.
+     */
+    public List<LeadView> today(int limit) {
+        return jdbc.sql(SELECT_VIEW + """
+                        where l.stage = 'QUALIFIED' and l.status = 'NEW'
+                        order by l.score desc, p.reviews_count desc, l.id
+                        limit :limit
+                        """)
+                .param("limit", limit)
+                .query(this::mapView)
+                .list();
+    }
+
     public Optional<LeadView> findById(long id) {
         return jdbc.sql(SELECT_VIEW + " where l.id = :id").param("id", id).query(this::mapView).optional();
     }

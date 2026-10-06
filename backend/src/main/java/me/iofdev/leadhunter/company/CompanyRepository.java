@@ -35,4 +35,10 @@ public class CompanyRepository {
                 .query((rs, row) -> json.readValue(rs.getString("profile"), CompanyProfile.class))
                 .optional();
     }
+
+    /** Contacts per day for the today queue: the profile's, or the default one before a profile exists. */
+    public int dailyQueueSize() {
+        return find().map(CompanyProfile::dailyQueueSize)
+                .orElse(Math.max(1, CompanyProfile.DEFAULT_WEEKLY_CAPACITY / 5));
+    }
 }

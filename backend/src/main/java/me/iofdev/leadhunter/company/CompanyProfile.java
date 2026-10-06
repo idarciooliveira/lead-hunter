@@ -33,6 +33,11 @@ public record CompanyProfile(
         weeklyCapacity = weeklyCapacity == null ? DEFAULT_WEEKLY_CAPACITY : weeklyCapacity;
     }
 
+    /** Contacts to make each working day: the weekly capacity over five days, at least one (ADR 0041). */
+    public int dailyQueueSize() {
+        return Math.max(1, weeklyCapacity / 5);
+    }
+
     /** Finds a service by name, ignoring case and accents. */
     public Optional<Service> service(String name) {
         String wanted = Text.normalize(name);

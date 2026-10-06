@@ -1,11 +1,16 @@
 package me.iofdev.leadhunter.cli;
 
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
 import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
+import me.iofdev.leadhunter.company.CompanyRepository;
+import me.iofdev.leadhunter.pipeline.LeadCsv;
 import me.iofdev.leadhunter.pipeline.LeadRepository;
 import me.iofdev.leadhunter.pipeline.LeadStage;
 import me.iofdev.leadhunter.pipeline.LeadStatus;
@@ -24,7 +29,7 @@ import picocli.CommandLine.Spec;
         description = "Browse ranked leads.",
         mixinStandardHelpOptions = true,
         subcommands = {LeadsCommand.ListLeads.class, LeadsCommand.Show.class, LeadsCommand.Pitch.class,
-                LeadsCommand.Mark.class})
+                LeadsCommand.Mark.class, LeadsCommand.Today.class, LeadsCommand.Export.class})
 class LeadsCommand implements Runnable {
 
     @Spec
@@ -193,6 +198,88 @@ class LeadsCommand implements Runnable {
             } else {
                 out.printf("Marked lead %d '%s' as %s.%n", lead.id(), lead.name(), lead.status());
             }
+        }
+    }
+
+    @Command(name = "today", description = "Today's contact queue across all campaigns. See ADR 0041.")
+    static class Today implements Runnable {
+
+        @Spec
+        CommandSpec spec;
+
+        @Option(names = "--limit", description = "Rows to show. Default: the company's weekly capacity over five days.")
+        Integer limit;
+
+        private final CompanyRepository company;
+        private final LeadRepository leads;
+
+        Today(CompanyRepository company, LeadRepository leads) {
+            this.company = company;
+            this.leads = leads;
+        }
+
+        @Override
+        public void run() {
+            PrintWriter out = spec.commandLine().getOut();
+            if (limit != null && limit < 1) {
+                throw new IllegalArgumentException("--limit must be at least 1");
+            }
+            List<LeadView> rows = leads.today(limit != null ? limit : company.dailyQueueSize());
+            if (rows.isEmpty()) {
+                out.println("Nobody to contact today. Run: campaign run <slug>");
+                return;
+            }
+            out.printf("%-6s %-5s %-30s %-22s %-18s %-15s %-5s%n",
+                    "ID", "SCORE", "NAME", "CATEGORY", "CAMPAIGN", "PHONE", "PITCH");
+            for (LeadView lead : rows) {
+                out.printf("%-6d %-5d %-30s %-22s %-18s %-15s %-5s%n",
+                        lead.id(), lead.score(), Format.truncate(lead.name(), 30),
+                        Format.truncate(lead.category(), 22), Format.truncate(lead.campaignSlug(), 18),
+                        Format.orDash(lead.phoneE164()), lead.pitch() == null ? "no" : "yes");
+            }
+            out.println("Card: leads show <id>. After the contact: leads mark <id> --status CONTACTED");
+        }
+    }
+
+    @Command(name = "export", description = "Write a campaign's leads as a CSV file. See ADR 0041.")
+    static class Export implements Runnable {
+
+        @Spec
+        CommandSpec spec;
+
+        @Parameters(index = "0", description = "Campaign slug.")
+        String slug;
+
+        @Option(names = "--stage", defaultValue = "QUALIFIED",
+                description = "QUALIFIED, BELOW_CUT, EXCLUDED or ALL. Default: ${DEFAULT-VALUE}.")
+        StageFilter stage;
+
+        @Option(names = "--out", description = "File to write. Default: <slug>-leads.csv in the current folder.")
+        Path out;
+
+        private final CampaignRepository campaigns;
+        private final LeadRepository leads;
+
+        Export(CampaignRepository campaigns, LeadRepository leads) {
+            this.campaigns = campaigns;
+            this.leads = leads;
+        }
+
+        @Override
+        public void run() {
+            PrintWriter console = spec.commandLine().getOut();
+            Campaign campaign = CampaignCommand.requireCampaign(campaigns, slug);
+            Optional<LeadStage> filter = stage == StageFilter.ALL
+                    ? Optional.empty()
+                    : Optional.of(LeadStage.valueOf(stage.name()));
+            List<LeadView> rows = leads.list(campaign.id(), filter, Integer.MAX_VALUE);
+            Path file = out != null ? out : Path.of(slug + "-leads.csv");
+            try {
+                Files.writeString(file, LeadCsv.of(rows));
+            } catch (IOException e) {
+                throw new IllegalArgumentException("cannot write " + file + ": " + e.getMessage());
+            }
+            console.printf("Wrote %d leads to %s%n", rows.size(), file);
         }
     }
 }

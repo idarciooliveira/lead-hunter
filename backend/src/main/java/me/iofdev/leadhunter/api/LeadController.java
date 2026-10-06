@@ -3,6 +3,14 @@ package me.iofdev.leadhunter.api;
 import java.util.List;
 import java.util.Optional;
 
+import me.iofdev.leadhunter.company.CompanyRepository;
+import me.iofdev.leadhunter.pipeline.LeadCsv;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import java.nio.charset.StandardCharsets;
+
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.pipeline.LeadRepository;
 import me.iofdev.leadhunter.pipeline.LeadStage;
@@ -32,11 +40,35 @@ class LeadController {
     private final CampaignRepository campaigns;
     private final LeadRepository leads;
     private final PitchService pitches;
+    private final CompanyRepository company;
 
-    LeadController(CampaignRepository campaigns, LeadRepository leads, PitchService pitches) {
+    LeadController(CampaignRepository campaigns, LeadRepository leads, PitchService pitches,
+            CompanyRepository company) {
         this.campaigns = campaigns;
         this.leads = leads;
         this.pitches = pitches;
+        this.company = company;
+    }
+
+    /** Today's queue (ADR 0041), same as {@code leads today}. {@code limit} overrides the profile's daily size. */
+    @GetMapping("/leads/today")
+    List<LeadDto> today(@RequestParam(required = false) Integer limit) {
+        int size = limit != null ? Math.clamp(limit, 1, MAX_LIMIT) : company.dailyQueueSize();
+        return leads.today(size).stream().map(LeadDto::from).toList();
+    }
+
+    /** Every lead of the stage as a CSV file, in the order of {@code list} (ADR 0041). */
+    @GetMapping(value = "/campaigns/{slug}/leads.csv", produces = "text/csv")
+    ResponseEntity<byte[]> csv(@PathVariable String slug, @RequestParam(defaultValue = "QUALIFIED") String stage) {
+        long campaignId = campaigns.findBySlug(slug)
+                .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"))
+                .id();
+        String body = LeadCsv.of(leads.list(campaignId, stageFilter(stage), Integer.MAX_VALUE));
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(slug + "-leads.csv").build().toString())
+                .body(body.getBytes(StandardCharsets.UTF_8));
     }
 
     @GetMapping("/campaigns/{slug}/leads")
