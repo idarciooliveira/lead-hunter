@@ -92,6 +92,8 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 | `campaign run <slug> [--dry-run] [--allow-over-limit]` | Scrape, filter, score, cut |
 | `campaign enrich <slug> [--dry-run] [--batch-size 25] [--max-reviews 10]` | Crawl websites, fetch reviews, classify complaints, rescore the qualified leads and write their pitches |
 | `leads list <slug> [--stage QUALIFIED\|BELOW_CUT\|EXCLUDED\|ALL] [--limit 20]` | Ranked leads |
+| `leads today [--limit N]` | Today's queue: qualified leads nobody has contacted, best first. Default size is the weekly capacity over five days |
+| `leads export <slug> [--stage ...] [--out file.csv]` | Write the leads as a CSV file that Excel opens |
 | `leads show <id>` | Lead card with score breakdown, pitch and WhatsApp link |
 | `leads pitch <id>` | Write a new pitch for a lead, replacing the old one. Spends LLM credit |
 | `leads mark <id> --status <status> [--lost-reason <reason>] [--note <text>]` | Mark a contact outcome. `LOST` needs one of `NO_BUDGET`, `WRONG_PERSON`, `HAS_SUPPLIER`, `NOT_INTERESTED`, `NOT_NOW` |

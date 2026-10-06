@@ -44,3 +44,4 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0038](0038-logins-with-better-auth.md) | Sign users in with Better Auth, stored in our Postgres | Accepted |
 | [0039](0039-full-stack-in-docker-compose-and-a-dev-script.md) | Run the API and the web client with one command, in Docker Compose or with `./dev` | Accepted |
 | [0040](0040-one-pitch-per-lead-written-at-enrichment.md) | Write one pitch per lead during enrichment, and drop it when it invents a number | Accepted |
+| [0041](0041-today-queue-and-csv-export.md) | Serve the today queue from the backend and export leads as CSV | Accepted |
