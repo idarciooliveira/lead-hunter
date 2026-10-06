@@ -5,7 +5,7 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | # | Decision | Status |
 |---|---|---|
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted |
-| [0002](0002-internal-tool-first.md) | Build an internal tool for our own lead generation first | Accepted |
+| [0002](0002-internal-tool-first.md) | Build an internal tool for our own lead generation first | Partly superseded by 0043 |
 | [0003](0003-target-market.md) | Target small PMEs in Luanda first, then Lubango and Benguela | Accepted |
 | [0004](0004-v1-stops-at-the-list.md) | Version 1 stops at the ranked list; outreach stays manual | Accepted |
 | [0005](0005-apify-google-maps-scraper.md) | Get Google Maps data through the Apify scraper | Accepted |
@@ -41,7 +41,10 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0035](0035-web-scaffold-on-sample-data.md) | Build the web screens on sample data behind a fake API, with the prototype's design tokens | Accepted |
 | [0036](0036-job-leases-for-one-run-per-campaign.md) | Hold one job per campaign with a parent row and a Postgres advisory lock, for the CLI and the API alike | Accepted |
 | [0037](0037-api-calls-through-server-functions.md) | Call the API only from TanStack Start server functions, with a service token | Accepted |
-| [0038](0038-logins-with-better-auth.md) | Sign users in with Better Auth, stored in our Postgres | Accepted |
+| [0038](0038-logins-with-better-auth.md) | Sign users in with Better Auth, stored in our Postgres | Partly superseded by 0042 |
 | [0039](0039-full-stack-in-docker-compose-and-a-dev-script.md) | Run the API and the web client with one command, in Docker Compose or with `./dev` | Accepted |
 | [0040](0040-one-pitch-per-lead-written-at-enrichment.md) | Write one pitch per lead during enrichment, and drop it when it invents a number | Accepted |
 | [0041](0041-today-queue-and-csv-export.md) | Serve the today queue from the backend and export leads as CSV | Accepted |
+| [0042](0042-passwords-magic-links-and-accounts-from-the-cli.md) | Sign in with a password or a magic link sent through Resend; accounts come from invitations and the CLI | Accepted |
+| [0043](0043-organizations-as-tenants.md) | Make the organization the tenant, with an `org_id` column on its tables | Accepted |
+| [0044](0044-owner-keys-with-enforced-budgets.md) | Run every organization on the owner's keys, with budgets that refuse runs | Accepted |

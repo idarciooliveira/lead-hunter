@@ -1,7 +1,7 @@
 # 0038. Sign users in with Better Auth, stored in our Postgres
 
 - Date: 2026-10-05
-- Status: Accepted
+- Status: Accepted, partly superseded by [0042](0042-passwords-magic-links-and-accounts-from-the-cli.md)
 - Supersedes: the shared-login part of [0032](0032-shared-token-auth-for-the-web-client.md)
 
 ## Context

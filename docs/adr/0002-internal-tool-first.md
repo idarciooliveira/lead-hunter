@@ -1,7 +1,7 @@
 # 0002. Build an internal tool for our own lead generation first
 
 - Date: 2026-09-28
-- Status: Accepted
+- Status: Accepted, partly superseded by [0043](0043-organizations-as-tenants.md)
 
 ## Context
 
