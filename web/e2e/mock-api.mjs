@@ -264,6 +264,13 @@ const server = http.createServer((req, res) => {
 	}
 	if (req.method === "GET" && url.pathname === "/api/usage") return json(200, USAGE);
 	if (req.method === "GET" && url.pathname === "/api/usage/entries") return json(200, ENTRIES);
+	if (req.method === "GET" && url.pathname === "/api/leads/today") {
+		// Mirrors LeadRepository.today: QUALIFIED still NEW, best first.
+		const queue = LEADS.filter((l) => l.stage === "QUALIFIED" && l.status === "NEW").sort(
+			(a, b) => b.score - a.score || b.reviewsCount - a.reviewsCount || a.id - b.id,
+		);
+		return json(200, queue);
+	}
 	if (req.method === "GET" && url.pathname === "/api/campaigns/mock-clinicas/leads") {
 		const stage = url.searchParams.get("stage") ?? "QUALIFIED";
 		return json(200, stage === "ALL" ? LEADS : LEADS.filter((l) => l.stage === stage));

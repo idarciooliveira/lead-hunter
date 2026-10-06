@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BackendLead } from "#/lib/api-contract";
 import { BACKEND_CAMPAIGN, stubApi } from "#/lib/test-api";
-import { fetchLead, fetchLeads, markLead, rankBackendLeads, regeneratePitch, toLead } from "./api.server";
+import {
+	fetchLead,
+	fetchLeads,
+	fetchTodayQueue,
+	markLead,
+	rankBackendLeads,
+	regeneratePitch,
+	toLead,
+} from "./api.server";
 
 const QUALIFIED: BackendLead = {
 	id: 9001,
@@ -86,6 +94,14 @@ describe("leads over HTTP", () => {
 	it("reads one lead without a list-scoped rank", async () => {
 		stubApi({ "/leads/9001": QUALIFIED });
 		await expect(fetchLead("9001")).resolves.toMatchObject({ id: "9001", name: "Mock Sorriso", rank: null });
+	});
+
+	it("reads the today queue from the API without cutting it", async () => {
+		const fetch = stubApi({ "/leads/today": [QUALIFIED] });
+		const queue = await fetchTodayQueue();
+		expect(fetch).toHaveBeenCalledWith("http://api:8080/api/leads/today", expect.anything());
+		expect(queue.map((l) => l.name)).toEqual(["Mock Sorriso"]);
+		expect(queue[0].rank).toBe(1);
 	});
 });
 

@@ -8,7 +8,6 @@ import {
 import { fakeResponse, NotFoundError } from "#/lib/fake-api";
 import { apiFetch, apiMutate } from "#/lib/http.server";
 import { LEADS } from "./fixtures";
-import { DAILY_GOAL } from "./model";
 import { Lead, LeadList, type LeadStatus, type Lead as LeadType, type LostReason } from "./schema";
 
 /** All leads, ranked first and excluded last. Becomes GET /api/leads. */
@@ -39,10 +38,21 @@ export async function fetchLead(id: string): Promise<Lead> {
 	return fakeResponse(Lead, toLead(lead, null));
 }
 
-/** The daily contact queue: qualified leads nobody has contacted yet. No endpoint: a filter over the mapped API leads. */
+/**
+ * The daily contact queue: GET /api/leads/today (ADR 0041). The size comes
+ * from the company's weekly capacity, so the web never cuts the queue itself.
+ * Without an API the fixtures stand in, filtered the same way.
+ */
 export async function fetchTodayQueue(): Promise<Lead[]> {
-	const leads = await fetchLeads();
-	return leads.filter((l) => l.stage === "QUALIFIED" && l.status === "NEW").slice(0, DAILY_GOAL);
+	if (apiBaseUrl() === null) {
+		const leads = await fetchLeads();
+		return fakeResponse(
+			LeadList,
+			leads.filter((l) => l.stage === "QUALIFIED" && l.status === "NEW"),
+		);
+	}
+	const queue = await apiFetch(BackendLeadList, "/leads/today");
+	return fakeResponse(LeadList, rankBackendLeads(queue));
 }
 
 /**

@@ -11,6 +11,7 @@ import { Chip, PlannedChip } from "#/components/ui/chip";
 import { Segmented } from "#/components/ui/segmented";
 import { LeadCards } from "#/features/leads/components/lead-cards";
 import { LeadTable } from "#/features/leads/components/lead-table";
+import { downloadCsv, leadsToCsv } from "#/features/leads/csv";
 import { countByStage, filterLeads, STAGE_FILTERS } from "#/features/leads/model";
 import { leadsQuery } from "#/features/leads/queries";
 import { LeadStage } from "#/features/leads/schema";
@@ -43,7 +44,7 @@ function LeadsPage() {
 	const filters = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const [selected, setSelected] = useState<Record<string, boolean>>({});
-	const [exported, setExported] = useState(false);
+	const [exported, setExported] = useState<number | null>(null);
 
 	const leads = filterLeads(all, {
 		stage: filters.stage,
@@ -53,9 +54,13 @@ function LeadsPage() {
 	});
 	const counts = countByStage(all);
 	const selectedCount = Object.values(selected).filter(Boolean).length;
+	const onExport = () => {
+		downloadCsv("leads.csv", leadsToCsv(leads));
+		setExported(leads.length);
+	};
 	const setFilter = (patch: Partial<z.infer<typeof search>>) =>
 		navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
-	useHotkeys({ e: () => setExported(true) });
+	useHotkeys({ e: onExport });
 	const toggle = useCallback((id: string) => setSelected((s) => ({ ...s, [id]: !s[id] })), []);
 
 	const empty = (
@@ -77,11 +82,11 @@ function LeadsPage() {
 			<PageHeader
 				title="Leads"
 				subtitle={`${leads.length === all.length ? leads.length : `${leads.length} de ${all.length}`} leads em todas as campanhas, ordenados por pontuação`}
-				actions={<ExportExcelButton onClick={() => setExported(true)} shortcut="E" />}
+				actions={<ExportExcelButton onClick={onExport} shortcut="E" />}
 			/>
-			{exported && (
+			{exported !== null && (
 				<Chip tone="ok" role="status">
-					Ficheiro leads.xlsx exportado com {leads.length} linhas
+					Ficheiro leads.csv exportado com {exported} linhas
 				</Chip>
 			)}
 
@@ -147,7 +152,7 @@ function LeadsPage() {
 							Enviar para Hoje <PlannedChip />
 						</Link>
 					</Button>
-					<ExportExcelButton onClick={() => setExported(true)} size="sm" />
+					<ExportExcelButton onClick={onExport} size="sm" />
 					<div className="flex-1" />
 					<Button size="sm" onClick={() => setSelected({})}>
 						Limpar

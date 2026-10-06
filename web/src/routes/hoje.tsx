@@ -7,7 +7,8 @@ import { StatBar } from "#/components/stat-bar";
 import { Chip } from "#/components/ui/chip";
 import { Kbd } from "#/components/ui/kbd";
 import { type QueueState, TodayQueue } from "#/features/leads/components/today-queue";
-import { DAILY_GOAL, type Outcome } from "#/features/leads/model";
+import { downloadCsv, leadsToCsv } from "#/features/leads/csv";
+import type { Outcome } from "#/features/leads/model";
 import { todayQueueQuery, useMarkLead } from "#/features/leads/queries";
 import { longDay, percent } from "#/lib/format";
 import { useHotkeys } from "#/lib/use-hotkeys";
@@ -21,13 +22,17 @@ export const Route = createFileRoute("/hoje")({
 function TodayPage() {
 	const { data: leads } = useSuspenseQuery(todayQueueQuery());
 	const [state, setState] = useState<QueueState>({ done: {} });
-	const [exported, setExported] = useState(false);
+	const [exported, setExported] = useState<number | null>(null);
 	const mark = useMarkLead();
 	const done = leads.filter((l) => state.done[l.id]).length;
 	const today = new Date();
 	const fileDate = today.toISOString().slice(0, 10);
 
-	useHotkeys({ e: () => setExported(true) });
+	const onExport = () => {
+		downloadCsv(`leads-hoje-${fileDate}.csv`, leadsToCsv(leads));
+		setExported(leads.length);
+	};
+	useHotkeys({ e: onExport });
 
 	const onMark = (id: string, outcome: Outcome) =>
 		mark.mutate({
@@ -40,11 +45,11 @@ function TodayPage() {
 			<PageHeader
 				title="Hoje"
 				subtitle={`${longDay(today)}. Os ${leads.length} leads com melhor pontuação ainda por contactar.`}
-				actions={<ExportExcelButton onClick={() => setExported(true)} shortcut="E" />}
+				actions={<ExportExcelButton onClick={onExport} shortcut="E" />}
 			/>
-			{exported && (
+			{exported !== null && (
 				<Chip tone="ok" className="h-8 w-fit" role="status">
-					Ficheiro leads-hoje-{fileDate}.xlsx exportado com {leads.length} linhas
+					Ficheiro leads-hoje-{fileDate}.csv exportado com {exported} linhas
 				</Chip>
 			)}
 			<StatBar
@@ -52,7 +57,7 @@ function TodayPage() {
 				caption="contactados"
 				percent={percent(done, leads.length)}
 				label="Contactados hoje"
-				aside={<div className="text-mute">Meta diária: {DAILY_GOAL} contactos</div>}
+				aside={<div className="text-mute">{leads.length} por contactar</div>}
 			/>
 			<TodayQueue
 				leads={leads}

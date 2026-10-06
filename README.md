@@ -9,8 +9,8 @@ Finds small companies on Google Maps that need a website, an app, or a system, a
 | 1 | Scaffold, schema, campaigns from YAML | done |
 | 2 | Apify scraping, stage 1 filters, scoring and cut | done |
 | 3 | Website crawl and stage 2 scoring | done |
-| 4 | Review analysis and pitches through the Vercel AI Gateway | backend done, web next |
-| 5 | `today` queue, `lead mark` outcomes, CSV export | planned |
+| 4 | Review analysis and pitches through the Vercel AI Gateway | done |
+| 5 | `today` queue, `lead mark` outcomes, CSV export | done |
 | 6 | Calibration on existing clients | planned |
 
 ## How it works
