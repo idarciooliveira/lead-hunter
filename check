@@ -26,7 +26,7 @@ check_backend() {
   version=$(javac -version 2>&1 | sed -n 's/^javac \([0-9]*\).*/\1/p')
   [ "$version" = "21" ] || fail "JDK 21 required, found $version. Run: sdk env"
 
-  for script in lh check backend/mvnw; do
+  for script in lh check dev backend/mvnw; do
     if grep -q "$(printf '\r')" "$script"; then
       fail "$script has CRLF line endings. Run: git add --renormalize . and re-checkout the file."
     fi

@@ -42,3 +42,4 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0036](0036-job-leases-for-one-run-per-campaign.md) | Hold one job per campaign with a parent row and a Postgres advisory lock, for the CLI and the API alike | Accepted |
 | [0037](0037-api-calls-through-server-functions.md) | Call the API only from TanStack Start server functions, with a service token | Accepted |
 | [0038](0038-logins-with-better-auth.md) | Sign users in with Better Auth, stored in our Postgres | Accepted |
+| [0039](0039-full-stack-in-docker-compose-and-a-dev-script.md) | Run the API and the web client with one command, in Docker Compose or with `./dev` | Accepted |
