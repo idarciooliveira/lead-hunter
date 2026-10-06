@@ -2,18 +2,19 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, stripSearchParams } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { z } from "zod";
+import { ExportExcelButton } from "#/components/export-excel-button";
 import { Page, PageHeader } from "#/components/page-header";
 import { FoxState } from "#/components/states";
 import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Chip, PlannedChip } from "#/components/ui/chip";
-import { Kbd } from "#/components/ui/kbd";
 import { Segmented } from "#/components/ui/segmented";
 import { LeadCards } from "#/features/leads/components/lead-cards";
 import { LeadTable } from "#/features/leads/components/lead-table";
 import { countByStage, filterLeads, STAGE_FILTERS } from "#/features/leads/model";
 import { leadsQuery } from "#/features/leads/queries";
 import { LeadStage } from "#/features/leads/schema";
+import { useHotkeys } from "#/lib/use-hotkeys";
 import { cn } from "#/lib/utils";
 
 const DEFAULTS = { stage: "ALL", minScore: 0, site: false, phone: false } as const;
@@ -54,6 +55,7 @@ function LeadsPage() {
 	const selectedCount = Object.values(selected).filter(Boolean).length;
 	const setFilter = (patch: Partial<z.infer<typeof search>>) =>
 		navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
+	useHotkeys({ e: () => setExported(true) });
 	const toggle = useCallback((id: string) => setSelected((s) => ({ ...s, [id]: !s[id] })), []);
 
 	const empty = (
@@ -75,11 +77,7 @@ function LeadsPage() {
 			<PageHeader
 				title="Leads"
 				subtitle={`${leads.length === all.length ? leads.length : `${leads.length} de ${all.length}`} leads em todas as campanhas, ordenados por pontuação`}
-				actions={
-					<Button onClick={() => setExported(true)}>
-						Exportar Excel <Kbd>E</Kbd>
-					</Button>
-				}
+				actions={<ExportExcelButton onClick={() => setExported(true)} shortcut="E" />}
 			/>
 			{exported && (
 				<Chip tone="ok" role="status">
@@ -149,9 +147,7 @@ function LeadsPage() {
 							Enviar para Hoje <PlannedChip />
 						</Link>
 					</Button>
-					<Button size="sm" onClick={() => setExported(true)}>
-						Exportar Excel
-					</Button>
+					<ExportExcelButton onClick={() => setExported(true)} size="sm" />
 					<div className="flex-1" />
 					<Button size="sm" onClick={() => setSelected({})}>
 						Limpar

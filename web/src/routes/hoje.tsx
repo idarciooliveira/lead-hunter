@@ -1,9 +1,9 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { ExportExcelButton } from "#/components/export-excel-button";
 import { Page, PageHeader } from "#/components/page-header";
 import { StatBar } from "#/components/stat-bar";
-import { Button } from "#/components/ui/button";
 import { Chip } from "#/components/ui/chip";
 import { Kbd } from "#/components/ui/kbd";
 import { type QueueState, TodayQueue } from "#/features/leads/components/today-queue";
@@ -40,11 +40,7 @@ function TodayPage() {
 			<PageHeader
 				title="Hoje"
 				subtitle={`${longDay(today)}. Os ${leads.length} leads com melhor pontuação ainda por contactar.`}
-				actions={
-					<Button onClick={() => setExported(true)}>
-						Exportar Excel <Kbd>E</Kbd>
-					</Button>
-				}
+				actions={<ExportExcelButton onClick={() => setExported(true)} shortcut="E" />}
 			/>
 			{exported && (
 				<Chip tone="ok" className="h-8 w-fit" role="status">
