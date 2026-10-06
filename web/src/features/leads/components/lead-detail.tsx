@@ -1,3 +1,4 @@
+import { Star } from "lucide-react";
 import { useState } from "react";
 import { CallLink, WhatsAppLink } from "#/components/contact-actions";
 import { Button } from "#/components/ui/button";
@@ -46,7 +47,8 @@ export function LeadHero({ lead }: { lead: Lead }) {
 					<dt className="text-mute">Website</dt>
 					<dd className="m-0">{site}</dd>
 					<dt className="text-mute">Google Maps</dt>
-					<dd className="m-0 font-mono">
+					<dd className="m-0 flex items-center gap-1 font-mono">
+						<Star aria-hidden className="size-3.5 fill-current text-warn" />
 						{rating(lead.rating)} estrelas · {lead.reviewCount} avaliações
 					</dd>
 				</dl>
@@ -79,7 +81,7 @@ export function LeadHero({ lead }: { lead: Lead }) {
 					</div>
 				</div>
 			</div>
-			<AreaMap />
+			<AreaMap mapsUrl={lead.mapsUrl} />
 		</Card>
 	);
 }

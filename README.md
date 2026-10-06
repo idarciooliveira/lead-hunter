@@ -1,8 +1,68 @@
-# Lead Hunter
+<h1 align="center">Lead Hunter</h1>
 
-Finds small companies on Google Maps that need a website, an app, or a system, and ranks them for outreach by WhatsApp or phone. It's built for one user: a software factory looking for PME clients in Luanda. The decisions behind it are in [docs/adr](docs/adr/README.md).
+<p align="center">
+  Find small companies on Google Maps that need software, and get them ranked for WhatsApp or phone outreach.
+</p>
+
+<p align="center">
+  <a href="https://github.com/idarciooliveira/lead-hunter/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/idarciooliveira/lead-hunter/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Java 21" src="https://img.shields.io/badge/Java-21-orange">
+  <img alt="Spring Boot 4.1" src="https://img.shields.io/badge/Spring%20Boot-4.1-6db33f">
+  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-Flyway-336791">
+  <img alt="TanStack Start" src="https://img.shields.io/badge/web-TanStack%20Start-black">
+</p>
+
+![The leads page: 240 leads ranked by score, with stage filters, a minimum score slider and a WhatsApp button per row](docs/screenshots/leads.png)
+
+Lead Hunter is an internal tool for a software factory in Luanda that sells websites, apps and systems to PMEs. It scrapes Google Maps through Apify, drops the places you would never sell to, scores the rest with rules you can read, and writes one WhatsApp pitch per qualified lead. Every point in a score comes with its reason.
+
+It is built for one team and one market, so it is opinionated. The reasons behind each choice are in [docs/adr](docs/adr/README.md).
+
+## Contents
+
+- [What you get](#what-you-get)
+- [Quick start](#quick-start)
+- [How it works](#how-it-works)
+- [Commands](#commands)
+- [Web client](#web-client)
+- [Configuration](#configuration)
+- [Costs](#costs)
+- [Deploying on Railway](#deploying-on-railway)
+- [Development](#development)
+- [Project layout](#project-layout)
+- [Contributing](#contributing)
+
+## What you get
+
+- **A ranked list, not a dump.** Hard filters remove closed places, banks, government, big chains and your current clients. Rules score the rest and the top 40% (configurable per campaign) become `QUALIFIED`.
+- **Scores you can audit.** Weights live in `Stage1Scorer` and are documented in [ADR 0007](docs/adr/0007-rule-based-scoring.md). The LLM reads reviews and writes pitches. It never sets a score.
+- **One pitch per lead.** Written at enrichment, and dropped if it quotes a number the data does not have.
+- **A hard budget.** $10 a month by default. `--dry-run` shows the estimated cost, and `usage` shows what each run and LLM call actually cost.
+- **CLI and web.** Run campaigns from the terminal, work the daily queue in the browser.
+
+## Quick start
+
+You need Docker and a JDK 21. For the full list of tools per workflow, see [Development](#development).
+
+```bash
+git clone https://github.com/idarciooliveira/lead-hunter.git
+cd lead-hunter
+cp .env.example .env            # set APIFY_TOKEN and AI_GATEWAY_API_KEY
+docker compose up -d postgres   # Postgres on localhost:5432
+
+./lh company setup              # once: your company, services, clients, cases
+./lh campaign new               # answer the campaign questions
+./lh campaign run clinicas-luanda --dry-run   # estimate the cost first
+./lh campaign run clinicas-luanda
+./lh campaign enrich clinicas-luanda
+./lh leads today                # who to contact today
+```
+
+`./lh` builds the jar the first time and then runs it. No Java? Use the [Docker option](#option-b-everything-in-docker) instead. Want to see the web client without any keys? Run `cd web && pnpm install && pnpm dev` and it opens on sample data.
 
 ## Status
+
+| Step | What | State |
 
 | Step | What | State |
 |---|---|---|
@@ -27,7 +87,7 @@ Places are shared across campaigns and deduplicated by Google place ID. Re-runni
 
 ## Run it locally
 
-First time, in the project root:
+Quick start above is the short path. This section covers both ways to run the CLI. First time, in the project root:
 
 ```bash
 cp .env.example .env          # then replace APIFY_TOKEN and AI_GATEWAY_API_KEY
@@ -140,14 +200,30 @@ Copy [.env.example](.env.example) to `.env` in the project root and replace the 
 
 The budget is $10 a month for scraping and LLM calls, see [ADR 0006](docs/adr/0006-two-stage-pipeline.md). Every Apify run stores what Apify reported it cost in `campaign_run.cost_usd`, failed and aborted runs included, and every LLM call stores the cost the gateway reported in `llm_call.cost_usd`. `usage` adds it up, see [ADR 0021](docs/adr/0021-track-usage-and-costs.md). LLM history starts from the day `usage` shipped. Always `--dry-run` a new campaign first.
 
-## Railway
+## Deploying on Railway
 
 Create a Railway project with a Postgres database and a service built from the `Dockerfile`. The image's default command prints help and exits, so either:
 
 - run the CLI from your laptop against Railway's database: `railway run java -jar backend/target/lead-hunter.jar leads list clinicas-luanda`, or
 - set the service's start command to a campaign run and give it a cron schedule, with restart policy "Never".
 
-## Tests
+## Development
+
+| Tool | Needed for |
+|---|---|
+| Docker | Postgres, integration tests, the all-in-Docker option |
+| JDK 21 | Building and running the backend without Docker. A JRE is not enough |
+| Node 22+ and pnpm | The web client. Run `corepack enable` once |
+
+Run the full check before you open a pull request. It is the definition of done here:
+
+```bash
+./check            # backend build and tests, then web lint, typecheck, tests, build and Playwright smoke tests
+./check backend    # one half only
+./check web
+```
+
+To run only the backend tests:
 
 ```bash
 (cd backend && ./mvnw test)
@@ -159,4 +235,28 @@ Integration tests need Postgres. They use Testcontainers when Docker is running.
 (cd backend && LEADHUNTER_TEST_JDBC_URL=jdbc:postgresql://localhost:5432/leadhunter_test ./mvnw test)
 ```
 
-See [ADR 0016](docs/adr/0016-testing-strategy.md).
+No test calls a real external API. See [ADR 0016](docs/adr/0016-testing-strategy.md) and [ADR 0034](docs/adr/0034-check-script-and-ci-define-done.md).
+
+## Project layout
+
+```
+backend/    Spring Boot app and picocli CLI, package me.iofdev.leadhunter
+            (company, campaign, maps, apify, place, scoring, pipeline, llm, usage, api, cli, input)
+web/        TanStack Start client, one folder per feature under src/features
+docs/       adr/ decisions, api.md, calibration.md, screenshots/
+evals/      harness and rounds for evaluating the LLM steps
+campaigns/  YAML files you load with `campaign create -f` (created by you)
+```
+
+## Contributing
+
+Read [docs/adr/README.md](docs/adr/README.md) before you change architecture, libraries, data sources, scoring or scope. A change that makes one of those choices needs a new ADR in the same pull request. Never rewrite an accepted ADR. Write a new one and mark the old one superseded.
+
+- Commits and pull request titles use Conventional Commits, for example `feat(usage): add the usage command`.
+- Keep pull requests small, and run `./check` first.
+- Before you add a Flyway migration or an ADR, check the next free number on `main` and in open pull requests.
+- Agent and conventions notes are in [CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md).
+
+## License
+
+No license file has been added yet, so all rights are reserved by default. Open an issue if you want to reuse the code.

@@ -6,8 +6,12 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+
+import java.io.IOException;
+import java.time.Duration;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +34,7 @@ class OpenAiCompatibleLlmClientTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder().baseUrl(BASE);
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new OpenAiCompatibleLlmClient(builder.build(), "gw-key", MODEL);
+        client = new OpenAiCompatibleLlmClient(builder.build(), "gw-key", MODEL, Duration.ZERO);
     }
 
     private static final String OK = """
@@ -126,6 +130,43 @@ class OpenAiCompatibleLlmClientTest {
                 .isInstanceOf(LlmException.class)
                 .hasMessageContaining("401")
                 .hasMessageContaining("Invalid API key");
+    }
+
+    @Test
+    void triesAgainAfterANetworkErrorAndAGatewayFailure() {
+        server.expect(requestTo(BASE + "/chat/completions"))
+                .andRespond(withException(new IOException("Request cancelled")));
+        server.expect(requestTo(BASE + "/chat/completions"))
+                .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+        server.expect(requestTo(BASE + "/chat/completions"))
+                .andRespond(withSuccess(OK, MediaType.APPLICATION_JSON));
+
+        assertThat(client.complete(LlmRequest.text(null, "Olá")).text()).isEqualTo("Bom dia!");
+        server.verify();
+    }
+
+    @Test
+    void givesUpAfterThreeFailedAttempts() {
+        for (int i = 0; i < OpenAiCompatibleLlmClient.MAX_ATTEMPTS; i++) {
+            server.expect(requestTo(BASE + "/chat/completions"))
+                    .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).body("slow down"));
+        }
+
+        assertThatThrownBy(() -> client.complete(LlmRequest.text(null, "Olá")))
+                .isInstanceOf(LlmException.class)
+                .hasMessageContaining("429");
+        server.verify();
+    }
+
+    @Test
+    void doesNotRetryAClientError() {
+        server.expect(requestTo(BASE + "/chat/completions"))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST));
+
+        assertThatThrownBy(() -> client.complete(LlmRequest.text(null, "Olá")))
+                .isInstanceOf(LlmException.class)
+                .hasMessageContaining("400");
+        server.verify();
     }
 
     @Test
