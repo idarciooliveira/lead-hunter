@@ -1,7 +1,7 @@
 # 0035. Build the web screens on sample data behind a fake API, with the prototype's design tokens
 
 - Date: 2026-10-05
-- Status: Proposed
+- Status: Accepted
 - Amends: [0030](0030-web-client-with-tanstack-start.md), [0034](0034-check-script-and-ci-define-done.md)
 
 ## Context
