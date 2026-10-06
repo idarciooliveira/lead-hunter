@@ -20,8 +20,14 @@ Every place scored 0: the mobile number gives +10 and fewer than 5 reviews gives
 - Today's listing is not the lead the clients were before they bought. AJABALG has an own website, probably the one we built. A client's Maps state after the sale says little about the score it should have had before.
 - With 0 reviews on every place, the review rules (`NO_WEBSITE_ACTIVE`, `REVIEWS_SWEET_SPOT`) cannot fire. If the seed clients were small and quiet when they signed, the -15 for under 5 reviews may be penalising the exact buyers we want. The data does not settle that.
 
+## The owner's answer on the pre-sale state
+
+Before the sale, none of the seed clients had a website, a social page or a Google Maps listing. The scraper cannot return a business that is not on Maps, so stage 1 cannot score them, and ADR 0003's test (rank the seed clients high) cannot be run. Scoring weights are not the cause.
+
+This leaves a gap. Buyers who start with no online presence are invisible to this pipeline. Finding them needs another source, such as WhatsApp business directories, Instagram or Facebook search, or referrals. That is a scope and data source decision, so it needs its own ADR before any code.
+
 ## What is needed to finish
 
-1. For each seed client, the Maps link or place id, and what its listing looked like before the sale (website, reviews, phone). The owner knows this; the scraper cannot recover it.
-2. The three clients added to the company profile (`company setup`), so they never show up as leads. The profile has 0 clients today.
-3. After 50 to 100 marked leads (ADR 0012), compare score ranges against outcomes. That is a better test than three seed clients.
+1. Add the three seed clients to the company profile (`company setup`), so they never show up as leads. The profile has 0 clients today.
+2. Drop the seed-client test from ADR 0003's calibration plan. Write a new ADR for it, since the accepted one cannot be rewritten.
+3. After 50 to 100 marked leads (ADR 0012), compare score ranges against outcomes. That is the calibration that can work.

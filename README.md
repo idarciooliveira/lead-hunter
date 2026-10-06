@@ -11,7 +11,7 @@ Finds small companies on Google Maps that need a website, an app, or a system, a
 | 3 | Website crawl and stage 2 scoring | done |
 | 4 | Review analysis and pitches through the Vercel AI Gateway | done |
 | 5 | `today` queue, `lead mark` outcomes, CSV export | done |
-| 6 | Calibration on existing clients | first pass done, see [docs/calibration.md](docs/calibration.md); needs pre-sale data |
+| 6 | Calibration on existing clients | first pass done, see [docs/calibration.md](docs/calibration.md); seed clients cannot be scored, see the note |
 
 ## How it works
 
