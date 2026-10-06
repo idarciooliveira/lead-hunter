@@ -39,6 +39,16 @@ class LeadCsvTest {
         assertThat(csv).contains("1,c,\"'=HYPERLINK(\"\"x\"\")\",,,,1,NEW,,\r\n");
     }
 
+    @Test
+    void defusesEveryFormulaPrefixInTextButKeepsThePhoneAndNumbers() {
+        for (String start : List.of("=1+1", "+1", "-1", "@a", "\tx", "\rx")) {
+            String csv = LeadCsv.of(List.of(lead(start, start, List.of())));
+            String row = csv.substring(csv.indexOf("\r\n") + 2);
+            assertThat(row).as("name and pitch starting with %s", start.strip()).contains("'" + start);
+        }
+        assertThat(LeadCsv.of(List.of(lead("a", "b", List.of())))).contains(",+244923456789,https://wa.me/244923456789,65,");
+    }
+
     private static LeadView lead(String name, String pitch, List<ScoreItem> reasons) {
         return new LeadView(7, "clinicas", LeadStage.QUALIFIED, LeadStatus.NEW, null, null, 65, reasons, null,
                 name, "Clínica", "Rua 1", "Talatona", "+244923456789", true, null, WebsiteKind.NONE,

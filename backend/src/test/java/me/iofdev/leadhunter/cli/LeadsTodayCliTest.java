@@ -55,7 +55,7 @@ class LeadsTodayCliTest extends PostgresTestSupport {
         Path file = dir.resolve("out.csv");
         assertThat(execute("leads", "export", "clinicas-teste", "--stage", "ALL", "--out", file.toString()))
                 .contains("Wrote 4 leads");
-        assertThat(Files.readString(file)).startsWith("﻿id,campanha").contains("Abaixo do corte");
+        assertThat(Files.readString(file)).startsWith("\uFEFFid,campanha").contains("Abaixo do corte");
 
         assertThat(execute("leads", "export", "nada")).contains("error: no campaign 'nada'");
     }

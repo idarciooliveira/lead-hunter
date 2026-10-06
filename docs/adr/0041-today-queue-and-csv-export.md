@@ -12,9 +12,9 @@ Step 5 of the roadmap needs a daily contact queue and a file the user can open i
 - The queue is the leads with stage `QUALIFIED` and status `NEW`, across every campaign, ordered like `leads list` (score, then reviews, then id). Campaigns have no active flag, so none is filtered out. A lead leaves the queue when it is marked.
 - The queue size is the company's `weeklyCapacity` divided by five, at least one (ADR 0019). A weekly capacity of 35 gives 7 a day. Before a company profile exists the default capacity applies. `--limit` and `?limit=` override it.
 - `leads today`, `GET /api/leads/today`, `leads export <slug>` and `GET /api/campaigns/{slug}/leads.csv` read the same repository methods, so the clients cannot disagree.
-- The export is CSV, not `.xlsx`. It needs no library, and Excel opens it. The file starts with a UTF-8 byte order mark so Excel reads the accents, uses CRLF line ends and quotes fields with commas, quotes or line breaks. A name starting with `=` or `@` gets a leading apostrophe so Excel does not run it as a formula.
+- The export is CSV, not `.xlsx`. It needs no library, and Excel opens it. The file starts with a UTF-8 byte order mark so Excel reads the accents, uses CRLF line ends and quotes fields with commas, quotes or line breaks. Free text (campaign, name, category, pitch, reasons) that starts with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading apostrophe so Excel does not run it as a formula. The phone, the WhatsApp link, the id, the score and the status are not free text and stay as they are, because the phone starts with `+`.
 - Columns: `id`, `campanha`, `nome`, `categoria`, `telefone`, `whatsapp`, `pontuacao`, `estado`, `pitch`, `motivos`. The reasons are the score breakdown joined with `; `.
-- The export takes every lead of the stage, with no limit. The default stage is `QUALIFIED`.
+- The export takes every lead of the stage, with no limit, and builds the file in memory. A campaign has hundreds of leads, so that is small. If one grows to tens of thousands, stream the rows instead. The default stage is `QUALIFIED`.
 
 ## Consequences
 

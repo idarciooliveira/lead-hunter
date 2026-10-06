@@ -24,29 +24,41 @@ public final class LeadCsv {
         row(csv, HEADER);
         for (LeadView lead : leads) {
             row(csv, List.of(
-                    String.valueOf(lead.id()),
-                    lead.campaignSlug(),
-                    lead.name(),
-                    orEmpty(lead.category()),
-                    orEmpty(lead.phoneE164()),
-                    orEmpty(lead.whatsappLink()),
-                    String.valueOf(lead.score()),
-                    lead.status().name(),
-                    orEmpty(lead.pitch()),
-                    lead.breakdown().stream().map(ScoreItem::reason).collect(Collectors.joining("; "))));
+                    plain(String.valueOf(lead.id())),
+                    text(lead.campaignSlug()),
+                    text(lead.name()),
+                    text(orEmpty(lead.category())),
+                    plain(orEmpty(lead.phoneE164())),
+                    plain(orEmpty(lead.whatsappLink())),
+                    plain(String.valueOf(lead.score())),
+                    plain(lead.status().name()),
+                    text(orEmpty(lead.pitch())),
+                    text(lead.breakdown().stream().map(ScoreItem::reason).collect(Collectors.joining("; ")))));
         }
         return csv.toString();
     }
 
     private static void row(StringBuilder csv, List<String> fields) {
-        csv.append(fields.stream().map(LeadCsv::field).collect(Collectors.joining(","))).append("\r\n");
+        csv.append(String.join(",", fields)).append("\r\n");
     }
 
-    /** A name starting with = or @ would run as a formula in Excel, so it gets a leading apostrophe. */
-    private static String field(String value) {
-        String safe = value.startsWith("=") || value.startsWith("@") ? "'" + value : value;
-        boolean quote = safe.contains(",") || safe.contains("\"") || safe.contains("\n") || safe.contains("\r");
-        return quote ? "\"" + safe.replace("\"", "\"\"") + "\"" : safe;
+    /** A value that is already safe: a number, or a phone number, which must keep its leading plus. */
+    private static String plain(String value) {
+        return escape(value);
+    }
+
+    /**
+     * Free text from Maps or the LLM. A value starting with =, +, -, @, a tab or a carriage return would
+     * run as a formula in Excel, so it gets a leading apostrophe.
+     */
+    private static String text(String value) {
+        boolean formula = !value.isEmpty() && "=+-@\t\r".indexOf(value.charAt(0)) >= 0;
+        return escape(formula ? "'" + value : value);
+    }
+
+    private static String escape(String value) {
+        boolean quote = value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r");
+        return quote ? "\"" + value.replace("\"", "\"\"") + "\"" : value;
     }
 
     private static String orEmpty(String value) {
