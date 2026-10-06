@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -177,5 +178,27 @@ class LeadOutcomeIntegrationTest extends PostgresTestSupport {
                         .header("Access-Control-Request-Method", "PATCH"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"));
+    }
+
+    @Test
+    void theLeadCardCarriesItsPitchAndComplaints() throws Exception {
+        jdbc.sql("update lead set pitch = 'Bom dia, podemos falar?', complaint_kinds = '{contact}' where id = :id")
+                .param("id", leadId).update();
+
+        mvc.perform(get("/api/leads/{id}", leadId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pitch").value("Bom dia, podemos falar?"))
+                .andExpect(jsonPath("$.complaintKinds[0]").value("contact"));
+    }
+
+    @Test
+    void writingAPitchNeedsAnExistingLeadAndACompanyProfile() throws Exception {
+        mvc.perform(post("/api/leads/{id}/pitch", 99999))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("no lead with id 99999")));
+
+        mvc.perform(post("/api/leads/{id}/pitch", leadId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("no company profile yet")));
     }
 }

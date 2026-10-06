@@ -27,7 +27,9 @@ public record LeadView(
         WebsiteKind websiteKind,
         BigDecimal rating,
         int reviewsCount,
-        String mapsUrl) {
+        String mapsUrl,
+        List<String> complaintKinds,
+        String pitch) {
 
     public String whatsappLink() {
         return phoneMobile && phoneE164 != null ? "https://wa.me/" + phoneE164.substring(1) : null;

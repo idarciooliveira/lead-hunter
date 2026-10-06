@@ -9,7 +9,7 @@ Finds small companies on Google Maps that need a website, an app, or a system, a
 | 1 | Scaffold, schema, campaigns from YAML | done |
 | 2 | Apify scraping, stage 1 filters, scoring and cut | done |
 | 3 | Website crawl and stage 2 scoring | done |
-| 4 | Review analysis and pitches through the Vercel AI Gateway | planned |
+| 4 | Review analysis and pitches through the Vercel AI Gateway | backend done, web next |
 | 5 | `today` queue, `lead mark` outcomes, CSV export | planned |
 | 6 | Calibration on existing clients | planned |
 
@@ -21,7 +21,7 @@ Finds small companies on Google Maps that need a website, an app, or a system, a
 4. Each place gets hard filters first: closed, no phone, your current clients (by phone, then name), banks, government, telecoms, big chains, fewer reviews than the campaign minimum, and the campaign's disqualifying signals.
 5. The rest get a stage 1 score from rules in `Stage1Scorer`. Every point comes with a reason.
 6. The top share of the campaign, 40% by default, becomes `QUALIFIED`. The rest is `BELOW_CUT`, with the reason stored.
-7. `campaign enrich` crawls each qualified lead's website, fetches its recent reviews, classifies what customers complain about, and adds the stage 2 points to the score. See [ADR 0027](docs/adr/0027-stage-two-website-crawl.md).
+7. `campaign enrich` crawls each qualified lead's website, fetches its recent reviews, classifies what customers complain about, and adds the stage 2 points to the score. It then writes one WhatsApp pitch per lead, and drops any pitch that quotes a number the data does not have. See [ADR 0027](docs/adr/0027-stage-two-website-crawl.md) and [ADR 0040](docs/adr/0040-one-pitch-per-lead-written-at-enrichment.md).
 
 Places are shared across campaigns and deduplicated by Google place ID. Re-running a campaign never touches a lead you already worked on.
 
@@ -90,9 +90,10 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 | `campaign create -f <file>` | Save a campaign. Same slug again updates it. The service must be one the company sells |
 | `campaign list` | Campaigns and how much each has spent on Apify |
 | `campaign run <slug> [--dry-run] [--allow-over-limit]` | Scrape, filter, score, cut |
-| `campaign enrich <slug> [--dry-run] [--batch-size 25] [--max-reviews 10]` | Crawl websites, fetch reviews, classify complaints, rescore the qualified leads |
+| `campaign enrich <slug> [--dry-run] [--batch-size 25] [--max-reviews 10]` | Crawl websites, fetch reviews, classify complaints, rescore the qualified leads and write their pitches |
 | `leads list <slug> [--stage QUALIFIED\|BELOW_CUT\|EXCLUDED\|ALL] [--limit 20]` | Ranked leads |
-| `leads show <id>` | Lead card with score breakdown and WhatsApp link |
+| `leads show <id>` | Lead card with score breakdown, pitch and WhatsApp link |
+| `leads pitch <id>` | Write a new pitch for a lead, replacing the old one. Spends LLM credit |
 | `leads mark <id> --status <status> [--lost-reason <reason>] [--note <text>]` | Mark a contact outcome. `LOST` needs one of `NO_BUDGET`, `WRONG_PERSON`, `HAS_SUPPLIER`, `NOT_INTERESTED`, `NOT_NOW` |
 | `usage [--month YYYY-MM] [--campaign <slug>] [--runs] [--limit 30]` | What Apify and the LLM have cost, with a monthly budget bar and spend per campaign. `--runs` lists each run and call |
 | `llm test ["prompt"]` | Send one prompt to the configured model, print the answer, token usage and cost |

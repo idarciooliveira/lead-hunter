@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CallLink, WhatsAppLink } from "#/components/contact-actions";
 import { Button } from "#/components/ui/button";
 import { Card, CardHeader } from "#/components/ui/card";
-import { Chip, PlannedChip, type Tone } from "#/components/ui/chip";
+import { Chip, type Tone } from "#/components/ui/chip";
 import { Cost } from "#/components/ui/cost";
 import { Label, NativeSelect, Textarea } from "#/components/ui/field";
 import { ProgressBar } from "#/components/ui/progress";
@@ -19,7 +19,7 @@ import {
 	points,
 	scoreSummary,
 } from "../model";
-import { useMarkLead } from "../queries";
+import { useMarkLead, useRegeneratePitch } from "../queries";
 import type { AuditResult, Lead, LostReason, ScoreLine } from "../schema";
 import { AreaMap } from "./area-map";
 import { StageChip } from "./status-chips";
@@ -192,19 +192,31 @@ export function ReviewComplaints({ lead }: { lead: Lead }) {
 }
 
 export function SuggestedMessage({ lead }: { lead: Lead }) {
+	const regenerate = useRegeneratePitch();
 	return (
 		<Card>
-			<CardHeader title="Mensagem sugerida" aside={<PlannedChip step={4} />} />
+			<CardHeader title="Mensagem sugerida" />
 			<div className="flex flex-col gap-3 px-4 py-3">
-				<div className="whitespace-pre-wrap rounded-md border border-line bg-bg p-3">{lead.pitch}</div>
+				{lead.pitch === "" ? (
+					<div className="rounded-md border border-line bg-bg p-3 text-mute">
+						Ainda sem mensagem. Surge ao enriquecer a campanha, ou gere agora.
+					</div>
+				) : (
+					<div className="whitespace-pre-wrap rounded-md border border-line bg-bg p-3">{lead.pitch}</div>
+				)}
 				<div className="flex flex-wrap gap-2">
 					<WhatsAppLink phone={lead.phone} message={lead.pitch} size="default" shortcut="W">
 						Abrir WhatsApp
 					</WhatsAppLink>
-					<Button>
-						Regenerar <Cost>≈ $0.002</Cost>
+					<Button disabled={regenerate.isPending} onClick={() => regenerate.mutate(lead.id)}>
+						{lead.pitch === "" ? "Gerar" : "Regenerar"} <Cost>≈ $0.002</Cost>
 					</Button>
 				</div>
+				{regenerate.isError && (
+					<div role="alert" className="text-sm text-bad">
+						{regenerate.error.message}
+					</div>
+				)}
 			</div>
 		</Card>
 	);

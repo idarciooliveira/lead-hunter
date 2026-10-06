@@ -23,7 +23,7 @@ public class LeadRepository {
     private static final String SELECT_VIEW = """
             select l.id, c.slug, l.stage, l.status, l.lost_reason, l.outcome_note, l.score, l.score_breakdown, l.stage_reason,
                    p.name, p.category, p.address, p.neighborhood, p.phone_e164, p.phone_mobile, p.website,
-                   p.website_kind, p.rating, p.reviews_count, p.maps_url
+                   p.website_kind, p.rating, p.reviews_count, p.maps_url, l.complaint_kinds, l.pitch
             from lead l
             join place p on p.id = l.place_id
             join campaign c on c.id = l.campaign_id
@@ -183,6 +183,19 @@ public class LeadRepository {
                 .update();
     }
 
+    /** Stores the pitch written for a lead and the model that wrote it. */
+    public void savePitch(long leadId, String pitch, String model) {
+        jdbc.sql("""
+                        update lead
+                        set pitch = :pitch, pitch_model = :model, updated_at = now()
+                        where id = :id
+                        """)
+                .param("id", leadId)
+                .param("pitch", pitch)
+                .param("model", model)
+                .update();
+    }
+
     /**
      * Marks a contact outcome. The CLI and the API are both thin adapters over this
      * method, so the rules can never drift. See ADR 0012 and ADR 0020.
@@ -276,6 +289,12 @@ public class LeadRepository {
                 WebsiteKind.valueOf(rs.getString("website_kind")),
                 rs.getBigDecimal("rating"),
                 rs.getInt("reviews_count"),
-                rs.getString("maps_url"));
+                rs.getString("maps_url"),
+                complaintKinds(rs),
+                rs.getString("pitch"));
+    }
+
+    private static List<String> complaintKinds(ResultSet rs) throws SQLException {
+        return List.of((String[]) rs.getArray("complaint_kinds").getArray());
     }
 }

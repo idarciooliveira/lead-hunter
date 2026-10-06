@@ -20,6 +20,11 @@ export const MarkLeadInput = z.object({
 });
 export type MarkLeadInput = z.infer<typeof MarkLeadInput>;
 
+/** POST /api/leads/{id}/pitch. Backend errors keep their message. */
+export const regeneratePitch = createServerFn({ method: "POST" })
+	.inputValidator(z.string())
+	.handler(({ data: id }) => source.regeneratePitch(id));
+
 /** PATCH /api/leads/{id}. Backend rule errors keep their message (ADR 0012, 0020). */
 export const markLead = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ id: z.string(), input: MarkLeadInput }))

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BackendLead } from "#/lib/api-contract";
 import { BACKEND_CAMPAIGN, stubApi } from "#/lib/test-api";
-import { fetchLead, fetchLeads, markLead, rankBackendLeads, toLead } from "./api.server";
+import { fetchLead, fetchLeads, markLead, rankBackendLeads, regeneratePitch, toLead } from "./api.server";
 
 const QUALIFIED: BackendLead = {
 	id: 9001,
@@ -24,6 +24,8 @@ const QUALIFIED: BackendLead = {
 	rating: 4.3,
 	reviewsCount: 142,
 	mapsUrl: "https://maps.example/p1",
+	complaintKinds: [],
+	pitch: null,
 	whatsappLink: "https://wa.me/244923456789",
 };
 
@@ -124,5 +126,30 @@ describe("markLead", () => {
 		expect(method).toBe("PATCH");
 		expect(body).toEqual({ status: "CONTACTED", lostReason: null, note: "ligou" });
 		expect(lead).toMatchObject({ id: "9001", status: "CONTACTED", note: "ligou" });
+	});
+});
+
+describe("pitch", () => {
+	it("shows the backend pitch and an empty string while there is none", () => {
+		expect(toLead({ ...QUALIFIED, pitch: "Bom dia, podemos falar?" }, 1).pitch).toBe("Bom dia, podemos falar?");
+		expect(toLead(QUALIFIED, 1).pitch).toBe("");
+	});
+
+	it("POSTs to the pitch endpoint and returns the new pitch", async () => {
+		vi.stubEnv("LEADHUNTER_API_URL", "http://api:8080/api");
+		let url: string | undefined;
+		let method: string | undefined;
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (u: string, init?: { method?: string }) => {
+				url = u;
+				method = init?.method;
+				return new Response(JSON.stringify({ ...QUALIFIED, pitch: "Nova mensagem" }), { status: 200 });
+			}),
+		);
+		const lead = await regeneratePitch("9001");
+		expect(url).toBe("http://api:8080/api/leads/9001/pitch");
+		expect(method).toBe("POST");
+		expect(lead.pitch).toBe("Nova mensagem");
 	});
 });

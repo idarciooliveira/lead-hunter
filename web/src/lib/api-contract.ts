@@ -112,6 +112,9 @@ export const BackendLead = z.object({
 	rating: z.number().nullable(),
 	reviewsCount: z.number().int(),
 	mapsUrl: z.string().nullable(),
+	complaintKinds: z.array(z.string()),
+	/** Null until enrichment writes one, or `POST /api/leads/{id}/pitch` does (ADR 0040). */
+	pitch: z.string().nullable(),
 	whatsappLink: z.string().nullable(),
 });
 export type BackendLead = z.infer<typeof BackendLead>;

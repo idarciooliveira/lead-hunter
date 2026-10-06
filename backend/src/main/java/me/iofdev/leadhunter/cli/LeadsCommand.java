@@ -11,6 +11,7 @@ import me.iofdev.leadhunter.pipeline.LeadStage;
 import me.iofdev.leadhunter.pipeline.LeadStatus;
 import me.iofdev.leadhunter.pipeline.LeadView;
 import me.iofdev.leadhunter.pipeline.LostReason;
+import me.iofdev.leadhunter.pipeline.PitchService;
 import me.iofdev.leadhunter.scoring.ScoreItem;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
@@ -22,7 +23,8 @@ import picocli.CommandLine.Spec;
         name = "leads",
         description = "Browse ranked leads.",
         mixinStandardHelpOptions = true,
-        subcommands = {LeadsCommand.ListLeads.class, LeadsCommand.Show.class, LeadsCommand.Mark.class})
+        subcommands = {LeadsCommand.ListLeads.class, LeadsCommand.Show.class, LeadsCommand.Pitch.class,
+                LeadsCommand.Mark.class})
 class LeadsCommand implements Runnable {
 
     @Spec
@@ -124,6 +126,35 @@ class LeadsCommand implements Runnable {
                     out.printf("  %+4d  %s%n", item.points(), item.reason());
                 }
             }
+            if (lead.pitch() != null) {
+                out.println("Pitch:");
+                out.println(lead.pitch());
+            } else if (lead.stage() == LeadStage.QUALIFIED) {
+                out.printf("Pitch:     none yet. Run: leads pitch %d%n", lead.id());
+            }
+        }
+    }
+
+    @Command(name = "pitch", description = "Write a new WhatsApp pitch for a lead. Spends LLM credit. See ADR 0040.")
+    static class Pitch implements Runnable {
+
+        @Spec
+        CommandSpec spec;
+
+        @Parameters(index = "0", description = "Lead id.")
+        long id;
+
+        private final PitchService pitches;
+
+        Pitch(PitchService pitches) {
+            this.pitches = pitches;
+        }
+
+        @Override
+        public void run() {
+            PrintWriter out = spec.commandLine().getOut();
+            LeadView lead = pitches.regenerate(id);
+            out.printf("Pitch for lead %d '%s':%n%s%n", lead.id(), lead.name(), lead.pitch());
         }
     }
 

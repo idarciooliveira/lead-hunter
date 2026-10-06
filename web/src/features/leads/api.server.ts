@@ -45,6 +45,16 @@ export async function fetchTodayQueue(): Promise<Lead[]> {
 	return leads.filter((l) => l.stage === "QUALIFIED" && l.status === "NEW").slice(0, DAILY_GOAL);
 }
 
+/**
+ * Writes a new pitch for the lead: POST /api/leads/{id}/pitch (ADR 0040). Without an
+ * API configured the sample pitch stays, so the smoke build keeps working.
+ */
+export async function regeneratePitch(id: string): Promise<Lead> {
+	if (apiBaseUrl() === null) return fetchLead(id);
+	const updated = await apiMutate(BackendLead, `/leads/${encodeURIComponent(id)}/pitch`, "POST", {});
+	return fakeResponse(Lead, toLead(updated, null));
+}
+
 export type MarkLeadInput = { status: LeadStatus; lostReason?: LostReason | null; note?: string | null };
 
 /**
@@ -75,7 +85,7 @@ export async function markLead(id: string, input: MarkLeadInput): Promise<Lead> 
 /**
  * Backend rows become UI leads. Scores and reasons are data, as the API
  * returns them; the UI never computes them (ADR 0007). Fields the API does
- * not serve yet (stage-2 audit, complaints, pitch) stay empty until their
+ * not serve yet (stage-2 audit, complaints) stay empty until their
  * endpoints land in docs/api.md.
  */
 export function toLead(b: BackendLeadType, rank: number | null): LeadType {
@@ -99,7 +109,7 @@ export function toLead(b: BackendLeadType, rank: number | null): LeadType {
 		breakdown: { stage1: b.breakdown.map((i) => ({ points: i.points, reason: i.reason })), stage2: null },
 		audit: [],
 		complaints: null,
-		pitch: "",
+		pitch: b.pitch ?? "",
 		note: b.note,
 	};
 }

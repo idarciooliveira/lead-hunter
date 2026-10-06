@@ -8,9 +8,11 @@ import me.iofdev.leadhunter.pipeline.LeadRepository;
 import me.iofdev.leadhunter.pipeline.LeadStage;
 import me.iofdev.leadhunter.pipeline.LeadStatus;
 import me.iofdev.leadhunter.pipeline.LostReason;
+import me.iofdev.leadhunter.pipeline.PitchService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,10 +31,12 @@ class LeadController {
 
     private final CampaignRepository campaigns;
     private final LeadRepository leads;
+    private final PitchService pitches;
 
-    LeadController(CampaignRepository campaigns, LeadRepository leads) {
+    LeadController(CampaignRepository campaigns, LeadRepository leads, PitchService pitches) {
         this.campaigns = campaigns;
         this.leads = leads;
+        this.pitches = pitches;
     }
 
     @GetMapping("/campaigns/{slug}/leads")
@@ -69,6 +73,12 @@ class LeadController {
         LeadStatus status = parseStatus(request.status());
         LostReason lostReason = request.lostReason() == null ? null : parseLostReason(request.lostReason());
         return LeadDto.from(leads.updateOutcome(id, status, lostReason, request.note()));
+    }
+
+    /** Writes a new pitch for the lead and replaces the old one (ADR 0040), like {@code leads pitch}. */
+    @PostMapping("/leads/{id}/pitch")
+    LeadDto pitch(@PathVariable long id) {
+        return LeadDto.from(pitches.regenerate(id));
     }
 
     record MarkLeadRequest(String status, String lostReason, String note) {

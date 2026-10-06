@@ -1,5 +1,5 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchLead, fetchLeads, fetchTodayQueue, type MarkLeadInput, markLead } from "./api";
+import { fetchLead, fetchLeads, fetchTodayQueue, type MarkLeadInput, markLead, regeneratePitch } from "./api";
 
 // Every key starts with "leads", so invalidating ["leads"] refreshes all of them.
 export const leadsQuery = () => queryOptions({ queryKey: ["leads", "list"], queryFn: () => fetchLeads() });
@@ -14,6 +14,15 @@ export const useMarkLead = () => {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: ({ id, input }: { id: string; input: MarkLeadInput }) => markLead({ data: { id, input } }),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leads"] }),
+	});
+};
+
+/** Writes a new pitch for a lead, then refreshes every leads query. */
+export const useRegeneratePitch = () => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: string) => regeneratePitch({ data: id }),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leads"] }),
 	});
 };

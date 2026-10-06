@@ -14,6 +14,8 @@ import me.iofdev.leadhunter.PostgresTestSupport;
 import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignFileParser;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
+import me.iofdev.leadhunter.company.CompanyProfile;
+import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.llm.FakeLlmClient;
 import me.iofdev.leadhunter.llm.LlmCallRepository;
 import me.iofdev.leadhunter.llm.LlmClient;
@@ -84,6 +86,10 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
     CampaignFileParser parser;
     @Autowired
     LeadRepository leads;
+    @Autowired
+    CompanyRepository companies;
+    @Autowired
+    PitchService pitches;
     @Autowired
     CrawlRepository crawls;
     @Autowired
@@ -257,5 +263,60 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
         assertThat(sorriso.score()).isEqualTo(65);
         assertThat(sorriso.breakdown()).extracting("code").endsWith("STAGE2_NO_ISSUES");
         assertThat(progress).anyMatch(line -> line.contains("+0 STAGE2_NO_ISSUES"));
+    }
+
+    private void saveCompany() {
+        companies.save(new CompanyProfile("Exemplo Software", "Fazemos sites",
+                List.of(new CompanyProfile.Service("Site", "400 mil Kz", "2 semanas")),
+                "Site", List.of("Luanda"), List.of(), List.of(), List.of(), 40, null));
+    }
+
+    @Test
+    void writesAPitchForEachEnrichedLeadWhenThereIsAProfile() {
+        saveCompany();
+        llm.answer = "Bom dia, o vosso site custa 400 mil Kz. Podemos falar?";
+
+        enrichment.enrich(campaign, 10, 10, progress::add);
+
+        assertThat(jdbc.sql("select pitch || ':' || pitch_model from lead order by id")
+                .query(String.class).list())
+                .containsOnly("Bom dia, o vosso site custa 400 mil Kz. Podemos falar?:test-model");
+        assertThat(leads.list(campaign.id(), Optional.empty(), 10)).extracting(LeadView::pitch)
+                .doesNotContainNull();
+        assertThat(progress).anyMatch(line -> line.contains("Clínica Sorriso") && line.endsWith(", pitch written"));
+        assertThat(llm.last.purpose()).isEqualTo("pitch");
+    }
+
+    @Test
+    void aPitchWithAnInventedNumberIsDroppedButTheLeadIsStillEnriched() {
+        saveCompany();
+        llm.answer = "Fazemos o site por 90 mil Kz. Podemos falar?";
+
+        EnrichmentSummary summary = enrichment.enrich(campaign, 10, 10, progress::add);
+
+        assertThat(summary.enriched()).isEqualTo(2);
+        assertThat(jdbc.sql("select count(*) from lead where pitch is not null").query(Long.class).single()).isZero();
+        assertThat(jdbc.sql("select count(*) from lead where enriched_at is not null").query(Long.class).single())
+                .isEqualTo(2);
+    }
+
+    @Test
+    void withoutAProfileThereAreNoPitchesAndASayingSo() {
+        enrichment.enrich(campaign, 10, 10, progress::add);
+
+        assertThat(jdbc.sql("select count(*) from lead where pitch is not null").query(Long.class).single()).isZero();
+        assertThat(progress).anyMatch(line -> line.contains("No company profile"));
+    }
+
+    @Test
+    void regeneratingReplacesThePitchOfOneLead() {
+        saveCompany();
+        enrichment.enrich(campaign, 10, 10, progress::add);
+        long id = leads.list(campaign.id(), Optional.empty(), 1).getFirst().id();
+        llm.answer = "Uma versão nova, em 2 semanas. Podemos falar?";
+
+        LeadView lead = pitches.regenerate(id);
+
+        assertThat(lead.pitch()).isEqualTo("Uma versão nova, em 2 semanas. Podemos falar?");
     }
 }

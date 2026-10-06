@@ -35,6 +35,8 @@ const LEADS = [
 		rating: 4.3,
 		reviewsCount: 142,
 		mapsUrl: "https://maps.example/p1",
+		complaintKinds: ["contact"],
+		pitch: "Bom dia, notámos que ninguém atende o telefone. Podemos falar?",
 		whatsappLink: "https://wa.me/244923456789",
 	},
 	{
@@ -58,6 +60,8 @@ const LEADS = [
 		rating: 4.0,
 		reviewsCount: 50,
 		mapsUrl: "https://maps.example/p2",
+		complaintKinds: [],
+		pitch: null,
 		whatsappLink: null,
 	},
 ];

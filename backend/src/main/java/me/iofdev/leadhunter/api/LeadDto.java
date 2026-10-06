@@ -28,6 +28,8 @@ public record LeadDto(
         BigDecimal rating,
         int reviewsCount,
         String mapsUrl,
+        List<String> complaintKinds,
+        String pitch,
         String whatsappLink) {
 
     static LeadDto from(LeadView lead) {
@@ -52,6 +54,8 @@ public record LeadDto(
                 lead.rating(),
                 lead.reviewsCount(),
                 lead.mapsUrl(),
+                lead.complaintKinds(),
+                lead.pitch(),
                 lead.whatsappLink());
     }
 }

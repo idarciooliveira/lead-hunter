@@ -11,6 +11,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import me.iofdev.leadhunter.campaign.Campaign;
+import me.iofdev.leadhunter.company.CompanyProfile;
+import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.llm.ReviewComplaints;
 import me.iofdev.leadhunter.maps.ReviewFetcher;
 import me.iofdev.leadhunter.maps.ReviewFetcher.ReviewsResult;
@@ -33,15 +35,20 @@ public class EnrichmentRunner {
     private final CrawlRepository crawls;
     private final LeadRepository leads;
     private final RunRepository runs;
+    private final PitchService pitches;
+    private final CompanyRepository company;
     private final WebsiteCrawler crawler;
 
     public EnrichmentRunner(ReviewFetcher reviews, ReviewComplaints complaints, CrawlRepository crawls,
-                            LeadRepository leads, RunRepository runs) {
+                            LeadRepository leads, RunRepository runs, PitchService pitches,
+                            CompanyRepository company) {
         this.reviews = reviews;
         this.complaints = complaints;
         this.crawls = crawls;
         this.leads = leads;
         this.runs = runs;
+        this.pitches = pitches;
+        this.company = company;
         this.crawler = new WebsiteCrawler(HttpClient.newHttpClient());
     }
 
@@ -53,6 +60,10 @@ public class EnrichmentRunner {
                                     Long parentJobId) {
         List<EnrichmentTarget> targets = leads.unenrichedQualified(campaign.id(), batchSize);
         fetchReviews(campaign, targets, maxReviews, progress, parentJobId);
+        Optional<CompanyProfile> profile = company.find();
+        if (profile.isEmpty() && !targets.isEmpty()) {
+            progress.accept("No company profile, so no pitches. Run: company setup");
+        }
 
         int enriched = 0;
         for (EnrichmentTarget target : targets) {
@@ -63,6 +74,7 @@ public class EnrichmentRunner {
             all.addAll(stage2.items());
             Score combined = Score.of(all);
             leads.saveStage2(target.leadId(), combined, kinds);
+            boolean pitched = profile.isPresent() && pitches.write(campaign, profile.get(), target.leadId()).isPresent();
             enriched++;
             if (parentJobId != null) {
                 runs.progressJob(parentJobId, enriched);
@@ -71,7 +83,8 @@ public class EnrichmentRunner {
                     .map(item -> "+" + item.points() + " " + item.code())
                     .collect(Collectors.joining(", "));
             progress.accept("  " + target.name() + ": " + target.stage1Score() + " -> " + combined.total()
-                    + (added.isEmpty() ? " (no change)" : " (" + added + ")"));
+                    + (added.isEmpty() ? " (no change)" : " (" + added + ")")
+                    + (pitched ? ", pitch written" : ""));
         }
         return new EnrichmentSummary(targets.size(), enriched, leads.countByStage(campaign.id()));
     }
