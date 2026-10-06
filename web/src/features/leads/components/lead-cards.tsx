@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { Star } from "lucide-react";
 import { WhatsAppLink } from "#/components/contact-actions";
 import { Card } from "#/components/ui/card";
 import { ProgressBar } from "#/components/ui/progress";
@@ -21,7 +22,8 @@ export function LeadCards({ leads }: { leads: Lead[] }) {
 								<div className="text-xs text-mute">
 									{lead.category} · {lead.area}
 								</div>
-								<div className="mt-0.5 font-mono text-xs">
+								<div className="mt-0.5 flex items-center gap-1 font-mono text-xs">
+									<Star aria-hidden className="size-3 fill-current text-warn" />
 									{rating(lead.rating)} <span className="text-mute">({lead.reviewCount} avaliações)</span>
 								</div>
 							</Link>

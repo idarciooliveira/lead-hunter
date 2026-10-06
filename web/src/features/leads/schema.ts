@@ -36,6 +36,8 @@ export const Lead = z.object({
 	category: z.string(),
 	area: z.string(),
 	address: z.string(),
+	/** Google Maps link to the place; absent on sample data. */
+	mapsUrl: z.string().nullable().optional(),
 	rating: z.number(),
 	reviewCount: z.number().int(),
 	phone: z.string().nullable(),

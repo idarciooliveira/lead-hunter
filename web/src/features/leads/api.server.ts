@@ -107,6 +107,7 @@ export function toLead(b: BackendLeadType, rank: number | null): LeadType {
 		category: b.category ?? "",
 		area: b.neighborhood ?? "",
 		address: b.address ?? "",
+		mapsUrl: b.mapsUrl,
 		rating: b.rating ?? 0,
 		reviewCount: b.reviewsCount,
 		phone: b.phoneE164,

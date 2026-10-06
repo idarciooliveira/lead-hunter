@@ -1,6 +1,7 @@
 package me.iofdev.leadhunter.llm;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.JsonNode;
@@ -15,17 +17,26 @@ import tools.jackson.databind.JsonNode;
 /**
  * Calls {@code POST /chat/completions} on an OpenAI-compatible API. Used with the Vercel AI Gateway,
  * so switching models or providers is a change to {@code LEADHUNTER_LLM_MODEL}. See ADR 0017.
+ * A call that fails on the network, with a 429 or with a 5xx is tried up to {@link #MAX_ATTEMPTS} times.
  */
 public class OpenAiCompatibleLlmClient implements LlmClient {
+
+    static final int MAX_ATTEMPTS = 3;
 
     private final RestClient http;
     private final String apiKey;
     private final String model;
+    private final Duration retryDelay;
 
     public OpenAiCompatibleLlmClient(RestClient http, String apiKey, String model) {
+        this(http, apiKey, model, Duration.ofSeconds(1));
+    }
+
+    OpenAiCompatibleLlmClient(RestClient http, String apiKey, String model, Duration retryDelay) {
         this.http = http;
         this.apiKey = apiKey;
         this.model = model;
+        this.retryDelay = retryDelay;
     }
 
     @Override
@@ -38,20 +49,49 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("AI_GATEWAY_API_KEY is not set. Create a key in the Vercel dashboard under AI Gateway");
         }
+        Map<String, Object> payload = payload(request);
         JsonNode body;
-        try {
-            body = http.post()
-                    .uri("/chat/completions")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(payload(request))
-                    .retrieve()
-                    .body(JsonNode.class);
-        } catch (RestClientResponseException e) {
-            throw new LlmException("LLM gateway returned " + e.getStatusCode().value() + ": "
-                    + abbreviate(e.getResponseBodyAsString()), e);
+        for (int attempt = 1; ; attempt++) {
+            try {
+                body = post(payload);
+                break;
+            } catch (RestClientResponseException e) {
+                if (attempt >= MAX_ATTEMPTS || !retryable(e)) {
+                    throw new LlmException("LLM gateway returned " + e.getStatusCode().value() + ": "
+                            + abbreviate(e.getResponseBodyAsString()), e);
+                }
+            } catch (ResourceAccessException e) {
+                if (attempt >= MAX_ATTEMPTS) {
+                    throw e;
+                }
+            }
+            pause();
         }
         return parse(body);
+    }
+
+    private JsonNode post(Map<String, Object> payload) {
+        return http.post()
+                .uri("/chat/completions")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(payload)
+                .retrieve()
+                .body(JsonNode.class);
+    }
+
+    private static boolean retryable(RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        return status == 429 || status >= 500;
+    }
+
+    private void pause() {
+        try {
+            Thread.sleep(retryDelay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new LlmException("Interrupted while waiting to retry the LLM gateway", e);
+        }
     }
 
     private Map<String, Object> payload(LlmRequest request) {
