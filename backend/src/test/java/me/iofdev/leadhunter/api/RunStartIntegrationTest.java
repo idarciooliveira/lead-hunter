@@ -48,7 +48,7 @@ import org.springframework.test.web.servlet.MvcResult;
 @EnabledIf("me.iofdev.leadhunter.PostgresTestSupport#databaseAvailable")
 @SpringBootTest(properties = {"leadhunter.cli.enabled=false", "spring.main.web-application-type=servlet"})
 @AutoConfigureMockMvc
-@Import(RunStartIntegrationTest.Config.class)
+@Import({RunStartIntegrationTest.Config.class, ApiTestAuth.class})
 class RunStartIntegrationTest extends PostgresTestSupport {
 
     @TestConfiguration

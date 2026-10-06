@@ -13,6 +13,16 @@ fi
 command -v javac >/dev/null 2>&1 || { echo "error: building needs a JDK 21 (javac not found). See README.md." >&2; exit 1; }
 command -v pnpm >/dev/null 2>&1 || { echo "error: pnpm not found. Run: corepack enable" >&2; exit 1; }
 
+# The API refuses every call without the service token the web server sends (ADR 0037). Use the one in the
+# environment or .env, else make one for this run.
+if [ -z "$LEADHUNTER_API_TOKEN" ]; then
+  LEADHUNTER_API_TOKEN="$(sed -n 's/^LEADHUNTER_API_TOKEN=//p' .env 2>/dev/null | tail -n 1)"
+fi
+if [ -z "$LEADHUNTER_API_TOKEN" ]; then
+  LEADHUNTER_API_TOKEN="$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')"
+fi
+export LEADHUNTER_API_TOKEN
+
 docker compose up -d --wait postgres
 # Rebuild every time so the API runs the code on disk.
 ./backend/mvnw -q -B -f backend/pom.xml package -DskipTests

@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -30,6 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @EnabledIf("me.iofdev.leadhunter.PostgresTestSupport#databaseAvailable")
 @SpringBootTest(properties = {"leadhunter.cli.enabled=false", "spring.main.web-application-type=servlet"})
 @AutoConfigureMockMvc
+@Import(ApiTestAuth.class)
 class LeadOutcomeIntegrationTest extends PostgresTestSupport {
 
     private static final String CAMPAIGN = """
@@ -168,16 +170,6 @@ class LeadOutcomeIntegrationTest extends PostgresTestSupport {
                         .content("{\"status\":\"CONTACTED\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message", containsString("no lead with id")));
-    }
-
-    @Test
-    void browserMutationsPassThePreflight() throws Exception {
-        // Mutations run in the browser from another origin (ADR 0031), until ADR 0037 moves them into server functions.
-        mvc.perform(options("/api/leads/{id}", leadId)
-                        .header("Origin", "http://localhost:3000")
-                        .header("Access-Control-Request-Method", "PATCH"))
-                .andExpect(status().isOk())
-                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"));
     }
 
     @Test

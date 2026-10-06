@@ -17,12 +17,14 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 /** The today queue and the CSV export over HTTP (ADR 0041), on real Postgres. */
 @EnabledIf("me.iofdev.leadhunter.PostgresTestSupport#databaseAvailable")
 @SpringBootTest(properties = {"leadhunter.cli.enabled=false", "spring.main.web-application-type=servlet"})
 @AutoConfigureMockMvc
+@Import(ApiTestAuth.class)
 class TodayQueueIntegrationTest extends PostgresTestSupport {
 
     private static final String CAMPAIGN = """

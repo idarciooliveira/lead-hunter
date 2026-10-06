@@ -1,5 +1,6 @@
 package me.iofdev.leadhunter;
 
+import me.iofdev.leadhunter.api.ApiTestAuth;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,6 +41,7 @@ public abstract class PostgresTestSupport {
 
     @DynamicPropertySource
     static void datasource(DynamicPropertyRegistry registry) {
+        registry.add("leadhunter.api.token", () -> ApiTestAuth.TOKEN);
         if (EXTERNAL_URL != null) {
             registry.add("spring.datasource.url", () -> EXTERNAL_URL);
             registry.add("spring.datasource.username", () -> env("LEADHUNTER_TEST_DB_USER", "leadhunter"));

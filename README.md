@@ -170,7 +170,7 @@ cd web && pnpm install && pnpm dev   # http://localhost:3000, on sample data
 
 ### API and web with one command
 
-Both read `.env` and use the same database as the CLI. See [ADR 0039](docs/adr/0039-full-stack-in-docker-compose-and-a-dev-script.md).
+Both read `.env` and use the same database as the CLI. Set `LEADHUNTER_API_TOKEN` in `.env` for `docker compose up`; `./dev` makes one when it is unset. See [ADR 0039](docs/adr/0039-full-stack-in-docker-compose-and-a-dev-script.md).
 
 ```bash
 docker compose up --build   # everything in Docker: Postgres, the API on :8080, the web on :3000
@@ -190,6 +190,7 @@ Copy [.env.example](.env.example) to `.env` in the project root and replace the 
 | `LEADHUNTER_LLM_MODEL` | `google/gemma-4-26b-a4b-it` | Any gateway model id. Gemma is for testing, see [ADR 0017](docs/adr/0017-vercel-ai-gateway.md) |
 | `LEADHUNTER_LLM_BASE_URL` | `https://ai-gateway.vercel.sh/v1` | Any OpenAI-compatible endpoint |
 | `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` | docker-compose values | Railway sets these on its Postgres |
+| `LEADHUNTER_API_TOKEN` | none | Service token the web server sends and the API requires on every `/api` call. The web profile will not start without it. `openssl rand -hex 32` makes one |
 | `LEADHUNTER_APIFY_MAX_PLACES_PER_RUN` | 600 | Budget guard. Larger runs need `--allow-over-limit` |
 | `LEADHUNTER_APIFY_ESTIMATED_USD_PER_PLACE` | 0.004 | Only for `--dry-run`. Set it from the actor's pricing page |
 | `LEADHUNTER_USAGE_MONTHLY_BUDGET_USD` | 10 | The budget the bar in `usage` measures against |
