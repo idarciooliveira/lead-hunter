@@ -11,6 +11,7 @@ import me.iofdev.leadhunter.campaign.CampaignFileParser;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.company.CompanyRepository;
+import me.iofdev.leadhunter.pipeline.CampaignFunnel;
 import me.iofdev.leadhunter.pipeline.LeadRepository;
 import me.iofdev.leadhunter.pipeline.RunRepository;
 import org.springframework.http.HttpStatus;
@@ -32,9 +33,11 @@ class CampaignController {
     private final LeadRepository leads;
     private final RunRepository runs;
     private final CompanyRepository company;
+    private final CampaignFunnel funnels;
 
     CampaignController(CampaignRepository campaigns, LeadRepository leads, RunRepository runs,
-                       CompanyRepository company) {
+                       CompanyRepository company, CampaignFunnel funnels) {
+        this.funnels = funnels;
         this.campaigns = campaigns;
         this.leads = leads;
         this.runs = runs;
@@ -49,7 +52,7 @@ class CampaignController {
     @GetMapping("/{slug}")
     CampaignDto get(OrgId org, @PathVariable String slug) {
         return campaigns.findBySlug(org, slug)
-                .map(this::dto)
+                .map(c -> dto(c).withFunnel(funnels.of(c).orElse(null)))
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"));
     }
 

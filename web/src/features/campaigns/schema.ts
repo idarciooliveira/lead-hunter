@@ -27,7 +27,7 @@ export const Campaign = z.object({
 	qualifiedCount: z.number().int(),
 	/** Apify and LLM spend so far. */
 	spendUsd: z.number(),
-	/** Null until the API serves a funnel report. */
+	/** Null until the campaign ran, and on the list, which does not carry it. */
 	funnel: Funnel.nullable(),
 });
 export type Campaign = z.infer<typeof Campaign>;

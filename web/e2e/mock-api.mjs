@@ -69,6 +69,19 @@ const LEADS = [
 	},
 ];
 
+// The finished scrape behind the funnel below, so the campaign reads as run, like the real API (ADR 0048).
+const SEED_RUN = {
+	id: 90,
+	campaignSlug: "mock-clinicas",
+	kind: "SCRAPE",
+	status: "DONE",
+	startedAt: "2026-10-05T09:40:00Z",
+	done: 12,
+	total: null,
+	costUsd: 0.2,
+	error: null,
+};
+
 const CAMPAIGN = {
 	id: 1,
 	slug: "mock-clinicas",
@@ -78,10 +91,22 @@ const CAMPAIGN = {
 	createdAt: "2026-10-01T09:00:00Z",
 	totalCostUsd: 0.21,
 	qualifiedCount: 1,
-	latestRun: null,
+	latestRun: SEED_RUN,
+	funnel: {
+		scraped: 12,
+		scrapeCostUsd: 0.2,
+		kept: 9,
+		excluded: 3,
+		excludedBy: [{ reason: "Sem telefone", leads: 3 }],
+		cutShare: 0.4,
+		qualified: 1,
+		enriched: 1,
+		enrichCostUsd: 0.01,
+		enriching: false,
+	},
 };
 
-const RUNS = [];
+const RUNS = [structuredClone(SEED_RUN)];
 
 // Created campaigns join this list, so the pages read them back like from the real API.
 const CAMPAIGNS = [CAMPAIGN];
@@ -122,6 +147,7 @@ const ENTRIES = [
 const PRISTINE = structuredClone(LEADS);
 const PRISTINE_CAMPAIGNS = structuredClone(CAMPAIGNS);
 const PRISTINE_COMPANY = structuredClone(COMPANY);
+const PRISTINE_RUNS = structuredClone(RUNS);
 
 const server = http.createServer((req, res) => {
 	const url = new URL(req.url ?? "/", "http://localhost");
@@ -158,6 +184,7 @@ const server = http.createServer((req, res) => {
 		LEADS.length = 0;
 		for (const lead of structuredClone(PRISTINE)) LEADS.push(lead);
 		RUNS.length = 0;
+		RUNS.push(...structuredClone(PRISTINE_RUNS));
 		CAMPAIGNS.length = 0;
 		for (const campaign of structuredClone(PRISTINE_CAMPAIGNS)) CAMPAIGNS.push(campaign);
 		const fresh = structuredClone(PRISTINE_COMPANY);
@@ -204,6 +231,7 @@ const server = http.createServer((req, res) => {
 				totalCostUsd: 0,
 				qualifiedCount: 0,
 				latestRun: null,
+				funnel: null,
 			};
 			CAMPAIGNS.push(saved);
 			return json(201, { saved, warnings: [] });

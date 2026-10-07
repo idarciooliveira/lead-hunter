@@ -50,3 +50,4 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0044](0044-owner-keys-with-enforced-budgets.md) | Run every organization on the owner's keys, with budgets that refuse runs | Accepted |
 | [0045](0045-public-sign-up-creates-an-organization.md) | Open public sign-up, with one new organization per account | Proposed |
 | [0046](0046-run-spend-outlives-its-campaign.md) | Keep run spend after its campaign is deleted, and admit jobs one at a time | Accepted |
+| [0048](0048-campaign-funnel-from-leads-and-jobs.md) | Serve the campaign funnel from the stored leads and jobs | Accepted |
