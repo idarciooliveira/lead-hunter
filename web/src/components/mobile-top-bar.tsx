@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { Button } from "#/components/ui/button";
+import { MobileSignOut } from "#/features/session/components/user-menu";
 import { BudgetText } from "./budget-pill";
 import { FoxLogo } from "./fox-logo";
 import { ThemeToggle } from "./theme-toggle";
@@ -26,6 +27,7 @@ export function MobileTopBar({ onSearch }: { onSearch: () => void }) {
 				<Search className="size-4" aria-hidden />
 			</Button>
 			<ThemeToggle touch />
+			<MobileSignOut />
 		</header>
 	);
 }

@@ -49,10 +49,16 @@ services:
     environment:
       LEADHUNTER_API_URL: http://api:8080/api
       LEADHUNTER_API_TOKEN: ${LEADHUNTER_API_TOKEN:-}
+      # Logins (ADR 0038): the web server reads and writes the same Postgres as the API.
+      DATABASE_URL: postgresql://leadhunter:leadhunter@postgres:5432/leadhunter
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
     depends_on:
       api:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
 
   # The CLI in a container. Only starts with `docker compose run --rm app <command>`.

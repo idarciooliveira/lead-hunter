@@ -1,13 +1,10 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, HeadContent, Link, Outlet, ScriptOnce, Scripts } from "@tanstack/react-router";
+import { createRootRouteWithContext, HeadContent, Outlet, ScriptOnce, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { AppShell } from "#/components/app-shell";
+import { NotFound } from "#/components/not-found";
 import { FoxState } from "#/components/states";
-import { Button } from "#/components/ui/button";
 import { TooltipProvider } from "#/components/ui/tooltip";
-import { companyQuery } from "#/features/company/queries";
-import { usageQuery } from "#/features/usage/queries";
 import TanStackQueryDevtools from "#/integrations/tanstack-query/devtools";
 import { ThemeProvider, themeScript } from "#/lib/theme";
 import appCss from "../styles.css?url";
@@ -21,29 +18,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 		],
 		links: [{ rel: "stylesheet", href: appCss }],
 	}),
-	// The shell shows the company name and this month's budget on every page.
-	loader: ({ context }) =>
-		Promise.all([
-			context.queryClient.ensureQueryData(companyQuery()),
-			context.queryClient.ensureQueryData(usageQuery()),
-		]),
 	shellComponent: RootDocument,
-	component: () => (
-		<AppShell>
-			<Outlet />
-		</AppShell>
-	),
-	notFoundComponent: () => (
-		<FoxState
-			title="Página não encontrada"
-			text="Este endereço não existe no Lead Hunter."
-			action={
-				<Button asChild variant="primary">
-					<Link to="/hoje">Ir para Hoje</Link>
-				</Button>
-			}
-		/>
-	),
+	component: Outlet,
+	notFoundComponent: NotFound,
 	errorComponent: ({ error }) => (
 		<FoxState
 			title="Algo correu mal"

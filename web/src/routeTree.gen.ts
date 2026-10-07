@@ -10,108 +10,133 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as EmpresaRouteImport } from './routes/empresa'
-import { Route as EstadosRouteImport } from './routes/estados'
-import { Route as HojeRouteImport } from './routes/hoje'
-import { Route as UsoRouteImport } from './routes/uso'
-import { Route as CampanhasIndexRouteImport } from './routes/campanhas.index'
-import { Route as CampanhasSlugRouteImport } from './routes/campanhas.$slug'
-import { Route as CampanhasNovaRouteImport } from './routes/campanhas.nova'
-import { Route as LeadsIndexRouteImport } from './routes/leads.index'
-import { Route as LeadsLeadIdRouteImport } from './routes/leads.$leadId'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as AppEmpresaRouteImport } from './routes/_app.empresa'
+import { Route as AppEstadosRouteImport } from './routes/_app.estados'
+import { Route as AppHojeRouteImport } from './routes/_app.hoje'
+import { Route as AppUsoRouteImport } from './routes/_app.uso'
+import { Route as AppCampanhasIndexRouteImport } from './routes/_app.campanhas.index'
+import { Route as AppCampanhasSlugRouteImport } from './routes/_app.campanhas.$slug'
+import { Route as AppCampanhasNovaRouteImport } from './routes/_app.campanhas.nova'
+import { Route as AppLeadsIndexRouteImport } from './routes/_app.leads.index'
+import { Route as AppLeadsLeadIdRouteImport } from './routes/_app.leads.$leadId'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmpresaRoute = EmpresaRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EntrarRoute = EntrarRouteImport.update({
+  id: '/entrar',
+  path: '/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppEmpresaRoute = AppEmpresaRouteImport.update({
   id: '/empresa',
   path: '/empresa',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const EstadosRoute = EstadosRouteImport.update({
+const AppEstadosRoute = AppEstadosRouteImport.update({
   id: '/estados',
   path: '/estados',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const HojeRoute = HojeRouteImport.update({
+const AppHojeRoute = AppHojeRouteImport.update({
   id: '/hoje',
   path: '/hoje',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const UsoRoute = UsoRouteImport.update({
+const AppUsoRoute = AppUsoRouteImport.update({
   id: '/uso',
   path: '/uso',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const CampanhasIndexRoute = CampanhasIndexRouteImport.update({
+const AppCampanhasIndexRoute = AppCampanhasIndexRouteImport.update({
   id: '/campanhas/',
   path: '/campanhas/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const CampanhasSlugRoute = CampanhasSlugRouteImport.update({
+const AppCampanhasSlugRoute = AppCampanhasSlugRouteImport.update({
   id: '/campanhas/$slug',
   path: '/campanhas/$slug',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const CampanhasNovaRoute = CampanhasNovaRouteImport.update({
+const AppCampanhasNovaRoute = AppCampanhasNovaRouteImport.update({
   id: '/campanhas/nova',
   path: '/campanhas/nova',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const LeadsIndexRoute = LeadsIndexRouteImport.update({
+const AppLeadsIndexRoute = AppLeadsIndexRouteImport.update({
   id: '/leads/',
   path: '/leads/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const LeadsLeadIdRoute = LeadsLeadIdRouteImport.update({
+const AppLeadsLeadIdRoute = AppLeadsLeadIdRouteImport.update({
   id: '/leads/$leadId',
   path: '/leads/$leadId',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/empresa': typeof EmpresaRoute
-  '/estados': typeof EstadosRoute
-  '/hoje': typeof HojeRoute
-  '/uso': typeof UsoRoute
-  '/campanhas/$slug': typeof CampanhasSlugRoute
-  '/campanhas/nova': typeof CampanhasNovaRoute
-  '/leads/$leadId': typeof LeadsLeadIdRoute
-  '/campanhas/': typeof CampanhasIndexRoute
-  '/leads/': typeof LeadsIndexRoute
+  '/entrar': typeof EntrarRoute
+  '/empresa': typeof AppEmpresaRoute
+  '/estados': typeof AppEstadosRoute
+  '/hoje': typeof AppHojeRoute
+  '/uso': typeof AppUsoRoute
+  '/campanhas/$slug': typeof AppCampanhasSlugRoute
+  '/campanhas/nova': typeof AppCampanhasNovaRoute
+  '/leads/$leadId': typeof AppLeadsLeadIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/campanhas/': typeof AppCampanhasIndexRoute
+  '/leads/': typeof AppLeadsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/empresa': typeof EmpresaRoute
-  '/estados': typeof EstadosRoute
-  '/hoje': typeof HojeRoute
-  '/uso': typeof UsoRoute
-  '/campanhas/$slug': typeof CampanhasSlugRoute
-  '/campanhas/nova': typeof CampanhasNovaRoute
-  '/leads/$leadId': typeof LeadsLeadIdRoute
-  '/campanhas': typeof CampanhasIndexRoute
-  '/leads': typeof LeadsIndexRoute
+  '/entrar': typeof EntrarRoute
+  '/empresa': typeof AppEmpresaRoute
+  '/estados': typeof AppEstadosRoute
+  '/hoje': typeof AppHojeRoute
+  '/uso': typeof AppUsoRoute
+  '/campanhas/$slug': typeof AppCampanhasSlugRoute
+  '/campanhas/nova': typeof AppCampanhasNovaRoute
+  '/leads/$leadId': typeof AppLeadsLeadIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/campanhas': typeof AppCampanhasIndexRoute
+  '/leads': typeof AppLeadsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/empresa': typeof EmpresaRoute
-  '/estados': typeof EstadosRoute
-  '/hoje': typeof HojeRoute
-  '/uso': typeof UsoRoute
-  '/campanhas/$slug': typeof CampanhasSlugRoute
-  '/campanhas/nova': typeof CampanhasNovaRoute
-  '/leads/$leadId': typeof LeadsLeadIdRoute
-  '/campanhas/': typeof CampanhasIndexRoute
-  '/leads/': typeof LeadsIndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/entrar': typeof EntrarRoute
+  '/_app/empresa': typeof AppEmpresaRoute
+  '/_app/estados': typeof AppEstadosRoute
+  '/_app/hoje': typeof AppHojeRoute
+  '/_app/uso': typeof AppUsoRoute
+  '/_app/campanhas/$slug': typeof AppCampanhasSlugRoute
+  '/_app/campanhas/nova': typeof AppCampanhasNovaRoute
+  '/_app/leads/$leadId': typeof AppLeadsLeadIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_app/campanhas/': typeof AppCampanhasIndexRoute
+  '/_app/leads/': typeof AppLeadsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/entrar'
     | '/empresa'
     | '/estados'
     | '/hoje'
@@ -119,11 +144,13 @@ export interface FileRouteTypes {
     | '/campanhas/$slug'
     | '/campanhas/nova'
     | '/leads/$leadId'
+    | '/api/auth/$'
     | '/campanhas/'
     | '/leads/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/entrar'
     | '/empresa'
     | '/estados'
     | '/hoje'
@@ -131,33 +158,31 @@ export interface FileRouteTypes {
     | '/campanhas/$slug'
     | '/campanhas/nova'
     | '/leads/$leadId'
+    | '/api/auth/$'
     | '/campanhas'
     | '/leads'
   id:
     | '__root__'
     | '/'
-    | '/empresa'
-    | '/estados'
-    | '/hoje'
-    | '/uso'
-    | '/campanhas/$slug'
-    | '/campanhas/nova'
-    | '/leads/$leadId'
-    | '/campanhas/'
-    | '/leads/'
+    | '/_app'
+    | '/entrar'
+    | '/_app/empresa'
+    | '/_app/estados'
+    | '/_app/hoje'
+    | '/_app/uso'
+    | '/_app/campanhas/$slug'
+    | '/_app/campanhas/nova'
+    | '/_app/leads/$leadId'
+    | '/api/auth/$'
+    | '/_app/campanhas/'
+    | '/_app/leads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  EmpresaRoute: typeof EmpresaRoute
-  EstadosRoute: typeof EstadosRoute
-  HojeRoute: typeof HojeRoute
-  UsoRoute: typeof UsoRoute
-  CampanhasSlugRoute: typeof CampanhasSlugRoute
-  CampanhasNovaRoute: typeof CampanhasNovaRoute
-  LeadsLeadIdRoute: typeof LeadsLeadIdRoute
-  CampanhasIndexRoute: typeof CampanhasIndexRoute
-  LeadsIndexRoute: typeof LeadsIndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  EntrarRoute: typeof EntrarRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -169,93 +194,135 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/empresa': {
-      id: '/empresa'
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/entrar': {
+      id: '/entrar'
+      path: '/entrar'
+      fullPath: '/entrar'
+      preLoaderRoute: typeof EntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/empresa': {
+      id: '/_app/empresa'
       path: '/empresa'
       fullPath: '/empresa'
-      preLoaderRoute: typeof EmpresaRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppEmpresaRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/estados': {
-      id: '/estados'
+    '/_app/estados': {
+      id: '/_app/estados'
       path: '/estados'
       fullPath: '/estados'
-      preLoaderRoute: typeof EstadosRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppEstadosRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/hoje': {
-      id: '/hoje'
+    '/_app/hoje': {
+      id: '/_app/hoje'
       path: '/hoje'
       fullPath: '/hoje'
-      preLoaderRoute: typeof HojeRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppHojeRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/uso': {
-      id: '/uso'
+    '/_app/uso': {
+      id: '/_app/uso'
       path: '/uso'
       fullPath: '/uso'
-      preLoaderRoute: typeof UsoRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppUsoRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/campanhas/': {
-      id: '/campanhas/'
+    '/_app/campanhas/': {
+      id: '/_app/campanhas/'
       path: '/campanhas'
       fullPath: '/campanhas/'
-      preLoaderRoute: typeof CampanhasIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppCampanhasIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/campanhas/$slug': {
-      id: '/campanhas/$slug'
+    '/_app/campanhas/$slug': {
+      id: '/_app/campanhas/$slug'
       path: '/campanhas/$slug'
       fullPath: '/campanhas/$slug'
-      preLoaderRoute: typeof CampanhasSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppCampanhasSlugRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/campanhas/nova': {
-      id: '/campanhas/nova'
+    '/_app/campanhas/nova': {
+      id: '/_app/campanhas/nova'
       path: '/campanhas/nova'
       fullPath: '/campanhas/nova'
-      preLoaderRoute: typeof CampanhasNovaRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppCampanhasNovaRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/leads/': {
-      id: '/leads/'
+    '/_app/leads/': {
+      id: '/_app/leads/'
       path: '/leads'
       fullPath: '/leads/'
-      preLoaderRoute: typeof LeadsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppLeadsIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/leads/$leadId': {
-      id: '/leads/$leadId'
+    '/_app/leads/$leadId': {
+      id: '/_app/leads/$leadId'
       path: '/leads/$leadId'
       fullPath: '/leads/$leadId'
-      preLoaderRoute: typeof LeadsLeadIdRouteImport
+      preLoaderRoute: typeof AppLeadsLeadIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
+interface AppRouteChildren {
+  AppEmpresaRoute: typeof AppEmpresaRoute
+  AppEstadosRoute: typeof AppEstadosRoute
+  AppHojeRoute: typeof AppHojeRoute
+  AppUsoRoute: typeof AppUsoRoute
+  AppCampanhasSlugRoute: typeof AppCampanhasSlugRoute
+  AppCampanhasNovaRoute: typeof AppCampanhasNovaRoute
+  AppLeadsLeadIdRoute: typeof AppLeadsLeadIdRoute
+  AppCampanhasIndexRoute: typeof AppCampanhasIndexRoute
+  AppLeadsIndexRoute: typeof AppLeadsIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppEmpresaRoute: AppEmpresaRoute,
+  AppEstadosRoute: AppEstadosRoute,
+  AppHojeRoute: AppHojeRoute,
+  AppUsoRoute: AppUsoRoute,
+  AppCampanhasSlugRoute: AppCampanhasSlugRoute,
+  AppCampanhasNovaRoute: AppCampanhasNovaRoute,
+  AppLeadsLeadIdRoute: AppLeadsLeadIdRoute,
+  AppCampanhasIndexRoute: AppCampanhasIndexRoute,
+  AppLeadsIndexRoute: AppLeadsIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  EmpresaRoute: EmpresaRoute,
-  EstadosRoute: EstadosRoute,
-  HojeRoute: HojeRoute,
-  UsoRoute: UsoRoute,
-  CampanhasSlugRoute: CampanhasSlugRoute,
-  CampanhasNovaRoute: CampanhasNovaRoute,
-  LeadsLeadIdRoute: LeadsLeadIdRoute,
-  CampanhasIndexRoute: CampanhasIndexRoute,
-  LeadsIndexRoute: LeadsIndexRoute,
+  AppRoute: AppRouteWithChildren,
+  EntrarRoute: EntrarRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

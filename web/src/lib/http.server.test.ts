@@ -58,7 +58,18 @@ describe("apiFetch", () => {
 		const fetch = vi.fn(async (_url: string, _init?: RequestInit) => response(200, { slug: "x" }));
 		vi.stubGlobal("fetch", fetch);
 		await apiFetch(Schema, "/campaigns/x");
-		expect(fetch.mock.calls[0][1]?.headers).toEqual({ authorization: "Bearer secret" });
+		expect(fetch.mock.calls[0][1]?.headers).toMatchObject({ authorization: "Bearer secret" });
+	});
+
+	it("sends the signed-in user and organization (ADR 0043)", async () => {
+		vi.stubEnv("LEADHUNTER_API_URL", "http://api:8080/api");
+		const fetch = vi.fn(async (_url: string, _init?: RequestInit) => response(200, { slug: "x" }));
+		vi.stubGlobal("fetch", fetch);
+		await apiFetch(Schema, "/campaigns/x");
+		expect(fetch.mock.calls[0][1]?.headers).toMatchObject({
+			"x-leadhunter-user": "user-1",
+			"x-leadhunter-org": "org-1",
+		});
 	});
 });
 
