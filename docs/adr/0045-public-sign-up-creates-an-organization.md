@@ -14,7 +14,8 @@ Every run spends the owner's Apify and AI Gateway money (ADR 0044), so an open f
 
 ## Decision
 
-- Sign-up asks for name, email, password and organization name. It creates the user, a new organization and an owner membership in one step, from a Better Auth `user.create.after` hook. Joining an existing organization still needs an invitation.
+- Sign-up asks for name, email, password and organization name. Better Auth commits the user first. Then its `user.create.after` hook writes the organization and the owner membership in one database transaction, so those two succeed or fail together. The user write is not part of that transaction. Joining an existing organization still needs an invitation.
+- If the hook fails, it deletes the user it just created and the sign-up returns an error, so the email can be used again. If the process dies between the user commit and the hook, the user is left with no organization. That user cannot sign in, because the session is refused without a membership and the email is not verified yet. The same provisioning runs again from `afterEmailVerification`. It does nothing when the user already has an organization, so the retry is safe.
 - The email must be verified before the first session (`requireEmailVerification`). The verification link goes out through the `Mailer` from ADR 0042. This is the main abuse control.
 - A new organization gets a monthly budget lower than the operator default, set by `leadhunter.usage.signup-budget-usd`. ADR 0044 enforces it and the install-wide cap.
 - `/api/auth/sign-up/*` is rate limited per IP with Better Auth's built-in limiter.
