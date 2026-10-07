@@ -112,6 +112,8 @@ class OrgsCommand implements Runnable {
         @Option(names = "--reset", description = "Go back to the default budget.")
         boolean reset;
 
+        private static final BigDecimal MAX_BUDGET = new BigDecimal("99999999.99");
+
         private final AuthRepository auth;
         private final UsageRepository usage;
         private final BudgetService budget;
@@ -130,6 +132,13 @@ class OrgsCommand implements Runnable {
             }
             if (amount != null && amount.signum() < 0) {
                 throw new IllegalArgumentException("the budget cannot be negative");
+            }
+            // The column is numeric(10, 2): more decimals would round, so 0.001 would save as a $0 budget.
+            if (amount != null && amount.stripTrailingZeros().scale() > 2) {
+                throw new IllegalArgumentException("the budget takes cents at most, like 12.50, got " + amount.toPlainString());
+            }
+            if (amount != null && amount.compareTo(MAX_BUDGET) > 0) {
+                throw new IllegalArgumentException("the budget can be at most $" + MAX_BUDGET.toPlainString());
             }
             Organization organization = auth.requireOrganization(slug);
             OrgId id = new OrgId(organization.id());

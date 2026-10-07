@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
+import java.util.List;
 
 import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.usage.Money;
@@ -74,6 +75,15 @@ public class BudgetService {
      */
     public BigDecimal committedThisMonth(OrgId orgId) {
         return committed(orgId, thisMonth());
+    }
+
+    /** Every organization this UTC month, its budget filled in from the default when the operator set none. */
+    public List<UsageRepository.OrgMonth> thisMonthByOrg() {
+        YearMonth month = thisMonth();
+        return usage.committedByOrg(start(month), start(month.plusMonths(1))).stream()
+                .map(org -> org.budgetUsd() != null ? org : new UsageRepository.OrgMonth(org.id(), org.slug(),
+                        properties.monthlyBudgetUsd(), org.committedUsd()))
+                .toList();
     }
 
     private YearMonth thisMonth() {

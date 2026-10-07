@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 
 import me.iofdev.leadhunter.auth.OrgId;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -86,19 +87,7 @@ public class UsageRepository {
      * </ul>
      */
     public BigDecimal committed(OrgId orgId, OffsetDateTime from, OffsetDateTime to) {
-        return jdbc.sql("""
-                        select
-                            coalesce((select sum(coalesce(r.cost_usd, r.estimated_usd, 0)) from campaign_run r
-                                      where r.location is not null and %1$s), 0)
-                          + coalesce((select sum(l.cost_usd) from llm_call l where %2$s), 0)
-                          + coalesce((select sum(greatest(p.estimated_usd - coalesce(
-                                          (select sum(coalesce(c.cost_usd, c.estimated_usd, 0))
-                                           from campaign_run c where c.parent_id = p.id), 0), 0))
-                                      from campaign_run p
-                                      where p.parent_id is null and p.location is null and p.status = 'RUNNING'
-                                        and p.estimated_usd is not null and %3$s), 0)
-                        """.formatted(committedWhere("r.started_at", "r.org_id"),
-                        committedWhere("l.created_at", "l.org_id"), orgWhere("p.org_id")))
+        return jdbc.sql("select " + committedSql(UsageRepository::orgWhere))
                 .param("orgId", orgId == null ? null : orgId.value())
                 .param("from", from)
                 .param("to", to)
@@ -106,9 +95,39 @@ public class UsageRepository {
                 .single();
     }
 
-    private static String committedWhere(String timeColumn, String orgColumn) {
-        return timeColumn + " >= cast(:from as timestamptz) and " + timeColumn + " < cast(:to as timestamptz)"
-                + " and " + orgWhere(orgColumn);
+    /** One organization's month for the operator: {@code budgetUsd} is null when it uses the default. */
+    public record OrgMonth(String id, String slug, BigDecimal budgetUsd, BigDecimal committedUsd) {
+    }
+
+    /** {@link #committed} for every organization in one query, oldest organization first. */
+    public List<OrgMonth> committedByOrg(OffsetDateTime from, OffsetDateTime to) {
+        return jdbc.sql("select o.id, o.slug, o.monthly_budget_usd, " + committedSql(column -> column + " = o.id")
+                        + " as committed from organization o order by o.created_at, o.slug")
+                .param("from", from)
+                .param("to", to)
+                .query((rs, row) -> new OrgMonth(rs.getString("id"), rs.getString("slug"),
+                        rs.getBigDecimal("monthly_budget_usd"), rs.getBigDecimal("committed")))
+                .list();
+    }
+
+    /** The three parts of {@link #committed}, with {@code orgFilter} turning an org column into a condition. */
+    private static String committedSql(UnaryOperator<String> orgFilter) {
+        return """
+                (coalesce((select sum(coalesce(r.cost_usd, r.estimated_usd, 0)) from campaign_run r
+                           where r.location is not null and %1$s), 0)
+                  + coalesce((select sum(l.cost_usd) from llm_call l where %2$s), 0)
+                  + coalesce((select sum(greatest(p.estimated_usd - coalesce(
+                                  (select sum(coalesce(c.cost_usd, c.estimated_usd, 0))
+                                   from campaign_run c where c.parent_id = p.id), 0), 0))
+                              from campaign_run p
+                              where p.parent_id is null and p.location is null and p.status = 'RUNNING'
+                                and p.estimated_usd is not null and %3$s), 0))
+                """.formatted(inMonth("r.started_at") + " and " + orgFilter.apply("r.org_id"),
+                inMonth("l.created_at") + " and " + orgFilter.apply("l.org_id"), orgFilter.apply("p.org_id"));
+    }
+
+    private static String inMonth(String timeColumn) {
+        return timeColumn + " >= cast(:from as timestamptz) and " + timeColumn + " < cast(:to as timestamptz)";
     }
 
     private static String orgWhere(String orgColumn) {

@@ -66,6 +66,20 @@ class OpenAiCompatibleLlmClientTest {
     }
 
     @Test
+    void namesTheModelItSentWhenTheResponseLeavesItOut() {
+        server.expect(requestTo(BASE + "/chat/completions"))
+                .andExpect(jsonPath("$.model").value("anthropic/haiku"))
+                .andRespond(withSuccess("""
+                        {"id": "chatcmpl-2", "choices": [{"index": 0, "message": {"role": "assistant", "content": "Olá"}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        LlmResponse response = client.complete(LlmRequest.text(null, "Olá").withModel("anthropic/haiku"));
+
+        assertThat(response.model()).isEqualTo("anthropic/haiku");
+        server.verify();
+    }
+
+    @Test
     void readsTheCostTheGatewayReports() {
         server.expect(requestTo(BASE + "/chat/completions"))
                 .andRespond(withSuccess("""

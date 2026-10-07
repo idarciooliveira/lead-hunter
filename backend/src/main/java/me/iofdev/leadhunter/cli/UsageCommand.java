@@ -5,14 +5,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
-import java.time.ZoneOffset;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 
-import me.iofdev.leadhunter.auth.AuthRepository;
 import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.pipeline.BudgetService;
@@ -56,15 +54,12 @@ class UsageCommand implements Runnable {
     private final CampaignRepository campaigns;
     private final BudgetService budget;
     private final CliOrg orgs;
-    private final AuthRepository auth;
 
-    UsageCommand(UsageRepository usage, CampaignRepository campaigns, BudgetService budget, CliOrg orgs,
-                 AuthRepository auth) {
+    UsageCommand(UsageRepository usage, CampaignRepository campaigns, BudgetService budget, CliOrg orgs) {
         this.usage = usage;
         this.campaigns = campaigns;
         this.budget = budget;
         this.orgs = orgs;
-        this.auth = auth;
     }
 
     @Override
@@ -104,12 +99,11 @@ class UsageCommand implements Runnable {
         out.println("Usage  ·  all organizations, " + YearMonth.now(ZoneOffset.UTC));
         out.println();
         out.printf("%-24s %-14s %-12s %s%n", "ORGANIZATION", "SPENT", "BUDGET", "USED");
-        for (AuthRepository.OrganizationRow row : auth.listOrganizations()) {
-            OrgId id = new OrgId(auth.requireOrganization(row.slug()).id());
-            BigDecimal limit = budget.budgetFor(id);
-            BigDecimal spent = budget.committedThisMonth(id);
+        for (UsageRepository.OrgMonth org : budget.thisMonthByOrg()) {
+            BigDecimal limit = org.budgetUsd();
+            BigDecimal spent = org.committedUsd();
             long percent = limit.signum() == 0 ? 0 : Math.round(spent.divide(limit, 4, RoundingMode.HALF_UP).doubleValue() * 100);
-            out.printf("%-24s %-14s $%-11s %d%%%n", Format.truncate(row.slug(), 24), Money.usd(spent),
+            out.printf("%-24s %-14s $%-11s %d%%%n", Format.truncate(org.slug(), 24), Money.usd(spent),
                     limit.setScale(2, RoundingMode.HALF_UP).toPlainString(), percent);
         }
         BigDecimal cap = budget.installCap();

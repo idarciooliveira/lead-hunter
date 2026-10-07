@@ -17,7 +17,8 @@ import picocli.CommandLine;
 @EnabledIf("me.iofdev.leadhunter.PostgresTestSupport#databaseAvailable")
 @SpringBootTest(properties = {"leadhunter.cli.enabled=false", "leadhunter.usage.monthly-budget-usd=10",
         "leadhunter.usage.total-monthly-budget-usd=40",
-        "leadhunter.llm.model=google/default", "leadhunter.llm.allowed-models=anthropic/haiku,openai/mini"})
+        "leadhunter.llm.model=google/default", "leadhunter.llm.allowed-models=anthropic/haiku,openai/mini",
+        "leadhunter.llm.api-key="})
 class OrgSettingsCliTest extends PostgresTestSupport {
 
     @Autowired
@@ -43,6 +44,11 @@ class OrgSettingsCliTest extends PostgresTestSupport {
         Result negative = execute("orgs", "budget", "beta", "-5");
         assertThat(negative.exitCode()).isEqualTo(1);
         assertThat(negative.err()).contains("the budget cannot be negative");
+
+        Result tooPrecise = execute("orgs", "budget", "beta", "0.001");
+        assertThat(tooPrecise.exitCode()).isEqualTo(1);
+        assertThat(tooPrecise.err()).contains("the budget takes cents at most");
+        assertThat(execute("orgs", "budget", "beta", "12.50").out()).contains("beta: $12.50 a month");
 
         Result unknown = execute("orgs", "budget", "nada");
         assertThat(unknown.exitCode()).isEqualTo(1);
@@ -88,6 +94,17 @@ class OrgSettingsCliTest extends PostgresTestSupport {
                 .containsPattern("beta\\s+\\$1\\.0000\\s+\\$4\\.00\\s+25%")
                 .containsPattern("test\\s+\\$0\\.0000\\s+\\$10\\.00\\s+0%")
                 .contains("All organizations  $1.0000 of $40.00");
+    }
+
+    @Test
+    void llmTestNamesTheOrganizationsModel() {
+        execute("orgs", "model", "test", "anthropic/haiku");
+
+        // No key, so the client refuses before any request leaves; the model line prints first.
+        Result result = execute("--org", "test", "llm", "test", "olá");
+
+        assertThat(result.out()).contains("Model: anthropic/haiku");
+        assertThat(result.err()).contains("AI_GATEWAY_API_KEY is not set");
     }
 
     @Test
