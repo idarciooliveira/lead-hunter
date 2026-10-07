@@ -45,6 +45,7 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0039](0039-full-stack-in-docker-compose-and-a-dev-script.md) | Run the API and the web client with one command, in Docker Compose or with `./dev` | Accepted |
 | [0040](0040-one-pitch-per-lead-written-at-enrichment.md) | Write one pitch per lead during enrichment, and drop it when it invents a number | Accepted |
 | [0041](0041-today-queue-and-csv-export.md) | Serve the today queue from the backend and export leads as CSV | Accepted |
-| [0042](0042-passwords-magic-links-and-accounts-from-the-cli.md) | Sign in with a password or a magic link sent through Resend; accounts come from invitations and the CLI | Accepted |
+| [0042](0042-passwords-magic-links-and-accounts-from-the-cli.md) | Sign in with a password or a magic link sent through Resend; accounts come from invitations and the CLI | Partly superseded by 0045 |
 | [0043](0043-organizations-as-tenants.md) | Make the organization the tenant, with an `org_id` column on its tables | Accepted |
 | [0044](0044-owner-keys-with-enforced-budgets.md) | Run every organization on the owner's keys, with budgets that refuse runs | Accepted |
+| [0045](0045-public-sign-up-creates-an-organization.md) | Open public sign-up, with one new organization per account | Proposed |
