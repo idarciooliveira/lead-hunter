@@ -1,5 +1,6 @@
 package me.iofdev.leadhunter.pipeline;
 
+import java.math.BigDecimal;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.LongFunction;
@@ -38,14 +39,19 @@ public class RunJobService {
     private final EnrichmentRunner enrich;
     private final RunRepository runs;
     private final LeadRepository leads;
+    private final BudgetService budget;
+    private final EnrichmentProperties enrichment;
     private final TaskExecutor jobs;
 
     public RunJobService(CampaignRunner scrape, EnrichmentRunner enrich, RunRepository runs,
-                         LeadRepository leads, @Qualifier("runJobs") TaskExecutor jobs) {
+                         LeadRepository leads, BudgetService budget, EnrichmentProperties enrichment,
+                         @Qualifier("runJobs") TaskExecutor jobs) {
         this.scrape = scrape;
         this.enrich = enrich;
         this.runs = runs;
         this.leads = leads;
+        this.budget = budget;
+        this.enrichment = enrichment;
         this.jobs = jobs;
     }
 
@@ -58,14 +64,16 @@ public class RunJobService {
 
     /** {@code campaign run}: the job runs on the calling thread and its summary comes back. */
     public RunSummary runScrape(Campaign campaign, boolean allowOverLimit, Consumer<String> progress) {
-        scrape.checkOverLimit(scrape.plan(campaign), allowOverLimit);
-        return runJob(begin(campaign, RunRepository.KIND_SCRAPE, null),
+        SearchPlan plan = scrape.plan(campaign);
+        scrape.checkOverLimit(plan, allowOverLimit);
+        return runJob(begin(campaign, RunRepository.KIND_SCRAPE, null, plan.estimatedMaxUsd()),
                 jobId -> scrape.run(campaign, allowOverLimit, progress, jobId), RunJobService::scrapeVerdict);
     }
 
     public long startScrape(Campaign campaign, boolean allowOverLimit) {
-        scrape.checkOverLimit(scrape.plan(campaign), allowOverLimit);
-        return submit(begin(campaign, RunRepository.KIND_SCRAPE, null),
+        SearchPlan plan = scrape.plan(campaign);
+        scrape.checkOverLimit(plan, allowOverLimit);
+        return submit(begin(campaign, RunRepository.KIND_SCRAPE, null, plan.estimatedMaxUsd()),
                 jobId -> scrape.run(campaign, allowOverLimit, SILENT, jobId), RunJobService::scrapeVerdict);
     }
 
@@ -79,7 +87,8 @@ public class RunJobService {
     /** {@code campaign enrich}, after it checked there is something to enrich. */
     public EnrichmentSummary runEnrichment(Campaign campaign, int pending, int batchSize, int maxReviews,
                                            Consumer<String> progress) {
-        return runJob(begin(campaign, RunRepository.KIND_ENRICH, Math.min(pending, batchSize)),
+        int leadCount = Math.min(pending, batchSize);
+        return runJob(begin(campaign, RunRepository.KIND_ENRICH, leadCount, enrichment.estimateJobUsd(leadCount, maxReviews)),
                 jobId -> enrich.enrich(campaign, batchSize, maxReviews, progress, jobId), RunJobService::enrichVerdict);
     }
 
@@ -89,7 +98,8 @@ public class RunJobService {
             throw new IllegalArgumentException("nothing to enrich: every qualified lead of '"
                     + campaign.slug() + "' is already enriched.");
         }
-        return submit(begin(campaign, RunRepository.KIND_ENRICH, Math.min(pending, batchSize)),
+        int leadCount = Math.min(pending, batchSize);
+        return submit(begin(campaign, RunRepository.KIND_ENRICH, leadCount, enrichment.estimateJobUsd(leadCount, maxReviews)),
                 jobId -> enrich.enrich(campaign, batchSize, maxReviews, SILENT, jobId), RunJobService::enrichVerdict);
     }
 
@@ -105,13 +115,17 @@ public class RunJobService {
 
     /**
      * Opens the job's parent row and lease. Jobs whose process died are
-     * failed first, so a killed run never blocks its campaign. The unique
-     * index behind {@link RunRepository#startJob} settles two starts that race.
+     * failed first, so a killed run never blocks its campaign and its reserved
+     * estimate does not count against the budget. The budget check runs under
+     * the admission lock and refuses before any row is written (ADR 0044, 0046).
+     * The unique index behind {@link RunRepository#startJob} settles two starts
+     * of one campaign that race.
      */
-    private JobLease begin(Campaign campaign, String kind, Integer total) {
+    private JobLease begin(Campaign campaign, String kind, Integer total, BigDecimal estimatedUsd) {
         runs.failAbandoned(campaign.id());
         try {
-            return runs.startJob(campaign.id(), kind, total);
+            return runs.startJob(campaign.id(), kind, total, estimatedUsd,
+                    () -> budget.check(campaign.orgId(), estimatedUsd));
         } catch (DataIntegrityViolationException e) {
             throw new AlreadyRunningException("campaign '" + campaign.slug() + "' already has a running job");
         }

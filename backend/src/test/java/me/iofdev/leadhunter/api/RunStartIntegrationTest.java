@@ -17,7 +17,9 @@ import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignFileParser;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.maps.ScrapedPlace;
+import me.iofdev.leadhunter.pipeline.BudgetService;
 import me.iofdev.leadhunter.pipeline.CampaignRunner;
+import me.iofdev.leadhunter.pipeline.EnrichmentProperties;
 import me.iofdev.leadhunter.pipeline.EnrichmentRunner;
 import me.iofdev.leadhunter.pipeline.FakeScraper;
 import me.iofdev.leadhunter.pipeline.JobLease;
@@ -98,6 +100,10 @@ class RunStartIntegrationTest extends PostgresTestSupport {
     EnrichmentRunner enrichRunner;
     @Autowired
     LeadRepository leads;
+    @Autowired
+    BudgetService budget;
+    @Autowired
+    EnrichmentProperties enrichmentProperties;
 
     Campaign campaign;
 
@@ -146,7 +152,7 @@ class RunStartIntegrationTest extends PostgresTestSupport {
     @Test
     void secondStartWhileRunningReturns409() throws Exception {
         seedQualifiedLead();
-        try (JobLease running = runs.startJob(campaign.id(), RunRepository.KIND_SCRAPE, null)) {
+        try (JobLease running = runs.startJob(campaign.id(), RunRepository.KIND_SCRAPE, null, null)) {
             mvc.perform(post("/api/campaigns/{slug}/runs", campaign.slug()))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.message", containsString("already has a running job")));
@@ -172,7 +178,7 @@ class RunStartIntegrationTest extends PostgresTestSupport {
 
     @Test
     void aFullQueueFailsTheJobItOpened() {
-        RunJobService full = new RunJobService(scrapeRunner, enrichRunner, runs, leads, task -> {
+        RunJobService full = new RunJobService(scrapeRunner, enrichRunner, runs, leads, budget, enrichmentProperties, task -> {
             throw new TaskRejectedException("queue full");
         });
 
@@ -185,7 +191,7 @@ class RunStartIntegrationTest extends PostgresTestSupport {
 
     @Test
     void anErrorStillClosesTheJob() {
-        RunJobService inline = new RunJobService(scrapeRunner, enrichRunner, runs, leads, Runnable::run);
+        RunJobService inline = new RunJobService(scrapeRunner, enrichRunner, runs, leads, budget, enrichmentProperties, Runnable::run);
         scraper.crashWith(new OutOfMemoryError("Java heap space"));
 
         assertThatThrownBy(() -> inline.startScrape(campaign, false)).isInstanceOf(OutOfMemoryError.class);
@@ -193,6 +199,17 @@ class RunStartIntegrationTest extends PostgresTestSupport {
         RunRepository.JobView job = runs.listJobs(campaign.id()).getFirst();
         assertThat(job.status()).isEqualTo("FAILED");
         assertThat(job.error()).isEqualTo("Java heap space");
+    }
+
+    @Test
+    void aRunThatWouldPassTheOrganizationBudgetIsABadRequestAndWritesNothing() throws Exception {
+        jdbc.sql("update organization set monthly_budget_usd = 0.01 where id = :id").param("id", ORG.value()).update();
+
+        mvc.perform(post("/api/campaigns/{slug}/runs", campaign.slug()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("monthly budget of this organization")));
+
+        assertThat(runs.listJobs(campaign.id())).isEmpty();
     }
 
     @Test
@@ -241,7 +258,7 @@ class RunStartIntegrationTest extends PostgresTestSupport {
         long other = campaigns.findBySlug(ORG, "clinicas-grande").orElseThrow().id();
         long dead = startAndAbandon();
 
-        try (JobLease live = runs.startJob(other, RunRepository.KIND_SCRAPE, null)) {
+        try (JobLease live = runs.startJob(other, RunRepository.KIND_SCRAPE, null, null)) {
             recovery.run(new DefaultApplicationArguments());
 
             mvc.perform(get("/api/runs/{id}", dead))
@@ -254,7 +271,7 @@ class RunStartIntegrationTest extends PostgresTestSupport {
 
     /** A job whose process died: its row says RUNNING, but nothing holds its lease. */
     private long startAndAbandon() {
-        try (JobLease lease = runs.startJob(campaign.id(), RunRepository.KIND_SCRAPE, null)) {
+        try (JobLease lease = runs.startJob(campaign.id(), RunRepository.KIND_SCRAPE, null, null)) {
             return lease.jobId();
         }
     }

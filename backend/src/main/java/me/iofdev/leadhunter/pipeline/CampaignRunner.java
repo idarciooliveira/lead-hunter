@@ -87,7 +87,8 @@ public class CampaignRunner {
         for (ScrapeRequest request : plan.requests()) {
             progress.accept("Searching " + request.terms().size() + " terms in " + request.location() + "...");
             long runId = runs.start(campaign.id(), request.location(), request.terms(), request.maxPlaces(),
-                    parentJobId, RunRepository.KIND_SCRAPE);
+                    parentJobId, RunRepository.KIND_SCRAPE,
+                    apify.estimatedUsdPerPlace().multiply(BigDecimal.valueOf(request.maxPlaces())));
             ScrapeResult result;
             try {
                 result = scraper.search(request);

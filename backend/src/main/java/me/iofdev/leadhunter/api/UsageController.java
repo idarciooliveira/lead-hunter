@@ -10,7 +10,7 @@ import java.util.List;
 import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.usage.UsageFilter;
-import me.iofdev.leadhunter.usage.UsageProperties;
+import me.iofdev.leadhunter.pipeline.BudgetService;
 import me.iofdev.leadhunter.usage.UsageReport;
 import me.iofdev.leadhunter.usage.UsageRepository;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,19 +18,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Spend reporting as `usage` prints it, as JSON. Same filters: `month` and `campaign`. */
+/**
+ * Spend reporting as `usage` prints it, as JSON. Same filters: `month` and `campaign`. In `byCampaign`, a
+ * null slug holds the spend of deleted campaigns and of LLM calls made outside one. `committedUsd` is
+ * always this UTC month, whatever the filter: reported spend plus what running jobs and unpriced runs
+ * reserve, which is what the budget check counts (ADR 0044, 0046).
+ */
 @RestController
 @RequestMapping("/api/usage")
 class UsageController {
 
     private final UsageRepository usage;
     private final CampaignRepository campaigns;
-    private final UsageProperties properties;
+    private final BudgetService budget;
 
-    UsageController(UsageRepository usage, CampaignRepository campaigns, UsageProperties properties) {
+    UsageController(UsageRepository usage, CampaignRepository campaigns, BudgetService budget) {
         this.usage = usage;
         this.campaigns = campaigns;
-        this.properties = properties;
+        this.budget = budget;
     }
 
     public record Summary(
@@ -38,9 +43,9 @@ class UsageController {
             UsageReport.Apify apify,
             UsageReport.Llm llm,
             List<UsageReport.CampaignSpend> byCampaign,
-            BigDecimal llmWithoutCampaignUsd,
             BigDecimal totalUsd,
-            BigDecimal budgetUsd) {
+            BigDecimal budgetUsd,
+            BigDecimal committedUsd) {
     }
 
     /** Totals for the filter. When `entries` is true, the newest runs and calls instead. */
@@ -56,9 +61,9 @@ class UsageController {
                 report.apify(),
                 report.llm(),
                 report.byCampaign(),
-                report.llmWithoutCampaignUsd(),
                 report.totalUsd(),
-                properties.monthlyBudgetUsd());
+                budget.budgetFor(org),
+                budget.committedThisMonth(org));
     }
 
     @GetMapping("/entries")

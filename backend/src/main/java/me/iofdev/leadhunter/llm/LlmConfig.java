@@ -12,12 +12,13 @@ import org.springframework.web.client.RestClient;
 class LlmConfig {
 
     @Bean
-    LlmClient llmClient(RestClient.Builder builder, LlmProperties properties, LlmCallRepository calls) {
+    LlmClient llmClient(RestClient.Builder builder, LlmProperties properties, LlmCallRepository calls,
+                       OrgModelRepository models) {
         HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(properties.timeout());
         RestClient restClient = builder.clone().baseUrl(properties.baseUrl()).requestFactory(requestFactory).build();
-        return new RecordingLlmClient(
-                new OpenAiCompatibleLlmClient(restClient, properties.apiKey(), properties.model()), calls);
+        return new RecordingLlmClient(new OrgModelLlmClient(
+                new OpenAiCompatibleLlmClient(restClient, properties.apiKey(), properties.model()), models), calls);
     }
 }

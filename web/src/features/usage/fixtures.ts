@@ -5,6 +5,7 @@ export const USAGE: UsageMonth[] = [
 	{
 		month: "2026-10",
 		budgetUsd: 10,
+		committedUsd: null,
 		apifyUsd: 2.61,
 		llmUsd: 0.81,
 		byCampaign: [
@@ -54,6 +55,7 @@ export const USAGE: UsageMonth[] = [
 	{
 		month: "2026-09",
 		budgetUsd: 10,
+		committedUsd: null,
 		apifyUsd: 5.2,
 		llmUsd: 1.7,
 		byCampaign: [
@@ -95,6 +97,7 @@ export const USAGE: UsageMonth[] = [
 	{
 		month: "2026-08",
 		budgetUsd: 10,
+		committedUsd: null,
 		apifyUsd: 1.8,
 		llmUsd: 0.35,
 		byCampaign: [

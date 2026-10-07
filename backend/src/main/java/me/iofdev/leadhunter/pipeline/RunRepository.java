@@ -88,6 +88,8 @@ public class RunRepository {
 
     /** The two-key advisory lock space of job leases, apart from Flyway's single-key locks. */
     private static final int LOCK_SPACE = 0x4C48;
+    /** The lock space of job admission, one key for every organization so the install cap holds too. */
+    private static final int ADMISSION_SPACE = 0x4C49;
     static final String UNLOCK = "select pg_advisory_unlock(" + lockKey("?") + ")";
 
     private final JdbcClient jdbc;
@@ -104,11 +106,20 @@ public class RunRepository {
 
     public long start(long campaignId, String location, List<String> terms, int maxPlaces,
                       Long parentId, String kind) {
+        return start(campaignId, location, terms, maxPlaces, parentId, kind, null);
+    }
+
+    /** {@code estimatedUsd} is what the run counts at while its own cost is missing (ADR 0044). */
+    public long start(long campaignId, String location, List<String> terms, int maxPlaces,
+                      Long parentId, String kind, BigDecimal estimatedUsd) {
         return jdbc.sql("""
-                        insert into campaign_run (campaign_id, location, search_terms, max_places, status, parent_id, kind)
-                        values (:campaignId, :location, :terms, :maxPlaces, 'RUNNING', :parentId, :kind)
+                        insert into campaign_run (org_id, campaign_id, location, search_terms, max_places, status,
+                                                  parent_id, kind, estimated_usd)
+                        values ((select org_id from campaign where id = :campaignId), :campaignId, :location, :terms,
+                                :maxPlaces, 'RUNNING', :parentId, :kind, :estimatedUsd)
                         returning id
                         """)
+                .param("estimatedUsd", estimatedUsd)
                 .param("campaignId", campaignId)
                 .param("location", location)
                 .param("terms", terms.toArray(String[]::new))
@@ -156,13 +167,29 @@ public class RunRepository {
      * hold no location of their own. The partial unique index rejects a
      * second RUNNING job per campaign.
      */
-    public JobLease startJob(long campaignId, String kind, Integer total) {
+    public JobLease startJob(long campaignId, String kind, Integer total, BigDecimal estimatedUsd) {
+        return startJob(campaignId, kind, total, estimatedUsd, () -> {
+        });
+    }
+
+    /**
+     * {@link #startJob(long, String, Integer, BigDecimal)} after {@code admit} lets the job in. One
+     * transaction holds the admission lock across {@code admit} and the insert, so two jobs that start
+     * at once never both pass the budget check on the same spend (ADR 0046). Whatever {@code admit}
+     * throws rolls the insert back.
+     */
+    public JobLease startJob(long campaignId, String kind, Integer total, BigDecimal estimatedUsd, Runnable admit) {
         Connection connection = connect();
         try {
-            long jobId = session(connection).sql("""
+            connection.setAutoCommit(false);
+            JdbcClient session = session(connection);
+            session.sql("select pg_advisory_xact_lock(" + ADMISSION_SPACE + ", 0)").query().listOfRows();
+            admit.run();
+            long jobId = session.sql("""
                             with job as (
-                                insert into campaign_run (campaign_id, kind, status, total)
-                                values (:campaignId, :kind, 'RUNNING', :total)
+                                insert into campaign_run (org_id, campaign_id, kind, status, total, estimated_usd)
+                                values ((select org_id from campaign where id = :campaignId), :campaignId, :kind,
+                                        'RUNNING', :total, :estimatedUsd)
                                 returning id
                             )
                             select id from job where pg_try_advisory_lock(%s)
@@ -170,11 +197,17 @@ public class RunRepository {
                     .param("campaignId", campaignId)
                     .param("kind", kind)
                     .param("total", total)
+                    .param("estimatedUsd", estimatedUsd)
                     .query(Long.class)
                     .single();
+            connection.commit();
+            connection.setAutoCommit(true);
             return new JobLease(jobId, connection);
+        } catch (SQLException e) {
+            rollbackAndClose(connection);
+            throw new DataAccessResourceFailureException("could not start the job", e);
         } catch (RuntimeException e) {
-            closeQuietly(connection);
+            rollbackAndClose(connection);
             throw e;
         }
     }
@@ -214,9 +247,10 @@ public class RunRepository {
     /** A dry run costs nothing but lands in the history, so the UI shows the estimates it showed. */
     public long recordDryRun(long campaignId, long done, Integer total) {
         return jdbc.sql("""
-                        insert into campaign_run (campaign_id, kind, status, places_found, total,
+                        insert into campaign_run (org_id, campaign_id, kind, status, places_found, total,
                             cost_usd, started_at, finished_at)
-                        values (:campaignId, :kind, 'SUCCEEDED', :done, :total, 0, now(), now())
+                        values ((select org_id from campaign where id = :campaignId), :campaignId, :kind,
+                            'SUCCEEDED', :done, :total, 0, now(), now())
                         returning id
                         """)
                 .param("campaignId", campaignId)
@@ -317,6 +351,16 @@ public class RunRepository {
 
     private static JdbcClient session(Connection connection) {
         return JdbcClient.create(new SingleConnectionDataSource(connection, true));
+    }
+
+    /** A rolled-back transaction frees the admission lock; the session lock was never taken. */
+    private static void rollbackAndClose(Connection connection) {
+        try {
+            connection.rollback();
+        } catch (SQLException e) {
+            // Closing the connection ends the transaction as well.
+        }
+        closeQuietly(connection);
     }
 
     private static void closeQuietly(Connection connection) {

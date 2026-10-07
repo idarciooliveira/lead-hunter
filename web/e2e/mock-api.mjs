@@ -104,9 +104,9 @@ const USAGE = {
 	apify: { runs: 1, failedRuns: 0, unpricedRuns: 0, places: 8, costUsd: 0.2 },
 	llm: { calls: 1, unpricedCalls: 0, promptTokens: 100, completionTokens: 50, costUsd: 0.01, models: [] },
 	byCampaign: [{ slug: "mock-clinicas", apifyUsd: 0.2, llmUsd: 0.01 }],
-	llmWithoutCampaignUsd: 0,
 	totalUsd: 0.21,
 	budgetUsd: 10,
+	committedUsd: 0.21,
 };
 
 const ENTRIES = [
