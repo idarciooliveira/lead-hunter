@@ -20,6 +20,7 @@ const QUALIFIED: BackendLead = {
 	note: null,
 	score: 65,
 	breakdown: [{ code: "MOBILE_PHONE", points: 5, reason: "Telefone móvel" }],
+	stage2Breakdown: null,
 	stageReason: null,
 	name: "Mock Sorriso",
 	category: "Clínica",
@@ -35,6 +36,7 @@ const QUALIFIED: BackendLead = {
 	complaintKinds: [],
 	pitch: null,
 	whatsappLink: "https://wa.me/244923456789",
+	websiteCrawl: null,
 };
 
 const EXCLUDED: BackendLead = { ...QUALIFIED, id: 9002, name: "Mock Banco", stage: "EXCLUDED", score: 99 };
@@ -45,7 +47,7 @@ afterEach(() => {
 });
 
 describe("backend lead mapping", () => {
-	it("keeps scores and reasons as data and fills what the API does not serve yet", () => {
+	it("keeps scores and reasons as data", () => {
 		const lead = toLead(QUALIFIED, 1);
 		expect(lead).toMatchObject({
 			id: "9001",
@@ -57,7 +59,61 @@ describe("backend lead mapping", () => {
 			breakdown: { stage1: [{ points: 5, reason: "Telefone móvel" }], stage2: null },
 		});
 		expect(lead.pitch).toBe("");
-		expect(lead.audit).toEqual([]);
+		expect(lead.audit).toEqual([
+			{ check: "Website", result: "FAIL", detail: "Não existe. O Google Maps não tem ligação para nenhum site." },
+		]);
+		expect(lead.complaints).toBeNull();
+	});
+
+	it("shows the stage 2 items, the crawl and the complaint kinds once the lead is enriched", () => {
+		const lead = toLead(
+			{
+				...QUALIFIED,
+				website: "http://velho.ao",
+				websiteKind: "OWN",
+				complaintKinds: ["contact", "waiting"],
+				stage2Breakdown: [{ code: "NO_HTTPS", points: 25, reason: "Website is plain HTTP, not HTTPS" }],
+				websiteCrawl: {
+					url: "http://velho.ao",
+					reachable: true,
+					https: false,
+					mobileFriendly: true,
+					stale: null,
+					httpStatus: 200,
+					error: null,
+					crawledAt: "2026-10-05T10:00:00Z",
+				},
+			},
+			1,
+		);
+		expect(lead.breakdown.stage2).toEqual([{ points: 25, reason: "Website is plain HTTP, not HTTPS" }]);
+		expect(lead.audit.map((a) => [a.check, a.result])).toEqual([
+			["Carrega", "OK"],
+			["HTTPS", "FAIL"],
+			["Telemóvel", "OK"],
+		]);
+		expect(lead.complaints).toEqual([
+			{ theme: "Difícil de contactar", mentions: null, quotes: [] },
+			{ theme: "Demora no atendimento", mentions: null, quotes: [] },
+		]);
+	});
+
+	it("marks a site with no crawl as not analysed and an unreachable one as failed", () => {
+		const own = { ...QUALIFIED, website: "https://nova.ao", websiteKind: "OWN" as const };
+		expect(toLead(own, 1).audit).toMatchObject([{ check: "Website", result: "PENDING" }]);
+		const down = {
+			url: "https://nova.ao",
+			reachable: false,
+			https: null,
+			mobileFriendly: null,
+			stale: null,
+			httpStatus: null,
+			error: "Website unreachable",
+			crawledAt: "2026-10-05T10:00:00Z",
+		};
+		expect(toLead({ ...own, websiteCrawl: down }, 1).audit).toEqual([
+			{ check: "Carrega", result: "FAIL", detail: "Website unreachable" },
+		]);
 	});
 
 	it("splits the host and scheme off website URLs", () => {

@@ -24,7 +24,15 @@ public final class Stage2Scorer {
     /** Zero-point marker proving stage 2 ran and fired no point-earning rule (ADR 0028). */
     public static final String NO_ISSUES_CODE = "STAGE2_NO_ISSUES";
 
+    private static final Set<String> CODES = Set.of("WEBSITE_BROKEN", "NO_HTTPS", "NOT_MOBILE_FRIENDLY",
+            "WEBSITE_STALE", "REVIEW_COMPLAINTS", NO_ISSUES_CODE);
+
     private Stage2Scorer() {
+    }
+
+    /** True for the codes this scorer writes, so a stored breakdown can be split into its two stages. */
+    public static boolean isStage2Code(String code) {
+        return CODES.contains(code);
     }
 
     /**

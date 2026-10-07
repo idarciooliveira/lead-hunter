@@ -4,9 +4,15 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import me.iofdev.leadhunter.pipeline.LeadView;
+import me.iofdev.leadhunter.place.CrawlRepository.StoredCrawl;
 import me.iofdev.leadhunter.scoring.ScoreItem;
+import me.iofdev.leadhunter.scoring.Stage2Scorer;
 
-/** A ranked lead as the web client reads it. Scores and reasons come from the API (ADR 0007). */
+/**
+ * A ranked lead as the web client reads it. Scores and reasons come from the API (ADR 0007).
+ * {@code breakdown} holds the stage 1 items and {@code stage2Breakdown} the stage 2 ones, null until
+ * enrichment ran. {@code websiteCrawl} is the newest crawl and only the single-lead endpoints fill it.
+ */
 public record LeadDto(
         long id,
         String campaignSlug,
@@ -30,9 +36,13 @@ public record LeadDto(
         String mapsUrl,
         List<String> complaintKinds,
         String pitch,
-        String whatsappLink) {
+        String whatsappLink,
+        List<ScoreItem> stage2Breakdown,
+        StoredCrawl websiteCrawl) {
 
     static LeadDto from(LeadView lead) {
+        List<ScoreItem> stage2 = lead.breakdown().stream().filter(i -> Stage2Scorer.isStage2Code(i.code())).toList();
+        List<ScoreItem> stage1 = lead.breakdown().stream().filter(i -> !Stage2Scorer.isStage2Code(i.code())).toList();
         return new LeadDto(
                 lead.id(),
                 lead.campaignSlug(),
@@ -41,7 +51,7 @@ public record LeadDto(
                 lead.lostReason() == null ? null : lead.lostReason().name(),
                 lead.outcomeNote(),
                 lead.score(),
-                lead.breakdown(),
+                stage1,
                 lead.stageReason(),
                 lead.name(),
                 lead.category(),
@@ -56,6 +66,14 @@ public record LeadDto(
                 lead.mapsUrl(),
                 lead.complaintKinds(),
                 lead.pitch(),
-                lead.whatsappLink());
+                lead.whatsappLink(),
+                stage2.isEmpty() ? null : stage2,
+                null);
+    }
+
+    LeadDto withCrawl(StoredCrawl crawl) {
+        return new LeadDto(id, campaignSlug, stage, status, lostReason, note, score, breakdown, stageReason, name,
+                category, address, neighborhood, phoneE164, phoneMobile, website, websiteKind, rating, reviewsCount,
+                mapsUrl, complaintKinds, pitch, whatsappLink, stage2Breakdown, crawl);
     }
 }

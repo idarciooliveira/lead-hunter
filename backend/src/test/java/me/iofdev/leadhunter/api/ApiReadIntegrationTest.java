@@ -182,6 +182,46 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
+    void showsStageTwoAndTheCrawlOnlyOnTheSingleLead() throws Exception {
+        mvc.perform(get("/api/leads/{id}", qualifiedLeadId))
+                .andExpect(jsonPath("$.stage2Breakdown").isEmpty())
+                .andExpect(jsonPath("$.websiteCrawl").isEmpty());
+
+        jdbc.sql("""
+                        update lead set complaint_kinds = '{contact}', enriched_at = now(), score = 90,
+                            score_breakdown = cast(:breakdown as jsonb)
+                        where id = :id
+                        """)
+                .param("id", qualifiedLeadId)
+                .param("breakdown", """
+                        [{"code":"MOBILE_PHONE","points":5,"reason":"Telefone móvel"},
+                         {"code":"NO_HTTPS","points":25,"reason":"Website is plain HTTP, not HTTPS"}]""")
+                .update();
+        long placeId = jdbc.sql("select place_id from lead where id = :id").param("id", qualifiedLeadId)
+                .query(Long.class).single();
+        jdbc.sql("""
+                        insert into website_crawl (place_id, url, reachable, https, mobile_friendly, stale, http_status)
+                        values (:placeId, 'http://old.example', true, false, true, null, 200)
+                        """)
+                .param("placeId", placeId)
+                .update();
+
+        mvc.perform(get("/api/leads/{id}", qualifiedLeadId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.breakdown.length()").value(1))
+                .andExpect(jsonPath("$.breakdown[0].code").value("MOBILE_PHONE"))
+                .andExpect(jsonPath("$.stage2Breakdown[0].code").value("NO_HTTPS"))
+                .andExpect(jsonPath("$.websiteCrawl.url").value("http://old.example"))
+                .andExpect(jsonPath("$.websiteCrawl.https").value(false))
+                .andExpect(jsonPath("$.websiteCrawl.mobileFriendly").value(true))
+                .andExpect(jsonPath("$.websiteCrawl.stale").isEmpty());
+
+        mvc.perform(get("/api/campaigns/clinicas-teste/leads"))
+                .andExpect(jsonPath("$[0].stage2Breakdown[0].code").value("NO_HTTPS"))
+                .andExpect(jsonPath("$[0].websiteCrawl").isEmpty());
+    }
+
+    @Test
     void showsOneLead() throws Exception {
         mvc.perform(get("/api/leads/{id}", qualifiedLeadId))
                 .andExpect(status().isOk())

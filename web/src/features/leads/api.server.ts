@@ -7,6 +7,7 @@ import {
 } from "#/lib/api-contract";
 import { fakeResponse, NotFoundError } from "#/lib/fake-api";
 import { apiFetch, apiMutate } from "#/lib/http.server";
+import { auditOf, complaintsOf } from "./enrichment";
 import { LEADS } from "./fixtures";
 import { Lead, LeadList, type LeadStatus, type Lead as LeadType, type LostReason } from "./schema";
 
@@ -94,9 +95,9 @@ export async function markLead(id: string, input: MarkLeadInput): Promise<Lead> 
 
 /**
  * Backend rows become UI leads. Scores and reasons are data, as the API
- * returns them; the UI never computes them (ADR 0007). Fields the API does
- * not serve yet (stage-2 audit, complaints) stay empty until their
- * endpoints land in docs/api.md.
+ * returns them; the UI never computes them (ADR 0007). The audit and the
+ * complaints come with the single-lead endpoints only; a list row has no
+ * crawl, so its audit says "not analysed".
  */
 export function toLead(b: BackendLeadType, rank: number | null): LeadType {
 	return {
@@ -117,9 +118,12 @@ export function toLead(b: BackendLeadType, rank: number | null): LeadType {
 		status: b.status,
 		lostReason: b.lostReason,
 		score: b.score,
-		breakdown: { stage1: b.breakdown.map((i) => ({ points: i.points, reason: i.reason })), stage2: null },
-		audit: [],
-		complaints: null,
+		breakdown: {
+			stage1: b.breakdown.map((i) => ({ points: i.points, reason: i.reason })),
+			stage2: b.stage2Breakdown?.map((i) => ({ points: i.points, reason: i.reason })) ?? null,
+		},
+		audit: auditOf(b),
+		complaints: complaintsOf(b),
 		pitch: b.pitch ?? "",
 		note: b.note,
 	};

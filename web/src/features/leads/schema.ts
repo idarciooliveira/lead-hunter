@@ -56,7 +56,13 @@ export const Lead = z.object({
 	audit: z.array(z.object({ check: z.string(), result: AuditResult, detail: z.string() })),
 	/** Null until the reviews have been analysed. */
 	complaints: z
-		.array(z.object({ theme: z.string(), mentions: z.number().int(), quotes: z.array(z.string()) }))
+		.array(
+			z.object({
+				theme: z.string() /** Null when the API only knows the kind, not how often reviews raise it. */,
+				mentions: z.number().int().nullable(),
+				quotes: z.array(z.string()),
+			}),
+		)
 		.nullable(),
 	pitch: z.string(),
 	note: z.string().nullable(),

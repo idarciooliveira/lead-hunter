@@ -165,8 +165,8 @@ export function ReviewComplaints({ lead }: { lead: Lead }) {
 		complaints === null
 			? "As reviews ainda não foram analisadas."
 			: complaints.length
-				? "Temas mais repetidos nas últimas 60 reviews."
-				: "Sem queixas recorrentes nas últimas 60 reviews.";
+				? "Temas que as reviews repetem."
+				: "Sem queixas recorrentes nas reviews.";
 	const quotes = (complaints ?? []).flatMap((c) => c.quotes).slice(0, 2);
 	return (
 		<Card>
@@ -177,7 +177,7 @@ export function ReviewComplaints({ lead }: { lead: Lead }) {
 					<div className="flex flex-wrap gap-1.5">
 						{complaints.slice(0, 4).map((c) => (
 							<Chip key={c.theme} tone="warn">
-								{c.theme} · {c.mentions} menções
+								{c.mentions === null ? c.theme : `${c.theme} · ${c.mentions} menções`}
 							</Chip>
 						))}
 					</div>

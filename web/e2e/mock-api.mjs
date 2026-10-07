@@ -26,6 +26,7 @@ const LEADS = [
 		note: null,
 		score: 65,
 		breakdown: [{ code: "MOBILE_PHONE", points: 5, reason: "Telefone móvel" }],
+		stage2Breakdown: [{ code: "REVIEW_COMPLAINTS", points: 20, reason: "Reviews complain about contact" }],
 		stageReason: null,
 		name: "Mock Sorriso",
 		category: "Clínica",
@@ -41,6 +42,7 @@ const LEADS = [
 		complaintKinds: ["contact"],
 		pitch: "Bom dia, notámos que ninguém atende o telefone. Podemos falar?",
 		whatsappLink: "https://wa.me/244923456789",
+		websiteCrawl: null,
 	},
 	{
 		id: 9002,
@@ -51,6 +53,7 @@ const LEADS = [
 		note: null,
 		score: 20,
 		breakdown: [],
+		stage2Breakdown: null,
 		stageReason: "Ranked 2 of 2, below the top 40% cut",
 		name: "Mock Girassol",
 		category: "Clínica",
@@ -66,6 +69,16 @@ const LEADS = [
 		complaintKinds: [],
 		pitch: null,
 		whatsappLink: null,
+		websiteCrawl: {
+			url: "https://girassol.example",
+			reachable: true,
+			https: false,
+			mobileFriendly: true,
+			stale: null,
+			httpStatus: 200,
+			error: null,
+			crawledAt: "2026-10-05T10:00:00Z",
+		},
 	},
 ];
 
