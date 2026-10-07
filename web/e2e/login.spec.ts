@@ -11,8 +11,14 @@ test("a signed-out page request goes to the login page and remembers the page", 
 });
 
 test("a signed-out server function call gets a 401, not a redirect", async ({ request }) => {
-	const res = await request.get("/_serverFn/nope", { maxRedirects: 0 });
+	// Browsers always send Sec-Fetch-Site; without it the CSRF middleware refuses the call first.
+	const res = await request.get("/_serverFn/nope", { maxRedirects: 0, headers: { "sec-fetch-site": "same-origin" } });
 	expect(res.status()).toBe(401);
+});
+
+test("a cross-site server function call is refused before the session check", async ({ request }) => {
+	const res = await request.get("/_serverFn/nope", { maxRedirects: 0, headers: { "sec-fetch-site": "cross-site" } });
+	expect(res.status()).toBe(403);
 });
 
 test("a wrong password shows the error and stays on the login page", async ({ page }) => {
