@@ -1,7 +1,7 @@
 # 0042. Sign in with a password or a magic link sent through Resend; accounts come from invitations and the CLI
 
 - Date: 2026-10-06
-- Status: Accepted
+- Status: Partly superseded by [0045](0045-public-sign-up-creates-an-organization.md)
 - Supersedes: the account-creation part of [0038](0038-logins-with-better-auth.md)
 
 ## Context
