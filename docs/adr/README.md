@@ -51,3 +51,4 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0045](0045-public-sign-up-creates-an-organization.md) | Open public sign-up, with one new organization per account | Proposed |
 | [0046](0046-run-spend-outlives-its-campaign.md) | Keep run spend after its campaign is deleted, and admit jobs one at a time | Accepted |
 | [0048](0048-campaign-funnel-from-leads-and-jobs.md) | Serve the campaign funnel from the stored leads and jobs | Accepted |
+| [0049](0049-rank-all-leads-on-the-server.md) | Serve every lead ranked from `GET /api/leads` | Accepted |

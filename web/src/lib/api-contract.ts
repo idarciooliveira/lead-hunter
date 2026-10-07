@@ -137,3 +137,7 @@ export const BackendLead = z.object({
 });
 export type BackendLead = z.infer<typeof BackendLead>;
 export const BackendLeadList = z.array(BackendLead);
+
+/** GET /api/leads: a lead with its position among the non-excluded; null when excluded (ADR 0049). */
+export const BackendRankedLead = BackendLead.extend({ rank: z.number().int().nullable() });
+export const BackendRankedLeadList = z.array(BackendRankedLead);

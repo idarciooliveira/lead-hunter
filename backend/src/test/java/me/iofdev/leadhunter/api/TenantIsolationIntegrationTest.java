@@ -112,6 +112,7 @@ class TenantIsolationIntegrationTest extends PostgresTestSupport {
                 .andExpect(status().isNotFound());
         mvc.perform(post("/api/leads/" + leadId + "/pitch")).andExpect(status().isNotFound());
         mvc.perform(get("/api/leads/today")).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/leads")).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
 
         org.assertj.core.api.Assertions.assertThat(
                         jdbc.sql("select status from lead where id = :id").param("id", leadId).query(String.class).single())

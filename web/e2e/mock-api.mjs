@@ -307,6 +307,18 @@ const server = http.createServer((req, res) => {
 		}
 		return json(200, url.pathname === "/api/usage" ? USAGE : ENTRIES);
 	}
+	if (req.method === "GET" && url.pathname === "/api/leads") {
+		// Mirrors LeadRepository.ranked: best first, the excluded last, rank only for the others.
+		// Mirrors LeadController.all: limit defaults to 500 and is clamped to 1..2000.
+		const requested = Number.parseInt(url.searchParams.get("limit") ?? "500", 10);
+		const limit = Math.min(2000, Math.max(1, Number.isNaN(requested) ? 500 : requested));
+		const kept = LEADS.filter((l) => l.stage !== "EXCLUDED").sort(
+			(a, b) => b.score - a.score || b.reviewsCount - a.reviewsCount || a.id - b.id,
+		);
+		const excluded = LEADS.filter((l) => l.stage === "EXCLUDED");
+		const ranked = [...kept.map((l, i) => ({ ...l, rank: i + 1 })), ...excluded.map((l) => ({ ...l, rank: null }))];
+		return json(200, ranked.slice(0, limit));
+	}
 	if (req.method === "GET" && url.pathname === "/api/leads/today") {
 		// Mirrors LeadRepository.today: QUALIFIED still NEW, best first.
 		const queue = LEADS.filter((l) => l.stage === "QUALIFIED" && l.status === "NEW").sort(
