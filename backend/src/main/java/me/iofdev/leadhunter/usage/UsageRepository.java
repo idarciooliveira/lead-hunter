@@ -64,6 +64,14 @@ public class UsageRepository {
                 .optional();
     }
 
+    /** A null {@code budgetUsd} goes back to the default from {@code leadhunter.usage.monthly-budget-usd}. */
+    public void setOrgBudget(OrgId orgId, BigDecimal budgetUsd) {
+        jdbc.sql("update organization set monthly_budget_usd = :budget where id = :id")
+                .param("id", orgId.value())
+                .param("budget", budgetUsd)
+                .update();
+    }
+
     /**
      * What a month has spent or is about to spend, for the budget check (ADR 0044). An {@code orgId} of null
      * counts every organization. Three parts:

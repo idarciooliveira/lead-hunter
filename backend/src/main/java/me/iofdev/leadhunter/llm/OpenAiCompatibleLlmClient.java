@@ -102,7 +102,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         messages.add(Map.of("role", "user", "content", request.user()));
 
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("model", model);
+        payload.put("model", request.model() != null ? request.model() : model);
         payload.put("messages", messages);
         payload.put("temperature", request.temperature());
         payload.put("max_tokens", request.maxTokens());

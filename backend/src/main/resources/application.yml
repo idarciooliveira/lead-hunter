@@ -39,6 +39,8 @@ leadhunter:
     base-url: ${LEADHUNTER_LLM_BASE_URL:https://ai-gateway.vercel.sh/v1}
     model: ${LEADHUNTER_LLM_MODEL:google/gemma-4-26b-a4b-it}
     timeout: 60s
+    # Models the operator may give an organization with `orgs model`, comma separated. The default model is always allowed.
+    allowed-models: ${LEADHUNTER_LLM_ALLOWED_MODELS:}
   usage:
     # What one organization may spend a month unless the operator sets its own. Runs that would pass it are
     # refused (ADR 0044). ADR 0006 sets the default at $10.
