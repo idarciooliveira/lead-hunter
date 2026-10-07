@@ -1,7 +1,7 @@
 # 0047. Serve the stage 2 evidence on the lead card
 
 - Date: 2026-10-07
-- Status: Accepted
+- Status: Partly superseded by 0050
 
 ## Context
 

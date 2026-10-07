@@ -11,7 +11,8 @@ import me.iofdev.leadhunter.scoring.Stage2Scorer;
 /**
  * A ranked lead as the web client reads it. Scores and reasons come from the API (ADR 0007).
  * {@code breakdown} holds the stage 1 items and {@code stage2Breakdown} the stage 2 ones, null until
- * enrichment ran. {@code websiteCrawl} is the newest crawl and only the single-lead endpoints fill it.
+ * enrichment ran. {@code websiteCrawl} is the newest crawl of the current website, and only the single-lead
+ * endpoints fill it.
  */
 public record LeadDto(
         long id,

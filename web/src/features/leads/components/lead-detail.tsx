@@ -165,8 +165,8 @@ export function ReviewComplaints({ lead }: { lead: Lead }) {
 		complaints === null
 			? "As reviews ainda não foram analisadas."
 			: complaints.length
-				? "Temas que as reviews repetem."
-				: "Sem queixas recorrentes nas reviews.";
+				? "Temas apontados nas reviews."
+				: "Nenhuma queixa identificada nas reviews.";
 	const quotes = (complaints ?? []).flatMap((c) => c.quotes).slice(0, 2);
 	return (
 		<Card>

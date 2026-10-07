@@ -37,13 +37,18 @@ public class CrawlRepository {
                 .update();
     }
 
-    /** The newest crawl of the lead's place, or empty when enrichment never crawled a site. */
+    /**
+     * The newest crawl of the lead's place's current website, or empty when that website was never crawled.
+     * A crawl of an earlier website of the same place is not an audit of this one.
+     */
     public Optional<StoredCrawl> latestForLead(long leadId) {
         return jdbc.sql("""
                         select w.url, w.reachable, w.https, w.mobile_friendly, w.stale, w.http_status, w.error, w.crawled_at
                         from website_crawl w
-                        join lead l on l.place_id = w.place_id
+                        join place p on p.id = w.place_id
+                        join lead l on l.place_id = p.id
                         where l.id = :leadId
+                          and w.url = p.website
                         order by w.crawled_at desc, w.id desc
                         limit 1
                         """)

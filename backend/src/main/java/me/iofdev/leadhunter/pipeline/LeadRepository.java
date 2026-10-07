@@ -2,6 +2,7 @@ package me.iofdev.leadhunter.pipeline;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -10,6 +11,7 @@ import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.place.WebsiteKind;
 import me.iofdev.leadhunter.scoring.Score;
 import me.iofdev.leadhunter.scoring.ScoreItem;
+import me.iofdev.leadhunter.scoring.Stage2Scorer;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import tools.jackson.core.type.TypeReference;
@@ -48,8 +50,15 @@ public class LeadRepository {
     /**
      * Records the stage 1 result for a place in a campaign. A lead the user already worked on, or one
      * that moved past stage 1, keeps its state. Returns true when the lead is new to the campaign.
+     *
+     * <p>An enriched lead keeps its stage 2 items while it stays in the pool. A rescrape that excludes it,
+     * or that moves its place to another website, drops the enrichment, so the lead goes back to the queue
+     * when it qualifies again.
      */
     public boolean saveStage1(long campaignId, long placeId, long runId, LeadStage stage, Score score, String reason) {
+        Optional<String> stored = enrichedBreakdown(campaignId, placeId);
+        boolean keepStageTwo = stored.isPresent() && stage != LeadStage.EXCLUDED && !websiteChanged(placeId);
+        Score combined = keepStageTwo ? withStageTwo(score, stored.get()) : score;
         return jdbc.sql("""
                         insert into lead (campaign_id, place_id, first_run_id, stage, score, score_breakdown, stage_reason)
                         values (:campaignId, :placeId, :runId, :stage, :score, cast(:breakdown as jsonb), :reason)
@@ -58,6 +67,9 @@ public class LeadRepository {
                                 score = excluded.score,
                                 score_breakdown = excluded.score_breakdown,
                                 stage_reason = excluded.stage_reason,
+                                enriched_at = case when :dropEnrichment then null else lead.enriched_at end,
+                                complaint_kinds = case when :dropEnrichment
+                                                       then cast('{}' as text[]) else lead.complaint_kinds end,
                                 updated_at = now()
                             where lead.status = 'NEW' and lead.stage in ('EXCLUDED', 'BELOW_CUT', 'QUALIFIED')
                         returning (xmax = 0) as inserted
@@ -66,12 +78,59 @@ public class LeadRepository {
                 .param("placeId", placeId)
                 .param("runId", runId)
                 .param("stage", stage.name())
-                .param("score", score.total())
-                .param("breakdown", json.writeValueAsString(score.items()))
+                .param("score", combined.total())
+                .param("breakdown", json.writeValueAsString(combined.items()))
                 .param("reason", reason)
+                .param("dropEnrichment", stored.isPresent() && !keepStageTwo)
                 .query(Boolean.class)
                 .optional()
                 .orElse(false);
+    }
+
+    /** The stored breakdown of the lead when stage 2 ran on it, empty for a lead never enriched. */
+    private Optional<String> enrichedBreakdown(long campaignId, long placeId) {
+        return jdbc.sql("""
+                        select score_breakdown from lead
+                        where campaign_id = :campaignId and place_id = :placeId and enriched_at is not null
+                        """)
+                .param("campaignId", campaignId)
+                .param("placeId", placeId)
+                .query((rs, row) -> rs.getString("score_breakdown"))
+                .optional();
+    }
+
+    /** The new stage 1 score with the stage 2 items the lead already had appended. */
+    private Score withStageTwo(Score stageOne, String storedBreakdown) {
+        List<ScoreItem> items = new ArrayList<>(stageOne.items());
+        json.readValue(storedBreakdown, SCORE_ITEMS).stream()
+                .filter(item -> Stage2Scorer.isStage2Code(item.code()))
+                .forEach(items::add);
+        return Score.of(items);
+    }
+
+    /**
+     * True when the place now has another website than the one enrichment read. Enrichment crawls only an own
+     * website, so a place with no crawl and no own website has nothing to compare, and is not changed.
+     */
+    private boolean websiteChanged(long placeId) {
+        return jdbc.sql("""
+                        select exists (
+                            select 1
+                            from place p
+                            left join lateral (
+                                select w.url from website_crawl w
+                                where w.place_id = p.id
+                                order by w.crawled_at desc, w.id desc
+                                limit 1
+                            ) c on true
+                            where p.id = :placeId
+                              and c.url is distinct from p.website
+                              and (c.url is not null or p.website_kind = 'OWN')
+                        )
+                        """)
+                .param("placeId", placeId)
+                .query(Boolean.class)
+                .single();
     }
 
     /**
@@ -291,7 +350,8 @@ public class LeadRepository {
 
     /**
      * Every lead of the campaign, how many stage 1 excluded, how many are qualified and how many of those were
-     * enriched. A lead a later scrape demoted keeps its {@code enriched_at}, so it only counts while qualified.
+     * enriched. A lead a later scrape moved below the cut keeps its {@code enriched_at}, so it only counts while
+     * qualified. A lead a later scrape excluded loses it.
      */
     public FunnelCounts funnelCounts(long campaignId) {
         return jdbc.sql("""

@@ -119,7 +119,7 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
                         values ('p3', 'Banco', 'NONE', 900, '{}') returning id
                         """)
                 .query(Long.class).single();
-        // Enriched, then a rerun excluded it: it keeps enriched_at but no longer counts as enriched.
+        // An excluded lead never counts as enriched, even with enriched_at set.
         jdbc.sql("""
                         insert into lead (campaign_id, place_id, stage, score, score_breakdown, stage_reason, enriched_at)
                         values (:campaignId, :placeId, 'EXCLUDED', 0, cast('[]' as jsonb), 'Chain or client', now())
@@ -254,6 +254,9 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
                 .update();
         long placeId = jdbc.sql("select place_id from lead where id = :id").param("id", qualifiedLeadId)
                 .query(Long.class).single();
+        jdbc.sql("update place set website = 'http://old.example', website_kind = 'OWN' where id = :placeId")
+                .param("placeId", placeId)
+                .update();
         jdbc.sql("""
                         insert into website_crawl (place_id, url, reachable, https, mobile_friendly, stale, http_status)
                         values (:placeId, 'http://old.example', true, false, true, null, 200)
@@ -274,6 +277,13 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
         mvc.perform(get("/api/campaigns/clinicas-teste/leads"))
                 .andExpect(jsonPath("$[0].stage2Breakdown[0].code").value("NO_HTTPS"))
                 .andExpect(jsonPath("$[0].websiteCrawl").isEmpty());
+
+        // The place moved to another site: the crawl of the old one is no audit of the new site.
+        jdbc.sql("update place set website = 'http://new.example' where id = :placeId")
+                .param("placeId", placeId)
+                .update();
+        mvc.perform(get("/api/leads/{id}", qualifiedLeadId))
+                .andExpect(jsonPath("$.websiteCrawl").isEmpty());
     }
 
     @Test
