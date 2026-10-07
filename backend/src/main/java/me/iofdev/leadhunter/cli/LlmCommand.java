@@ -2,9 +2,11 @@ package me.iofdev.leadhunter.cli;
 
 import java.io.PrintWriter;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.llm.LlmClient;
 import me.iofdev.leadhunter.llm.LlmRequest;
 import me.iofdev.leadhunter.llm.LlmResponse;
+import me.iofdev.leadhunter.llm.OrgModelRepository;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Parameters;
@@ -39,19 +41,22 @@ class LlmCommand implements Runnable {
 
         private final LlmClient llm;
         private final CliOrg orgs;
+        private final OrgModelRepository models;
 
-        Test(LlmClient llm, CliOrg orgs) {
+        Test(LlmClient llm, CliOrg orgs, OrgModelRepository models) {
             this.llm = llm;
             this.orgs = orgs;
+            this.models = models;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            out.printf("Model: %s%n", llm.model());
+            OrgId org = orgs.require(spec);
+            out.printf("Model: %s%n", models.find(org).orElse(llm.model()));
             out.flush();
             long started = System.nanoTime();
-            LlmResponse response = llm.complete(LlmRequest.text(null, prompt == null ? DEFAULT_PROMPT : prompt).forOrg(orgs.require(spec).value(), "test"));
+            LlmResponse response = llm.complete(LlmRequest.text(null, prompt == null ? DEFAULT_PROMPT : prompt).forOrg(org.value(), "test"));
             long millis = (System.nanoTime() - started) / 1_000_000;
             out.println();
             out.println(response.text());

@@ -157,10 +157,12 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 | `leads show <id>` | Lead card with score breakdown, pitch and WhatsApp link |
 | `leads pitch <id>` | Write a new pitch for a lead, replacing the old one. Spends LLM credit |
 | `leads mark <id> --status <status> [--lost-reason <reason>] [--note <text>]` | Mark a contact outcome. `LOST` needs one of `NO_BUDGET`, `WRONG_PERSON`, `HAS_SUPPLIER`, `NOT_INTERESTED`, `NOT_NOW` |
-| `usage [--month YYYY-MM] [--campaign <slug>] [--runs] [--limit 30]` | What Apify and the LLM have cost, with a monthly budget bar and spend per campaign. `--runs` lists each run and call |
+| `usage [--month YYYY-MM] [--campaign <slug>] [--runs] [--limit 30] [--all-orgs]` | What Apify and the LLM have cost, with a monthly budget bar and spend per campaign. `--runs` lists each run and call |
 | `users add <email> --name <name> [--org <slug>] [--role owner\|admin\|member]` | Create an account for the web app. Asks for the password twice without showing it, and writes it the way Better Auth reads it (ADR 0042) |
 | `users list`, `users password <email>`, `users remove <email> [--yes]` | List accounts with their organizations, set a new password (it ends their sessions), delete an account |
 | `orgs add <name> [--slug <slug>]`, `orgs list` | Create and list organizations, the tenants (ADR 0043) |
+| `orgs budget <slug> [usd] [--reset]` | Show or set what an organization may spend a month. Only the operator sets it (ADR 0044) |
+| `orgs model <slug> [model] [--reset]` | Show or set the model an organization's LLM calls use, from `LEADHUNTER_LLM_ALLOWED_MODELS` |
 | `members add <org> <email> [--role owner\|admin\|member]` | Add a user to an organization, or change their role |
 | `llm test ["prompt"]` | Send one prompt to the configured model, print the answer, token usage and cost |
 
@@ -192,6 +194,7 @@ Copy [.env.example](.env.example) to `.env` in the project root and replace the 
 | `APIFY_TOKEN` | none | Required for `campaign run`. From console.apify.com, Settings, API & Integrations |
 | `AI_GATEWAY_API_KEY` | none | Vercel AI Gateway key. Check it with `llm test` |
 | `LEADHUNTER_LLM_MODEL` | `google/gemma-4-26b-a4b-it` | Any gateway model id. Gemma is for testing, see [ADR 0017](docs/adr/0017-vercel-ai-gateway.md) |
+| `LEADHUNTER_LLM_ALLOWED_MODELS` | none | Comma-separated models `orgs model` may give an organization, besides the default |
 | `LEADHUNTER_LLM_BASE_URL` | `https://ai-gateway.vercel.sh/v1` | Any OpenAI-compatible endpoint |
 | `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` | docker-compose values | Railway sets these on its Postgres |
 | `LEADHUNTER_API_TOKEN` | none | Service token the web server sends and the API requires on every `/api` call. The web profile will not start without it. `openssl rand -hex 32` makes one |

@@ -67,7 +67,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
             }
             pause();
         }
-        return parse(body);
+        return parse(body, modelFor(request));
     }
 
     private JsonNode post(Map<String, Object> payload) {
@@ -102,7 +102,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         messages.add(Map.of("role", "user", "content", request.user()));
 
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("model", model);
+        payload.put("model", modelFor(request));
         payload.put("messages", messages);
         payload.put("temperature", request.temperature());
         payload.put("max_tokens", request.maxTokens());
@@ -112,7 +112,12 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         return payload;
     }
 
-    private LlmResponse parse(JsonNode body) {
+    private String modelFor(LlmRequest request) {
+        return request.model() != null ? request.model() : model;
+    }
+
+    /** {@code sentModel} names the call when the response leaves {@code model} out. */
+    private LlmResponse parse(JsonNode body, String sentModel) {
         JsonNode content = body == null ? null : body.path("choices").path(0).path("message").get("content");
         if (content == null || !content.isString()) {
             throw new LlmException("LLM gateway response has no message content: " + abbreviate(String.valueOf(body)));
@@ -120,7 +125,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         JsonNode usage = body.path("usage");
         return new LlmResponse(
                 content.asString().trim(),
-                body.path("model").asString(model),
+                body.path("model").asString(sentModel),
                 usage.path("prompt_tokens").asInt(0),
                 usage.path("completion_tokens").asInt(0),
                 cost(body),
