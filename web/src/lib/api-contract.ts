@@ -107,6 +107,8 @@ export type BackendUsageEntry = z.infer<typeof BackendUsageEntry>;
 export const BackendUsageEntries = z.array(BackendUsageEntry);
 
 /** One row of GET /api/campaigns/{slug}/leads and GET /api/leads/{id}. */
+const ScoreItem = z.object({ code: z.string(), points: z.number().int(), reason: z.string() });
+
 export const BackendLead = z.object({
 	id: z.number().int(),
 	campaignSlug: z.string(),
@@ -117,7 +119,10 @@ export const BackendLead = z.object({
 	/** Free-text note stored with the outcome. */
 	note: z.string().nullable(),
 	score: z.number().int(),
-	breakdown: z.array(z.object({ code: z.string(), points: z.number().int(), reason: z.string() })),
+	/** The stage 1 items. */
+	breakdown: ScoreItem.array(),
+	/** The stage 2 items; null until enrichment ran. */
+	stage2Breakdown: ScoreItem.array().nullable(),
 	stageReason: z.string().nullable(),
 	name: z.string(),
 	category: z.string().nullable(),
@@ -134,6 +139,19 @@ export const BackendLead = z.object({
 	/** Null until enrichment writes one, or `POST /api/leads/{id}/pitch` does (ADR 0040). */
 	pitch: z.string().nullable(),
 	whatsappLink: z.string().nullable(),
+	/** The newest website crawl; only the single-lead endpoints send it. */
+	websiteCrawl: z
+		.object({
+			url: z.string(),
+			reachable: z.boolean(),
+			https: z.boolean().nullable(),
+			mobileFriendly: z.boolean().nullable(),
+			stale: z.boolean().nullable(),
+			httpStatus: z.number().int().nullable(),
+			error: z.string().nullable(),
+			crawledAt: z.string(),
+		})
+		.nullable(),
 });
 export type BackendLead = z.infer<typeof BackendLead>;
 export const BackendLeadList = z.array(BackendLead);

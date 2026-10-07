@@ -24,8 +24,19 @@ const LEADS = [
 		status: "NEW",
 		lostReason: null,
 		note: null,
-		score: 65,
-		breakdown: [{ code: "MOBILE_PHONE", points: 5, reason: "Telefone móvel" }],
+		// Stage 1 adds to 65, stage 2 adds the 20-point complaint rule, so the enriched score is 85.
+		score: 85,
+		breakdown: [
+			{ code: "NO_WEBSITE_ACTIVE", points: 30, reason: "Sem website, mas 142 avaliações no Google" },
+			{
+				code: "REVIEWS_SWEET_SPOT",
+				points: 15,
+				reason: "142 avaliações: movimento para pagar, pequeno para precisar de ajuda",
+			},
+			{ code: "MOBILE_PHONE", points: 10, reason: "Telefone móvel" },
+			{ code: "TARGET_SECTOR", points: 10, reason: "Setor alvo: corresponde a 'clínica'" },
+		],
+		stage2Breakdown: [{ code: "REVIEW_COMPLAINTS", points: 20, reason: "Queixas nas reviews sobre contacto" }],
 		stageReason: null,
 		name: "Mock Sorriso",
 		category: "Clínica",
@@ -41,6 +52,7 @@ const LEADS = [
 		complaintKinds: ["contact"],
 		pitch: "Bom dia, notámos que ninguém atende o telefone. Podemos falar?",
 		whatsappLink: "https://wa.me/244923456789",
+		websiteCrawl: null,
 	},
 	{
 		id: 9002,
@@ -51,6 +63,7 @@ const LEADS = [
 		note: null,
 		score: 20,
 		breakdown: [],
+		stage2Breakdown: null,
 		stageReason: "Ranked 2 of 2, below the top 40% cut",
 		name: "Mock Girassol",
 		category: "Clínica",
@@ -66,6 +79,16 @@ const LEADS = [
 		complaintKinds: [],
 		pitch: null,
 		whatsappLink: null,
+		websiteCrawl: {
+			url: "https://girassol.example",
+			reachable: true,
+			https: false,
+			mobileFriendly: true,
+			stale: null,
+			httpStatus: 200,
+			error: null,
+			crawledAt: "2026-10-05T10:00:00Z",
+		},
 	},
 ];
 
@@ -143,6 +166,9 @@ const ENTRIES = [
 		costUsd: 0.2,
 	},
 ];
+
+// The list endpoints leave the crawl out, as the API does (ADR 0047); only the single-lead responses carry it.
+const asListRow = (lead) => ({ ...lead, websiteCrawl: null });
 
 const PRISTINE = structuredClone(LEADS);
 const PRISTINE_CAMPAIGNS = structuredClone(CAMPAIGNS);
@@ -317,18 +343,18 @@ const server = http.createServer((req, res) => {
 		);
 		const excluded = LEADS.filter((l) => l.stage === "EXCLUDED");
 		const ranked = [...kept.map((l, i) => ({ ...l, rank: i + 1 })), ...excluded.map((l) => ({ ...l, rank: null }))];
-		return json(200, ranked.slice(0, limit));
+		return json(200, ranked.slice(0, limit).map(asListRow));
 	}
 	if (req.method === "GET" && url.pathname === "/api/leads/today") {
 		// Mirrors LeadRepository.today: QUALIFIED still NEW, best first.
 		const queue = LEADS.filter((l) => l.stage === "QUALIFIED" && l.status === "NEW").sort(
 			(a, b) => b.score - a.score || b.reviewsCount - a.reviewsCount || a.id - b.id,
 		);
-		return json(200, queue);
+		return json(200, queue.map(asListRow));
 	}
 	if (req.method === "GET" && url.pathname === "/api/campaigns/mock-clinicas/leads") {
 		const stage = url.searchParams.get("stage") ?? "QUALIFIED";
-		return json(200, stage === "ALL" ? LEADS : LEADS.filter((l) => l.stage === stage));
+		return json(200, (stage === "ALL" ? LEADS : LEADS.filter((l) => l.stage === stage)).map(asListRow));
 	}
 	const campaignLeadsMatch = /^\/api\/campaigns\/([^/]+)\/leads$/.exec(url.pathname);
 	if (req.method === "GET" && campaignLeadsMatch) {

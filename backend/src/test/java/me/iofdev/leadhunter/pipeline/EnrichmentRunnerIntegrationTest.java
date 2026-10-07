@@ -104,6 +104,7 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
     RunRepository runs;
 
     private HttpServer site;
+    private String siteUrl;
     private final List<String> progress = new ArrayList<>();
     private Campaign campaign;
 
@@ -132,7 +133,7 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
         scraper.reset();
         reviewFetcher.reset();
         llm.answer = "{\"complaints\": [\"contact\", \"waiting\"]}";
-        String siteUrl = "http://localhost:" + site.getAddress().getPort() + "/";
+        siteUrl = "http://localhost:" + site.getAddress().getPort() + "/";
         scraper.willReturn("Talatona", List.of(
                 place("q1", "Clínica Girassol", "+244923000444", siteUrl, 50),
                 place("q2", "Clínica Sorriso", "+244923456789", null, 142)));
@@ -263,6 +264,76 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
         assertThat(sorriso.score()).isEqualTo(65);
         assertThat(sorriso.breakdown()).extracting("code").endsWith("STAGE2_NO_ISSUES");
         assertThat(progress).anyMatch(line -> line.contains("+0 STAGE2_NO_ISSUES"));
+    }
+
+    private LeadView lead(String name) {
+        return leads.list(campaign.id(), Optional.empty(), 10).stream()
+                .filter(lead -> lead.name().equals(name)).findFirst().orElseThrow();
+    }
+
+    private boolean enrichmentDropped(long leadId) {
+        return jdbc.sql("select enriched_at is null and complaint_kinds = '{}' from lead where id = :id")
+                .param("id", leadId).query(Boolean.class).single();
+    }
+
+    @Test
+    void aRescrapeKeepsTheStageTwoOfAnEnrichedLead() {
+        enrichment.enrich(campaign, 10, 10, progress::add);
+
+        stage1.run(campaign, false, progress::add);
+
+        LeadView girassol = lead("Clínica Girassol");
+        assertThat(girassol.score()).isEqualTo(35 + 25 + 20);
+        assertThat(girassol.breakdown()).extracting("code").containsExactly(
+                "REVIEWS_SWEET_SPOT", "MOBILE_PHONE", "TARGET_SECTOR", "NO_HTTPS", "REVIEW_COMPLAINTS");
+        assertThat(jdbc.sql("select complaint_kinds from lead where id = :id")
+                .param("id", girassol.id()).query(String.class).single()).isEqualTo("{contact,waiting}");
+        assertThat(lead("Clínica Sorriso").breakdown()).extracting("code").endsWith("STAGE2_NO_ISSUES");
+        // Still enriched, so the queue does not send it through stage 2 again.
+        assertThat(enrichment.enrich(campaign, 10, 10, progress::add).considered()).isZero();
+    }
+
+    @Test
+    void aRescrapeThatExcludesAnEnrichedLeadSendsItBackToEnrichment() {
+        enrichment.enrich(campaign, 10, 10, progress::add);
+        long sorrisoId = lead("Clínica Sorriso").id();
+        scraper.willReturn("Talatona", List.of(
+                place("q1", "Clínica Girassol", "+244923000444", siteUrl, 50),
+                place("q2", "Clínica Sorriso", null, null, 142)));
+
+        stage1.run(campaign, false, progress::add);
+
+        assertThat(lead("Clínica Sorriso").stage()).isEqualTo(LeadStage.EXCLUDED);
+        assertThat(enrichmentDropped(sorrisoId)).isTrue();
+
+        scraper.willReturn("Talatona", List.of(
+                place("q1", "Clínica Girassol", "+244923000444", siteUrl, 50),
+                place("q2", "Clínica Sorriso", "+244923456789", null, 142)));
+        stage1.run(campaign, false, progress::add);
+
+        assertThat(lead("Clínica Sorriso").stage()).isEqualTo(LeadStage.QUALIFIED);
+        assertThat(enrichment.enrich(campaign, 10, 10, progress::add).considered()).isEqualTo(1);
+    }
+
+    @Test
+    void aRescrapeWithANewWebsiteDropsTheOldCrawlAndSendsTheLeadBackToEnrichment() {
+        enrichment.enrich(campaign, 10, 10, progress::add);
+        long girassolId = lead("Clínica Girassol").id();
+        assertThat(crawls.latestForLead(girassolId).map(CrawlRepository.StoredCrawl::url)).contains(siteUrl);
+
+        String newSite = siteUrl + "novo";
+        scraper.willReturn("Talatona", List.of(
+                place("q1", "Clínica Girassol", "+244923000444", newSite, 50),
+                place("q2", "Clínica Sorriso", "+244923456789", null, 142)));
+        stage1.run(campaign, false, progress::add);
+
+        // The only crawl on record read the old site, so it is no audit of the new one.
+        assertThat(crawls.latestForLead(girassolId)).isEmpty();
+        assertThat(lead("Clínica Girassol").score()).isEqualTo(35);
+        assertThat(enrichmentDropped(girassolId)).isTrue();
+
+        assertThat(enrichment.enrich(campaign, 10, 10, progress::add).considered()).isEqualTo(1);
+        assertThat(crawls.latestForLead(girassolId).map(CrawlRepository.StoredCrawl::url)).contains(newSite);
     }
 
     private void saveCompany() {

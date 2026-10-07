@@ -15,9 +15,11 @@ import java.nio.charset.StandardCharsets;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.pipeline.LeadRepository;
 import me.iofdev.leadhunter.pipeline.LeadStage;
+import me.iofdev.leadhunter.pipeline.LeadView;
 import me.iofdev.leadhunter.pipeline.LeadStatus;
 import me.iofdev.leadhunter.pipeline.LostReason;
 import me.iofdev.leadhunter.pipeline.PitchService;
+import me.iofdev.leadhunter.place.CrawlRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,9 +46,11 @@ class LeadController {
     private final LeadRepository leads;
     private final PitchService pitches;
     private final CompanyRepository company;
+    private final CrawlRepository crawls;
 
     LeadController(CampaignRepository campaigns, LeadRepository leads, PitchService pitches,
-            CompanyRepository company) {
+            CompanyRepository company, CrawlRepository crawls) {
+        this.crawls = crawls;
         this.campaigns = campaigns;
         this.leads = leads;
         this.pitches = pitches;
@@ -103,7 +107,7 @@ class LeadController {
 
     @GetMapping("/leads/{id}")
     LeadDto get(OrgId org, @PathVariable long id) {
-        return leads.findById(org, id).map(LeadDto::from)
+        return leads.findById(org, id).map(this::card)
                 .orElseThrow(() -> new IllegalArgumentException("no lead with id " + id));
     }
 
@@ -120,13 +124,18 @@ class LeadController {
         }
         LeadStatus status = parseStatus(request.status());
         LostReason lostReason = request.lostReason() == null ? null : parseLostReason(request.lostReason());
-        return LeadDto.from(leads.updateOutcome(org, id, status, lostReason, request.note()));
+        return card(leads.updateOutcome(org, id, status, lostReason, request.note()));
     }
 
     /** Writes a new pitch for the lead and replaces the old one (ADR 0040), like {@code leads pitch}. */
     @PostMapping("/leads/{id}/pitch")
     LeadDto pitch(OrgId org, @PathVariable long id) {
-        return LeadDto.from(pitches.regenerate(org, id));
+        return card(pitches.regenerate(org, id));
+    }
+
+    /** The single-lead shape: the list fields plus the newest website crawl. */
+    private LeadDto card(LeadView lead) {
+        return LeadDto.from(lead).withCrawl(crawls.latestForLead(lead.id()).orElse(null));
     }
 
     record MarkLeadRequest(String status, String lostReason, String note) {
