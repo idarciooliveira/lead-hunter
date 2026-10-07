@@ -27,18 +27,22 @@ function fixtureName(campaign: string): string {
 	return CAMPAIGNS.find((c) => c.slug === campaign)?.name ?? campaign;
 }
 
-/** One fixture month narrowed to a campaign. Its apify and llm totals come from the events it still lists. */
+/**
+ * One fixture month narrowed to a campaign. Its total is the campaign's line in the monthly breakdown, so the page
+ * agrees with itself. The fixtures do not split a campaign's spend by source, so the split follows the month's own
+ * Apify and LLM mix. The events list still only shows the runs and calls the fixture keeps.
+ */
 function forCampaign(m: UsageMonth, campaign: string): UsageMonth {
 	const name = fixtureName(campaign);
-	const events = m.events.filter((e) => e.campaign === name);
-	const sum = (source: "APIFY" | "LLM") =>
-		events.reduce((total, e) => (e.source === source ? total + (e.costUsd ?? 0) : total), 0);
+	const usd = m.byCampaign.find((c) => c.campaign === name)?.usd ?? 0;
+	const monthUsd = m.apifyUsd + m.llmUsd;
+	const apifyUsd = monthUsd === 0 ? 0 : usd * (m.apifyUsd / monthUsd);
 	return {
 		...m,
-		apifyUsd: sum("APIFY"),
-		llmUsd: sum("LLM"),
+		apifyUsd,
+		llmUsd: usd - apifyUsd,
 		byCampaign: m.byCampaign.filter((c) => c.campaign === name),
-		events,
+		events: m.events.filter((e) => e.campaign === name),
 	};
 }
 

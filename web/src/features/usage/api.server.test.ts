@@ -112,14 +112,34 @@ describe("usage API", () => {
 
 	it("narrows the fixture month to one campaign when no API is set", async () => {
 		vi.stubEnv("LEADHUNTER_API_URL", "");
-		await expect(fetchUsage("2026-10", "clinicas-talatona")).resolves.toMatchObject({
+		const page = await fetchUsage("2026-10", "clinicas-talatona");
+		expect(page).toMatchObject({
 			month: "2026-10",
 			budgetUsd: 10,
-			apifyUsd: 0.84,
-			llmUsd: 0.28,
 			byCampaign: [{ campaign: "Clínicas Talatona", usd: 1.12 }],
 		});
-		const { events } = await fetchUsage("2026-10", "clinicas-talatona");
-		expect(events.map((e) => e.campaign)).toEqual(["Clínicas Talatona", "Clínicas Talatona"]);
+		expect(page.apifyUsd + page.llmUsd).toBeCloseTo(1.12);
+		expect(page.events.map((e) => e.campaign)).toEqual(["Clínicas Talatona", "Clínicas Talatona"]);
+	});
+
+	it("totals a fixture campaign from the monthly breakdown, not the events it still lists", async () => {
+		vi.stubEnv("LEADHUNTER_API_URL", "");
+		// October's only Maianga event is a 0.41 LLM call, but the monthly breakdown says 0.97.
+		const maianga = await fetchUsage("2026-10", "restaurantes-maianga");
+		expect(maianga.apifyUsd + maianga.llmUsd).toBeCloseTo(0.97);
+		expect(maianga.byCampaign).toEqual([{ campaign: "Restaurantes Maianga", usd: 0.97 }]);
+		// Its only October event is a failed run that cost nothing, yet the campaign's 0.55 still counts.
+		const zango = await fetchUsage("2026-10", "oficinas-zango");
+		expect(zango.apifyUsd + zango.llmUsd).toBeCloseTo(0.55);
+	});
+
+	it("gives a fixture campaign with no spend that month zero", async () => {
+		vi.stubEnv("LEADHUNTER_API_URL", "");
+		await expect(fetchUsage("2026-09", "laboratorios-luanda")).resolves.toMatchObject({
+			apifyUsd: 0,
+			llmUsd: 0,
+			byCampaign: [],
+			events: [],
+		});
 	});
 });

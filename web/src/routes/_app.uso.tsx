@@ -10,7 +10,7 @@ import { NativeSelect } from "#/components/ui/field";
 import { ProgressBar } from "#/components/ui/progress";
 import { campaignsQuery } from "#/features/campaigns/queries";
 import { UsageEvents } from "#/features/usage/components/usage-events";
-import { budgetState, shiftMonth, totalOf, usedOf } from "#/features/usage/model";
+import { budgetOf, budgetState, shiftMonth, totalOf, usedOf } from "#/features/usage/model";
 import { usageQuery } from "#/features/usage/queries";
 import { monthLabel, percent, usd } from "#/lib/format";
 
@@ -27,6 +27,7 @@ export const Route = createFileRoute("/_app/uso")({
 	loader: ({ context, deps }) =>
 		Promise.all([
 			context.queryClient.ensureQueryData(usageQuery()),
+			context.queryClient.ensureQueryData(usageQuery(deps.month)),
 			context.queryClient.ensureQueryData(usageQuery(deps.month, deps.campaign)),
 			context.queryClient.ensureQueryData(campaignsQuery()),
 		]),
@@ -37,14 +38,16 @@ export const Route = createFileRoute("/_app/uso")({
 function UsagePage() {
 	const { month: wanted, campaign } = Route.useSearch();
 	const { data: current } = useSuspenseQuery(usageQuery());
+	const { data: organisation } = useSuspenseQuery(usageQuery(wanted));
 	const { data: m } = useSuspenseQuery(usageQuery(wanted, campaign));
 	const { data: campaigns } = useSuspenseQuery(campaignsQuery());
 	const latest = current.month;
 	const month = m.month;
 	const navigate = Route.useNavigate();
 	const total = totalOf(m);
-	const used = usedOf(m);
-	const state = budgetState(m);
+	const budget = budgetOf(m, organisation, campaign);
+	const used = usedOf(budget);
+	const state = budgetState(budget);
 	const max = Math.max(...m.byCampaign.map((c) => c.usd));
 	const go = (delta: number) =>
 		navigate({ search: (prev) => ({ ...prev, month: shiftMonth(month, delta) }), replace: true });
@@ -89,8 +92,11 @@ function UsagePage() {
 					</div>
 					<Chip tone={state.tone}>{state.label}</Chip>
 				</div>
-				<ProgressBar value={percent(used, m.budgetUsd)} label="Orçamento gasto" />
-				{used > total && (
+				<ProgressBar value={percent(used, budget.budgetUsd)} label="Orçamento gasto" />
+				{campaign && (
+					<div className="text-mute">O estado e a barra usam o orçamento do mês inteiro, de todas as campanhas.</div>
+				)}
+				{used > totalOf(budget) && (
 					<div className="text-mute">
 						{usd(used)} gasto ou reservado por jobs em curso. Uma nova execução é recusada se passar o orçamento.
 					</div>
