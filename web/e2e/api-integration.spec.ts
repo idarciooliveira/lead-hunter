@@ -46,6 +46,17 @@ test("campaigns, company and usage render from the API", async ({ page }) => {
 	expect(errors).toEqual([]);
 });
 
+test("usage filtered by a campaign says the budget is the whole month's", async ({ page }) => {
+	await page.goto("/uso?campaign=mock-clinicas");
+	await expect(page.getByRole("heading", { level: 1, name: "Uso e custos" })).toBeVisible();
+	await expect(page.getByText("O estado e a barra usam o orçamento do mês inteiro")).toBeVisible();
+});
+
+test("a bookmarked campaign that no longer exists shows the not found page", async ({ page }) => {
+	await page.goto("/uso?campaign=campanha-apagada");
+	await expect(page.getByText("Página não encontrada")).toBeVisible();
+});
+
 test("the browser never calls the API, only the web server does (ADR 0037)", async ({ page }) => {
 	const direct: string[] = [];
 	page.on("request", (r) => r.url().includes(":3330/") && direct.push(r.url()));
