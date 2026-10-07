@@ -48,10 +48,10 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
         // enrich batch without a review fetch closes with no child row, and a
         // scrape can fail before its first search.
         runs.recordDryRun(clinics, 120, 4);
-        try (JobLease enrich = runs.startJob(schools, RunRepository.KIND_ENRICH, 25)) {
+        try (JobLease enrich = runs.startJob(schools, RunRepository.KIND_ENRICH, 25, null)) {
             runs.finishJob(enrich.jobId(), 3);
         }
-        try (JobLease scrape = runs.startJob(clinics, RunRepository.KIND_SCRAPE, null)) {
+        try (JobLease scrape = runs.startJob(clinics, RunRepository.KIND_SCRAPE, null, null)) {
             runs.failJob(scrape.jobId(), "APIFY_TOKEN is not set");
         }
 

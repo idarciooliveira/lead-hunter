@@ -40,8 +40,11 @@ leadhunter:
     model: ${LEADHUNTER_LLM_MODEL:google/gemma-4-26b-a4b-it}
     timeout: 60s
   usage:
-    # The bar in `usage`. ADR 0006 sets the budget at $10 a month.
+    # What one organization may spend a month unless the operator sets its own. Runs that would pass it are
+    # refused (ADR 0044). ADR 0006 sets the default at $10.
     monthly-budget-usd: ${LEADHUNTER_USAGE_MONTHLY_BUDGET_USD:10}
+    # The same limit for all organizations together. Empty means no cap.
+    total-monthly-budget-usd: ${LEADHUNTER_TOTAL_MONTHLY_BUDGET_USD:}
 
 ---
 # The JSON API for the web client (ADR 0031). The CLI keeps running as a non-web

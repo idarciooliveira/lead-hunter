@@ -130,7 +130,7 @@ class CliIntegrationTest extends PostgresTestSupport {
         execute("campaign", "create", "--file", EXAMPLES.resolve("clinicas-luanda.yml").toString());
         long campaignId = jdbc.sql("select id from campaign where slug = 'clinicas-luanda'").query(Long.class).single();
 
-        try (JobLease running = runs.startJob(campaignId, RunRepository.KIND_ENRICH, 5)) {
+        try (JobLease running = runs.startJob(campaignId, RunRepository.KIND_ENRICH, 5, null)) {
             Result result = execute("campaign", "run", "clinicas-luanda");
 
             assertThat(result.exitCode()).isEqualTo(1);
@@ -216,10 +216,10 @@ class CliIntegrationTest extends PostgresTestSupport {
                 insert into campaign (org_id, slug, name, answers, search) values ('test-org', 'clinicas', 'Clínicas', '{}'::jsonb, '{}'::jsonb)
                 """).update();
         jdbc.sql("""
-                insert into campaign_run (campaign_id, location, search_terms, max_places, status, places_found, cost_usd, started_at)
-                values (1, 'Luanda', '{clínica}', 40, 'SUCCEEDED', 40, 2.5, '2026-09-10T10:00:00Z'),
-                       (1, 'Talatona', '{clínica}', 40, 'FAILED', null, 0.5, '2026-09-11T10:00:00Z'),
-                       (1, 'Viana', '{clínica}', 40, 'SUCCEEDED', 10, 9, '2026-08-11T10:00:00Z')
+                insert into campaign_run (org_id, campaign_id, location, search_terms, max_places, status, places_found, cost_usd, started_at)
+                values ('test-org', 1, 'Luanda', '{clínica}', 40, 'SUCCEEDED', 40, 2.5, '2026-09-10T10:00:00Z'),
+                       ('test-org', 1, 'Talatona', '{clínica}', 40, 'FAILED', null, 0.5, '2026-09-11T10:00:00Z'),
+                       ('test-org', 1, 'Viana', '{clínica}', 40, 'SUCCEEDED', 10, 9, '2026-08-11T10:00:00Z')
                 """).update();
         jdbc.sql("""
                 insert into llm_call (org_id, campaign_id, purpose, model, prompt_tokens, completion_tokens, cost_usd, created_at)

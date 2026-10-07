@@ -37,11 +37,12 @@ public class EnrichmentRunner {
     private final RunRepository runs;
     private final PitchService pitches;
     private final CompanyRepository company;
+    private final EnrichmentProperties properties;
     private final WebsiteCrawler crawler;
 
     public EnrichmentRunner(ReviewFetcher reviews, ReviewComplaints complaints, CrawlRepository crawls,
                             LeadRepository leads, RunRepository runs, PitchService pitches,
-                            CompanyRepository company) {
+                            CompanyRepository company, EnrichmentProperties properties) {
         this.reviews = reviews;
         this.complaints = complaints;
         this.crawls = crawls;
@@ -49,6 +50,7 @@ public class EnrichmentRunner {
         this.runs = runs;
         this.pitches = pitches;
         this.company = company;
+        this.properties = properties;
         this.crawler = new WebsiteCrawler(HttpClient.newHttpClient());
     }
 
@@ -126,7 +128,7 @@ public class EnrichmentRunner {
         }
         progress.accept("Fetching up to " + maxReviews + " reviews for " + urls.size() + " places...");
         long runId = runs.start(campaign.id(), RunRepository.REVIEWS_LOCATION, urls, urls.size(),
-                parentJobId, RunRepository.KIND_REVIEWS);
+                parentJobId, RunRepository.KIND_REVIEWS, properties.estimateReviewsUsd(urls.size(), maxReviews));
         ReviewsResult result;
         try {
             result = reviews.fetchReviews(urls, maxReviews, campaign.search().language());

@@ -104,11 +104,20 @@ public class RunRepository {
 
     public long start(long campaignId, String location, List<String> terms, int maxPlaces,
                       Long parentId, String kind) {
+        return start(campaignId, location, terms, maxPlaces, parentId, kind, null);
+    }
+
+    /** {@code estimatedUsd} is what the run counts at while its own cost is missing (ADR 0044). */
+    public long start(long campaignId, String location, List<String> terms, int maxPlaces,
+                      Long parentId, String kind, BigDecimal estimatedUsd) {
         return jdbc.sql("""
-                        insert into campaign_run (campaign_id, location, search_terms, max_places, status, parent_id, kind)
-                        values (:campaignId, :location, :terms, :maxPlaces, 'RUNNING', :parentId, :kind)
+                        insert into campaign_run (org_id, campaign_id, location, search_terms, max_places, status,
+                                                  parent_id, kind, estimated_usd)
+                        values ((select org_id from campaign where id = :campaignId), :campaignId, :location, :terms,
+                                :maxPlaces, 'RUNNING', :parentId, :kind, :estimatedUsd)
                         returning id
                         """)
+                .param("estimatedUsd", estimatedUsd)
                 .param("campaignId", campaignId)
                 .param("location", location)
                 .param("terms", terms.toArray(String[]::new))
@@ -156,13 +165,14 @@ public class RunRepository {
      * hold no location of their own. The partial unique index rejects a
      * second RUNNING job per campaign.
      */
-    public JobLease startJob(long campaignId, String kind, Integer total) {
+    public JobLease startJob(long campaignId, String kind, Integer total, BigDecimal estimatedUsd) {
         Connection connection = connect();
         try {
             long jobId = session(connection).sql("""
                             with job as (
-                                insert into campaign_run (campaign_id, kind, status, total)
-                                values (:campaignId, :kind, 'RUNNING', :total)
+                                insert into campaign_run (org_id, campaign_id, kind, status, total, estimated_usd)
+                                values ((select org_id from campaign where id = :campaignId), :campaignId, :kind,
+                                        'RUNNING', :total, :estimatedUsd)
                                 returning id
                             )
                             select id from job where pg_try_advisory_lock(%s)
@@ -170,6 +180,7 @@ public class RunRepository {
                     .param("campaignId", campaignId)
                     .param("kind", kind)
                     .param("total", total)
+                    .param("estimatedUsd", estimatedUsd)
                     .query(Long.class)
                     .single();
             return new JobLease(jobId, connection);
@@ -214,9 +225,10 @@ public class RunRepository {
     /** A dry run costs nothing but lands in the history, so the UI shows the estimates it showed. */
     public long recordDryRun(long campaignId, long done, Integer total) {
         return jdbc.sql("""
-                        insert into campaign_run (campaign_id, kind, status, places_found, total,
+                        insert into campaign_run (org_id, campaign_id, kind, status, places_found, total,
                             cost_usd, started_at, finished_at)
-                        values (:campaignId, :kind, 'SUCCEEDED', :done, :total, 0, now(), now())
+                        values ((select org_id from campaign where id = :campaignId), :campaignId, :kind,
+                            'SUCCEEDED', :done, :total, 0, now(), now())
                         returning id
                         """)
                 .param("campaignId", campaignId)

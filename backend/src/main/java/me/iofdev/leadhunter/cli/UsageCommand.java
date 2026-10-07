@@ -12,9 +12,9 @@ import java.util.List;
 
 import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
+import me.iofdev.leadhunter.pipeline.BudgetService;
 import me.iofdev.leadhunter.usage.Money;
 import me.iofdev.leadhunter.usage.UsageFilter;
-import me.iofdev.leadhunter.usage.UsageProperties;
 import me.iofdev.leadhunter.usage.UsageReport;
 import me.iofdev.leadhunter.usage.UsageRepository;
 import picocli.CommandLine.Command;
@@ -48,13 +48,13 @@ class UsageCommand implements Runnable {
 
     private final UsageRepository usage;
     private final CampaignRepository campaigns;
-    private final UsageProperties properties;
+    private final BudgetService budget;
     private final CliOrg orgs;
 
-    UsageCommand(UsageRepository usage, CampaignRepository campaigns, UsageProperties properties, CliOrg orgs) {
+    UsageCommand(UsageRepository usage, CampaignRepository campaigns, BudgetService budget, CliOrg orgs) {
         this.usage = usage;
         this.campaigns = campaigns;
-        this.properties = properties;
+        this.budget = budget;
         this.orgs = orgs;
     }
 
@@ -116,11 +116,15 @@ class UsageCommand implements Runnable {
     private void printBudget(PrintWriter out, OrgId org, YearMonth budgetMonth) {
         UsageFilter monthOnly = new UsageFilter(org, start(budgetMonth), start(budgetMonth.plusMonths(1)), null);
         BigDecimal spent = usage.report(monthOnly).totalUsd();
-        BigDecimal budget = properties.monthlyBudgetUsd();
-        double fraction = budget.signum() == 0 ? 0 : spent.divide(budget, 4, RoundingMode.HALF_UP).doubleValue();
+        BigDecimal limit = budget.budgetFor(org);
+        double fraction = limit.signum() == 0 ? 0 : spent.divide(limit, 4, RoundingMode.HALF_UP).doubleValue();
         out.printf("%nMonth %s, all campaigns  %s%n", budgetMonth, Money.usd(spent));
         out.printf("  %s  %d%% of $%s monthly budget%n", Format.bar(fraction, BAR_WIDTH),
-                Math.round(fraction * 100), budget.setScale(2, RoundingMode.HALF_UP).toPlainString());
+                Math.round(fraction * 100), limit.setScale(2, RoundingMode.HALF_UP).toPlainString());
+        BigDecimal cap = budget.installCap();
+        if (cap != null) {
+            out.printf("  all organizations together are capped at $%s a month%n", cap.setScale(2, RoundingMode.HALF_UP).toPlainString());
+        }
     }
 
     private void printCampaigns(PrintWriter out, UsageReport report) {

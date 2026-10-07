@@ -10,7 +10,7 @@ import java.util.List;
 import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.usage.UsageFilter;
-import me.iofdev.leadhunter.usage.UsageProperties;
+import me.iofdev.leadhunter.pipeline.BudgetService;
 import me.iofdev.leadhunter.usage.UsageReport;
 import me.iofdev.leadhunter.usage.UsageRepository;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,12 +25,12 @@ class UsageController {
 
     private final UsageRepository usage;
     private final CampaignRepository campaigns;
-    private final UsageProperties properties;
+    private final BudgetService budget;
 
-    UsageController(UsageRepository usage, CampaignRepository campaigns, UsageProperties properties) {
+    UsageController(UsageRepository usage, CampaignRepository campaigns, BudgetService budget) {
         this.usage = usage;
         this.campaigns = campaigns;
-        this.properties = properties;
+        this.budget = budget;
     }
 
     public record Summary(
@@ -58,7 +58,7 @@ class UsageController {
                 report.byCampaign(),
                 report.llmWithoutCampaignUsd(),
                 report.totalUsd(),
-                properties.monthlyBudgetUsd());
+                budget.budgetFor(org));
     }
 
     @GetMapping("/entries")

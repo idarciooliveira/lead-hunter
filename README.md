@@ -37,7 +37,7 @@ It is built for one team and one market, so it is opinionated. The reasons behin
 - **A ranked list, not a dump.** Hard filters remove closed places, banks, government, big chains and your current clients. Rules score the rest and the top 40% (configurable per campaign) become `QUALIFIED`.
 - **Scores you can audit.** Weights live in `Stage1Scorer` and are documented in [ADR 0007](docs/adr/0007-rule-based-scoring.md). The LLM reads reviews and writes pitches. It never sets a score.
 - **One pitch per lead.** Written at enrichment, and dropped if it quotes a number the data does not have.
-- **A hard budget.** $10 a month by default. `--dry-run` shows the estimated cost, and `usage` shows what each run and LLM call actually cost.
+- **A hard budget.** $10 a month per organization by default. A scrape or enrichment that would pass it is refused before it starts. `--dry-run` shows the estimated cost, and `usage` shows what each run and LLM call actually cost.
 - **CLI and web.** Run campaigns from the terminal, work the daily queue in the browser.
 
 ## Quick start
@@ -201,13 +201,16 @@ Copy [.env.example](.env.example) to `.env` in the project root and replace the 
 | `LEADHUNTER_APIFY_MAX_PLACES_PER_RUN` | 600 | Budget guard. Larger runs need `--allow-over-limit` |
 | `LEADHUNTER_APIFY_ESTIMATED_USD_PER_PLACE` | 0.004 | Only for `--dry-run`. Set it from the actor's pricing page |
 | `LEADHUNTER_ORG` | none | The organization slug the CLI works in. `--org <slug>` before the command wins. With neither, the CLI uses the only organization and fails when there are several (ADR 0043) |
-| `LEADHUNTER_USAGE_MONTHLY_BUDGET_USD` | 10 | The budget the bar in `usage` measures against |
+| `LEADHUNTER_USAGE_MONTHLY_BUDGET_USD` | 10 | What one organization may spend a month. A scrape or enrichment that would pass it is refused |
+| `LEADHUNTER_TOTAL_MONTHLY_BUDGET_USD` | none | The same limit for all organizations together |
+| `LEADHUNTER_STAGE2_ESTIMATED_USD_PER_REVIEW` | 0.0005 | Reviews price used by the budget check |
+| `LEADHUNTER_STAGE2_ESTIMATED_LLM_USD_PER_LEAD` | 0.002 | LLM cost per enriched lead used by the budget check |
 | `LEADHUNTER_STAGE2_BATCH` | 25 | Qualified leads enriched per `campaign enrich` run |
 | `LEADHUNTER_STAGE2_MAX_REVIEWS` | 10 | Recent reviews fetched per place for the complaint classification |
 
 ## Costs
 
-The budget is $10 a month for scraping and LLM calls, see [ADR 0006](docs/adr/0006-two-stage-pipeline.md). Every Apify run stores what Apify reported it cost in `campaign_run.cost_usd`, failed and aborted runs included, and every LLM call stores the cost the gateway reported in `llm_call.cost_usd`. `usage` adds it up, see [ADR 0021](docs/adr/0021-track-usage-and-costs.md). LLM history starts from the day `usage` shipped. Always `--dry-run` a new campaign first.
+The budget is $10 a month per organization for scraping and LLM calls, see [ADR 0006](docs/adr/0006-two-stage-pipeline.md) and [ADR 0044](docs/adr/0044-owner-keys-with-enforced-budgets.md). When a scrape or enrichment starts, the check adds its estimate to what the month has spent and refuses it if the total passes the budget or the install cap. A run with no reported cost counts at the estimate stored when it started, and deleting a campaign keeps its runs' cost in the month. The check never stops a job that is already running. Every Apify run stores what Apify reported it cost in `campaign_run.cost_usd`, failed and aborted runs included, and every LLM call stores the cost the gateway reported in `llm_call.cost_usd`. `usage` adds it up, see [ADR 0021](docs/adr/0021-track-usage-and-costs.md). LLM history starts from the day `usage` shipped. Always `--dry-run` a new campaign first.
 
 ## Deploying on Railway
 

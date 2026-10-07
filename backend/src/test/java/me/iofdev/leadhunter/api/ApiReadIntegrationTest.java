@@ -97,9 +97,10 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
                 .update();
 
         jdbc.sql("""
-                        insert into campaign_run (campaign_id, location, search_terms, max_places, status, places_found, cost_usd)
-                        values (:campaignId, 'Talatona', :terms, 40, 'SUCCEEDED', 8, 0.20)
+                        insert into campaign_run (org_id, campaign_id, location, search_terms, max_places, status, places_found, cost_usd)
+                        values (:orgId, :campaignId, 'Talatona', :terms, 40, 'SUCCEEDED', 8, 0.20)
                         """)
+                .param("orgId", ORG.value())
                 .param("campaignId", campaign.id())
                 .param("terms", new String[]{"clínica"})
                 .update();
@@ -135,7 +136,8 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
 
         // A dry run is no real work, so a campaign with only dry runs never ran.
         campaigns.save(ORG, parser.parse(CAMPAIGN.replace("clinicas-teste", "so-dry-run")));
-        jdbc.sql("insert into campaign_run (campaign_id, kind, status, places_found) values (:id, 'DRY_RUN', 'SUCCEEDED', 40)")
+        jdbc.sql("insert into campaign_run (org_id, campaign_id, kind, status, places_found) values (:org, :id, 'DRY_RUN', 'SUCCEEDED', 40)")
+                .param("org", ORG.value())
                 .param("id", campaigns.findBySlug(ORG, "so-dry-run").orElseThrow().id())
                 .update();
         mvc.perform(get("/api/campaigns/so-dry-run"))

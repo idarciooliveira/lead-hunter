@@ -5,7 +5,9 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -33,7 +35,7 @@ public class UsageRepository {
                         select * from (
                             select 'apify' as kind, r.started_at as at, c.slug, r.location || ', ' || r.status as label,
                                    r.cost_usd as cost
-                            from campaign_run r join campaign c on c.id = r.campaign_id
+                            from campaign_run r left join campaign c on c.id = r.campaign_id
                             where %s and r.location is not null
                             union all
                             select 'llm', l.created_at, c.slug, l.model || ', ' || l.purpose, l.cost_usd
@@ -42,7 +44,7 @@ public class UsageRepository {
                         ) e
                         order by at desc
                         limit :limit
-                        """.formatted(runWhere("r.started_at", "r.campaign_id"), llmWhere("l.created_at", "l.campaign_id", "l.org_id")))
+                        """.formatted(runWhere("r.started_at", "r.campaign_id", "r.org_id"), llmWhere("l.created_at", "l.campaign_id", "l.org_id")))
                 .params(params(filter))
                 .param("limit", limit)
                 .query((rs, row) -> new UsageReport.Entry(
@@ -54,6 +56,52 @@ public class UsageRepository {
                 .list();
     }
 
+    /** The organization's own monthly budget, empty when the operator never set one. */
+    public Optional<BigDecimal> orgBudget(OrgId orgId) {
+        return jdbc.sql("select monthly_budget_usd from organization where id = :id")
+                .param("id", orgId.value())
+                .query(BigDecimal.class)
+                .optional();
+    }
+
+    /**
+     * What a month has spent or is about to spend, for the budget check (ADR 0044). An {@code orgId} of null
+     * counts every organization. Three parts:
+     * <ul>
+     * <li>every run with a location (a scraper run, a review batch or a pre-job row) at its cost, or at the
+     * estimate stored when it started when the cost is missing;</li>
+     * <li>every LLM call at its cost;</li>
+     * <li>for each job still running, the part of its estimate that its own runs do not cover yet. A job's
+     * LLM calls come in as they finish, so a running enrichment counts them twice until it ends. That errs
+     * toward refusing, never toward overspending.</li>
+     * </ul>
+     */
+    public BigDecimal committed(OrgId orgId, OffsetDateTime from, OffsetDateTime to) {
+        return jdbc.sql("""
+                        select
+                            coalesce((select sum(coalesce(r.cost_usd, r.estimated_usd, 0)) from campaign_run r
+                                      where r.location is not null and %1$s), 0)
+                          + coalesce((select sum(l.cost_usd) from llm_call l where %2$s), 0)
+                          + coalesce((select sum(greatest(p.estimated_usd - coalesce(
+                                          (select sum(coalesce(c.cost_usd, c.estimated_usd, 0))
+                                           from campaign_run c where c.parent_id = p.id), 0), 0))
+                                      from campaign_run p
+                                      where p.parent_id is null and p.location is null and p.status = 'RUNNING'
+                                        and p.estimated_usd is not null and %3$s), 0)
+                        """.formatted(committedWhere("r.started_at", "r.org_id"),
+                        committedWhere("l.created_at", "l.org_id"), committedWhere("p.started_at", "p.org_id")))
+                .param("orgId", orgId == null ? null : orgId.value())
+                .param("from", from)
+                .param("to", to)
+                .query(BigDecimal.class)
+                .single();
+    }
+
+    private static String committedWhere(String timeColumn, String orgColumn) {
+        return timeColumn + " >= cast(:from as timestamptz) and " + timeColumn + " < cast(:to as timestamptz)"
+                + " and (cast(:orgId as text) is null or " + orgColumn + " = cast(:orgId as text))";
+    }
+
     private UsageReport.Apify apify(UsageFilter filter) {
         return jdbc.sql("""
                         select count(*) as runs,
@@ -63,7 +111,7 @@ public class UsageRepository {
                                coalesce(sum(cost_usd), 0) as cost
                         from campaign_run
                         where %s and location is not null
-                        """.formatted(runWhere("started_at", "campaign_id")))
+                        """.formatted(runWhere("started_at", "campaign_id", "org_id")))
                 .params(params(filter))
                 .query((rs, row) -> new UsageReport.Apify(
                         rs.getInt("runs"), rs.getInt("failed"), rs.getInt("unpriced"),
@@ -112,7 +160,7 @@ public class UsageRepository {
                           and (a.campaign_id is not null or l.campaign_id is not null)
                           and (cast(:campaignId as bigint) is null or c.id = cast(:campaignId as bigint))
                         order by coalesce(a.cost, 0) + coalesce(l.cost, 0) desc, c.slug
-                        """.formatted(runWhere("started_at", "campaign_id"), llmWhere("created_at", "campaign_id", "org_id")))
+                        """.formatted(runWhere("started_at", "campaign_id", "org_id"), llmWhere("created_at", "campaign_id", "org_id")))
                 .params(params(filter))
                 .query((rs, row) -> new UsageReport.CampaignSpend(
                         rs.getString("slug"), rs.getBigDecimal("apify_cost"), rs.getBigDecimal("llm_cost")))
@@ -130,10 +178,9 @@ public class UsageRepository {
                 .single();
     }
 
-    /** Runs have no organization of their own (ADR 0043): they count through their campaign. */
-    private static String runWhere(String timeColumn, String campaignColumn) {
-        return where(timeColumn, campaignColumn)
-                + " and " + campaignColumn + " in (select id from campaign where org_id = :orgId)";
+    /** Runs carry their organization, because a deleted campaign leaves its runs behind (ADR 0044). */
+    private static String runWhere(String timeColumn, String campaignColumn, String orgColumn) {
+        return where(timeColumn, campaignColumn) + " and " + orgColumn + " = :orgId";
     }
 
     /** LLM calls carry their organization, because some belong to no campaign. */
