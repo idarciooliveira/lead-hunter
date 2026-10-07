@@ -139,8 +139,8 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
         reviewFetcher.willReturn("https://maps.google.com/?cid=q1",
                 List.of(new PlaceReview(2, "Ninguém atende o telefone", "2026-08-01")));
 
-        assertThat(campaigns.save(parser.parse(CAMPAIGN))).isTrue();
-        campaign = campaigns.findBySlug("clinicas-enriquecer").orElseThrow();
+        assertThat(campaigns.save(ORG, parser.parse(CAMPAIGN))).isTrue();
+        campaign = campaigns.findBySlug(ORG, "clinicas-enriquecer").orElseThrow();
         stage1.run(campaign, false, progress::add);
         progress.clear();
     }
@@ -266,7 +266,7 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
     }
 
     private void saveCompany() {
-        companies.save(new CompanyProfile("Exemplo Software", "Fazemos sites",
+        companies.save(ORG, new CompanyProfile("Exemplo Software", "Fazemos sites",
                 List.of(new CompanyProfile.Service("Site", "400 mil Kz", "2 semanas")),
                 "Site", List.of("Luanda"), List.of(), List.of(), List.of(), 40, null));
     }
@@ -315,7 +315,7 @@ class EnrichmentRunnerIntegrationTest extends PostgresTestSupport {
         long id = leads.list(campaign.id(), Optional.empty(), 1).getFirst().id();
         llm.answer = "Uma versão nova, em 2 semanas. Podemos falar?";
 
-        LeadView lead = pitches.regenerate(id);
+        LeadView lead = pitches.regenerate(ORG, id);
 
         assertThat(lead.pitch()).isEqualTo("Uma versão nova, em 2 semanas. Podemos falar?");
     }

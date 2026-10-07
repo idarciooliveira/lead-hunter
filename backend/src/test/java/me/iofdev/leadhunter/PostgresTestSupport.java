@@ -1,6 +1,7 @@
 package me.iofdev.leadhunter;
 
 import me.iofdev.leadhunter.api.ApiTestAuth;
+import me.iofdev.leadhunter.auth.OrgId;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,6 +23,9 @@ public abstract class PostgresTestSupport {
 
     private static final String EXTERNAL_URL = System.getenv("LEADHUNTER_TEST_JDBC_URL");
     private static PostgreSQLContainer postgres;
+
+    /** The organization every test works in, with {@link ApiTestAuth#USER_ID} as its member. */
+    protected static final OrgId ORG = new OrgId(ApiTestAuth.ORG_ID);
 
     @Autowired
     protected JdbcClient jdbc;
@@ -62,6 +66,11 @@ public abstract class PostgresTestSupport {
     @BeforeEach
     void cleanDatabase() {
         jdbc.sql("truncate invitation, member, auth_session, auth_account, auth_verification, app_user, organization, lead, campaign_run, llm_call, website_crawl, place_review, place, campaign, company restart identity cascade").update();
+        jdbc.sql("insert into organization (id, name, slug) values (:id, 'Test', 'test')").param("id", ApiTestAuth.ORG_ID).update();
+        jdbc.sql("insert into app_user (id, name, email) values (:id, 'Test User', 'test@example.com')")
+                .param("id", ApiTestAuth.USER_ID).update();
+        jdbc.sql("insert into member (id, organization_id, user_id, role) values ('test-member', :org, :user, 'owner')")
+                .param("org", ApiTestAuth.ORG_ID).param("user", ApiTestAuth.USER_ID).update();
     }
 
     private static String env(String name, String fallback) {

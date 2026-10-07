@@ -2,6 +2,7 @@ package me.iofdev.leadhunter.pipeline;
 
 import java.util.Optional;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.company.CompanyProfile;
@@ -29,7 +30,7 @@ public class PitchService {
 
     /** Writes and stores the pitch. Empty when the model failed or the guard dropped the answer. */
     public Optional<Pitch> write(Campaign campaign, CompanyProfile profile, long leadId) {
-        LeadView lead = leads.findById(leadId)
+        LeadView lead = leads.findById(campaign.orgId(), leadId)
                 .orElseThrow(() -> new IllegalArgumentException("no lead with id " + leadId));
         Optional<Pitch> pitch = writer.write(campaign, profile, lead);
         pitch.ifPresent(written -> leads.savePitch(leadId, written.text(), written.model()));
@@ -42,17 +43,17 @@ public class PitchService {
      * @throws IllegalArgumentException with a {@code no ...} message for an unknown lead, campaign or
      *         company profile (the API maps it to 404), and another message when no pitch came back (400)
      */
-    public LeadView regenerate(long leadId) {
-        LeadView lead = leads.findById(leadId)
+    public LeadView regenerate(OrgId orgId, long leadId) {
+        LeadView lead = leads.findById(orgId, leadId)
                 .orElseThrow(() -> new IllegalArgumentException("no lead with id " + leadId));
-        Campaign campaign = campaigns.findBySlug(lead.campaignSlug())
+        Campaign campaign = campaigns.findBySlug(orgId, lead.campaignSlug())
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + lead.campaignSlug() + "'"));
-        CompanyProfile profile = company.find().orElseThrow(
+        CompanyProfile profile = company.find(orgId).orElseThrow(
                 () -> new IllegalArgumentException("no company profile yet. Run: company setup"));
         if (write(campaign, profile, leadId).isEmpty()) {
             throw new IllegalArgumentException("could not write a pitch for lead " + leadId
                     + ". The model failed or invented a number; try again");
         }
-        return leads.findById(leadId).orElseThrow();
+        return leads.findById(orgId, leadId).orElseThrow();
     }
 }

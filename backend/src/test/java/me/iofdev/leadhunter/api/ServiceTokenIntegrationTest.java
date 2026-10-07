@@ -43,8 +43,17 @@ class ServiceTokenIntegrationTest extends PostgresTestSupport {
 
     @Test
     void theRightTokenGetsPastTheFilter() throws Exception {
-        mvc.perform(get("/api/campaigns").header("Authorization", "Bearer " + ApiTestAuth.TOKEN))
+        mvc.perform(get("/api/campaigns").header("Authorization", "Bearer " + ApiTestAuth.TOKEN)
+                        .header("X-LeadHunter-User", ApiTestAuth.USER_ID)
+                        .header("X-LeadHunter-Org", ApiTestAuth.ORG_ID))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void theRightTokenWithoutAUserAndOrganizationIsForbidden() throws Exception {
+        mvc.perform(get("/api/campaigns").header("Authorization", "Bearer " + ApiTestAuth.TOKEN))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("not a member of this organization"));
     }
 
     @Test

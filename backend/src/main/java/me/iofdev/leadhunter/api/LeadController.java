@@ -3,6 +3,7 @@ package me.iofdev.leadhunter.api;
 import java.util.List;
 import java.util.Optional;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.company.CompanyRepository;
 import me.iofdev.leadhunter.pipeline.LeadCsv;
 import org.springframework.http.ContentDisposition;
@@ -52,15 +53,16 @@ class LeadController {
 
     /** Today's queue (ADR 0041), same as {@code leads today}. {@code limit} overrides the profile's daily size. */
     @GetMapping("/leads/today")
-    List<LeadDto> today(@RequestParam(required = false) Integer limit) {
-        int size = limit != null ? Math.clamp(limit, 1, MAX_LIMIT) : company.dailyQueueSize();
-        return leads.today(size).stream().map(LeadDto::from).toList();
+    List<LeadDto> today(OrgId org, @RequestParam(required = false) Integer limit) {
+        int size = limit != null ? Math.clamp(limit, 1, MAX_LIMIT) : company.dailyQueueSize(org);
+        return leads.today(org, size).stream().map(LeadDto::from).toList();
     }
 
     /** Every lead of the stage as a CSV file, in the order of {@code list} (ADR 0041). */
     @GetMapping(value = "/campaigns/{slug}/leads.csv", produces = "text/csv")
-    ResponseEntity<byte[]> csv(@PathVariable String slug, @RequestParam(defaultValue = "QUALIFIED") String stage) {
-        long campaignId = campaigns.findBySlug(slug)
+    ResponseEntity<byte[]> csv(OrgId org, @PathVariable String slug,
+                          @RequestParam(defaultValue = "QUALIFIED") String stage) {
+        long campaignId = campaigns.findBySlug(org, slug)
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"))
                 .id();
         String body = LeadCsv.of(leads.list(campaignId, stageFilter(stage), Integer.MAX_VALUE));
@@ -73,10 +75,11 @@ class LeadController {
 
     @GetMapping("/campaigns/{slug}/leads")
     List<LeadDto> list(
+            OrgId org,
             @PathVariable String slug,
             @RequestParam(defaultValue = "QUALIFIED") String stage,
             @RequestParam(defaultValue = "" + DEFAULT_LIMIT) int limit) {
-        long campaignId = campaigns.findBySlug(slug)
+        long campaignId = campaigns.findBySlug(org, slug)
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"))
                 .id();
         Optional<LeadStage> filter = stageFilter(stage);
@@ -86,8 +89,8 @@ class LeadController {
     }
 
     @GetMapping("/leads/{id}")
-    LeadDto get(@PathVariable long id) {
-        return leads.findById(id).map(LeadDto::from)
+    LeadDto get(OrgId org, @PathVariable long id) {
+        return leads.findById(org, id).map(LeadDto::from)
                 .orElseThrow(() -> new IllegalArgumentException("no lead with id " + id));
     }
 
@@ -97,20 +100,20 @@ class LeadController {
      * worked lead can never go back to NEW.
      */
     @PatchMapping("/leads/{id}")
-    LeadDto mark(@PathVariable long id, @RequestBody MarkLeadRequest request) {
+    LeadDto mark(OrgId org, @PathVariable long id, @RequestBody MarkLeadRequest request) {
         if (request == null || request.status() == null) {
             throw new IllegalArgumentException("status is required: "
                     + "NEW, CONTACTED, NO_ANSWER, INTERESTED, MEETING, PROPOSAL_SENT, WON or LOST");
         }
         LeadStatus status = parseStatus(request.status());
         LostReason lostReason = request.lostReason() == null ? null : parseLostReason(request.lostReason());
-        return LeadDto.from(leads.updateOutcome(id, status, lostReason, request.note()));
+        return LeadDto.from(leads.updateOutcome(org, id, status, lostReason, request.note()));
     }
 
     /** Writes a new pitch for the lead and replaces the old one (ADR 0040), like {@code leads pitch}. */
     @PostMapping("/leads/{id}/pitch")
-    LeadDto pitch(@PathVariable long id) {
-        return LeadDto.from(pitches.regenerate(id));
+    LeadDto pitch(OrgId org, @PathVariable long id) {
+        return LeadDto.from(pitches.regenerate(org, id));
     }
 
     record MarkLeadRequest(String status, String lostReason, String note) {

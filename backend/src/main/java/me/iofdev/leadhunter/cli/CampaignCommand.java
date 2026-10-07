@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignChecks;
 import me.iofdev.leadhunter.campaign.CampaignFile;
@@ -48,8 +49,8 @@ class CampaignCommand implements Runnable {
         spec.commandLine().usage(spec.commandLine().getOut());
     }
 
-    static Campaign requireCampaign(CampaignRepository campaigns, String slug) {
-        return campaigns.findBySlug(slug)
+    static Campaign requireCampaign(CampaignRepository campaigns, OrgId org, String slug) {
+        return campaigns.findBySlug(org, slug)
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"));
     }
 
@@ -61,18 +62,21 @@ class CampaignCommand implements Runnable {
 
         private final CampaignRepository campaigns;
         private final CompanyRepository company;
+        private final CliOrg orgs;
 
-        New(CampaignRepository campaigns, CompanyRepository company) {
+        New(CampaignRepository campaigns, CompanyRepository company, CliOrg orgs) {
             this.campaigns = campaigns;
             this.company = company;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            CompanyProfile profile = CompanyCommand.requireCompany(company);
+            OrgId org = orgs.require(spec);
+            CompanyProfile profile = CompanyCommand.requireCompany(company, org);
             LocalDate today = LocalDate.now();
-            List<Campaign> all = campaigns.findAll();
+            List<Campaign> all = campaigns.findAll(org);
             Prompter prompter = Prompter.stdin(out,
                     "input ended before the campaign was complete. "
                             + "In Docker, run it with: docker compose run --rm app campaign new");
@@ -84,12 +88,12 @@ class CampaignCommand implements Runnable {
             out.println();
             Format.printWarnings(out, CampaignChecks.warnings(campaign, profile, all, today));
 
-            if (campaigns.findBySlug(campaign.slug()).isPresent()
+            if (campaigns.findBySlug(org, campaign.slug()).isPresent()
                     && !wizard.confirm("Campaign '" + campaign.slug() + "' already exists. Replace it?")) {
                 out.println("Nothing saved.");
                 return;
             }
-            campaigns.save(campaign);
+            campaigns.save(org, campaign);
             out.printf("Saved campaign '%s'.%n", campaign.slug());
             out.printf("Next: campaign run %s --dry-run%n", campaign.slug());
         }
@@ -119,21 +123,24 @@ class CampaignCommand implements Runnable {
         private final CampaignFileParser parser;
         private final CampaignRepository campaigns;
         private final CompanyRepository company;
+        private final CliOrg orgs;
 
-        Create(CampaignFileParser parser, CampaignRepository campaigns, CompanyRepository company) {
+        Create(CampaignFileParser parser, CampaignRepository campaigns, CompanyRepository company, CliOrg orgs) {
             this.parser = parser;
             this.campaigns = campaigns;
             this.company = company;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             String content = CliFiles.read(file);
             CampaignFile campaign = parser.parse(content);
-            CompanyProfile profile = CompanyCommand.requireCompany(company);
+            OrgId org = orgs.require(spec);
+            CompanyProfile profile = CompanyCommand.requireCompany(company, org);
             CampaignChecks.requireFits(campaign, profile);
-            List<String> warnings = CampaignChecks.warnings(campaign, profile, campaigns.findAll(), LocalDate.now());
-            boolean created = campaigns.save(campaign);
+            List<String> warnings = CampaignChecks.warnings(campaign, profile, campaigns.findAll(org), LocalDate.now());
+            boolean created = campaigns.save(org, campaign);
             Format.printWarnings(spec.commandLine().getOut(), warnings);
             spec.commandLine().getOut().printf("%s campaign '%s'. Next: campaign run %s --dry-run%n",
                     created ? "Created" : "Updated", campaign.slug(), campaign.slug());
@@ -147,15 +154,17 @@ class CampaignCommand implements Runnable {
         CommandSpec spec;
 
         private final CampaignRepository campaigns;
+        private final CliOrg orgs;
 
-        ListCampaigns(CampaignRepository campaigns) {
+        ListCampaigns(CampaignRepository campaigns, CliOrg orgs) {
             this.campaigns = campaigns;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            List<Campaign> all = campaigns.findAll();
+            List<Campaign> all = campaigns.findAll(orgs.require(spec));
             if (all.isEmpty()) {
                 out.println("No campaigns yet. Start with: campaign new");
                 return;
@@ -186,17 +195,19 @@ class CampaignCommand implements Runnable {
         private final CampaignRepository campaigns;
         private final CampaignRunner runner;
         private final RunJobService jobs;
+        private final CliOrg orgs;
 
-        Run(CampaignRepository campaigns, CampaignRunner runner, RunJobService jobs) {
+        Run(CampaignRepository campaigns, CampaignRunner runner, RunJobService jobs, CliOrg orgs) {
             this.campaigns = campaigns;
             this.runner = runner;
             this.jobs = jobs;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            Campaign campaign = requireCampaign(campaigns, slug);
+            Campaign campaign = requireCampaign(campaigns, orgs.require(spec), slug);
 
             if (dryRun) {
                 printDryRun(out, campaign, runner.plan(campaign));
@@ -258,19 +269,21 @@ class CampaignCommand implements Runnable {
         private final RunJobService jobs;
         private final LeadRepository leads;
         private final EnrichmentProperties enrichment;
+        private final CliOrg orgs;
 
         Enrich(CampaignRepository campaigns, RunJobService jobs, LeadRepository leads,
-               EnrichmentProperties enrichment) {
+               EnrichmentProperties enrichment, CliOrg orgs) {
             this.campaigns = campaigns;
             this.jobs = jobs;
             this.leads = leads;
             this.enrichment = enrichment;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            Campaign campaign = requireCampaign(campaigns, slug);
+            Campaign campaign = requireCampaign(campaigns, orgs.require(spec), slug);
             int batch = batchSize == null ? enrichment.batch() : batchSize;
             int reviews = maxReviews == null ? enrichment.maxReviews() : maxReviews;
 

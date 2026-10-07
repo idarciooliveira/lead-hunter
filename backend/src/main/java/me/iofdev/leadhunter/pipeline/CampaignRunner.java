@@ -76,7 +76,7 @@ public class CampaignRunner {
         SearchPlan plan = plan(campaign);
         checkOverLimit(plan, allowOverLimit);
         scraper.checkReady();
-        List<CompanyProfile.Client> clients = company.find().map(CompanyProfile::clients).orElse(List.of());
+        List<CompanyProfile.Client> clients = company.find(campaign.orgId()).map(CompanyProfile::clients).orElse(List.of());
 
         int failed = 0;
         int found = 0;

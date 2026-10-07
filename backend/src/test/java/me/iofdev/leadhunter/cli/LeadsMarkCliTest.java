@@ -43,8 +43,8 @@ class LeadsMarkCliTest extends PostgresTestSupport {
 
     @BeforeEach
     void seed() {
-        campaigns.save(parser.parse(CAMPAIGN));
-        Campaign campaign = campaigns.findBySlug("clinicas-teste").orElseThrow();
+        campaigns.save(ORG, parser.parse(CAMPAIGN));
+        Campaign campaign = campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow();
         long place = jdbc.sql("""
                         insert into place (google_place_id, name, category, address, neighborhood,
                             phone_e164, phone_mobile, website, website_kind, rating, reviews_count, maps_url, raw)

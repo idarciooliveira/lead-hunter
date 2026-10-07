@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.json.JsonMapper;
@@ -21,6 +22,7 @@ import tools.jackson.databind.json.JsonMapper;
  * {@code /api/health} stays open for Docker and Railway. With no token configured nothing gets through.
  */
 @Component
+@Order(1)
 class ServiceTokenFilter extends OncePerRequestFilter {
 
     private static final String BEARER = "Bearer ";

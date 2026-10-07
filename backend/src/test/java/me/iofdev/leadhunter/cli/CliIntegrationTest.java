@@ -163,7 +163,7 @@ class CliIntegrationTest extends PostgresTestSupport {
         site.start();
         try {
             long campaignId = jdbc.sql("""
-                    insert into campaign (slug, name, answers, search) values ('dentistas', 'Dentistas', '{}'::jsonb, '{}'::jsonb)
+                    insert into campaign (org_id, slug, name, answers, search) values ('test-org', 'dentistas', 'Dentistas', '{}'::jsonb, '{}'::jsonb)
                     returning id
                     """).query(Long.class).single();
             long placeId = jdbc.sql("""
@@ -198,7 +198,7 @@ class CliIntegrationTest extends PostgresTestSupport {
     @Test
     void suggestsCampaignRunWhenDryRunWithNothingWaiting() {
         jdbc.sql("""
-                insert into campaign (slug, name, answers, search) values ('vazias', 'Vazias', '{}'::jsonb, '{}'::jsonb)
+                insert into campaign (org_id, slug, name, answers, search) values ('test-org', 'vazias', 'Vazias', '{}'::jsonb, '{}'::jsonb)
                 """).update();
 
         Result dry = execute("campaign", "enrich", "vazias", "--dry-run");
@@ -213,7 +213,7 @@ class CliIntegrationTest extends PostgresTestSupport {
     @Test
     void showsSpendForAMonthAndListsEachRun() {
         jdbc.sql("""
-                insert into campaign (slug, name, answers, search) values ('clinicas', 'Clínicas', '{}'::jsonb, '{}'::jsonb)
+                insert into campaign (org_id, slug, name, answers, search) values ('test-org', 'clinicas', 'Clínicas', '{}'::jsonb, '{}'::jsonb)
                 """).update();
         jdbc.sql("""
                 insert into campaign_run (campaign_id, location, search_terms, max_places, status, places_found, cost_usd, started_at)
@@ -222,9 +222,9 @@ class CliIntegrationTest extends PostgresTestSupport {
                        (1, 'Viana', '{clínica}', 40, 'SUCCEEDED', 10, 9, '2026-08-11T10:00:00Z')
                 """).update();
         jdbc.sql("""
-                insert into llm_call (campaign_id, purpose, model, prompt_tokens, completion_tokens, cost_usd, created_at)
-                values (1, 'pitch', 'google/gemma-4-26b-a4b-it', 131500, 22000, 0.0008, '2026-09-12T10:00:00Z'),
-                       (null, 'test', 'google/gemma-4-26b-a4b-it', 15, 10, 0.00000771, '2026-09-12T11:00:00Z')
+                insert into llm_call (org_id, campaign_id, purpose, model, prompt_tokens, completion_tokens, cost_usd, created_at)
+                values ('test-org', 1, 'pitch', 'google/gemma-4-26b-a4b-it', 131500, 22000, 0.0008, '2026-09-12T10:00:00Z'),
+                       ('test-org', null, 'test', 'google/gemma-4-26b-a4b-it', 15, 10, 0.00000771, '2026-09-12T11:00:00Z')
                 """).update();
 
         Result month = execute("usage", "--month", "2026-09");

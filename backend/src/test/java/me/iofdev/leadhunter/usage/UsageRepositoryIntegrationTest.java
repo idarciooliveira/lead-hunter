@@ -63,7 +63,7 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
 
     @Test
     void sumsApifySpendIncludingFailedRuns() {
-        UsageReport.Apify apify = usage.report(UsageFilter.all()).apify();
+        UsageReport.Apify apify = usage.report(UsageFilter.all(ORG)).apify();
 
         // The DRY_RUN row (projected 120) and the childless parents stay out.
         assertThat(apify.runs()).isEqualTo(4);
@@ -75,7 +75,7 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
 
     @Test
     void sumsLlmSpendPerModelAndCountsCallsWithoutACost() {
-        UsageReport.Llm llm = usage.report(UsageFilter.all()).llm();
+        UsageReport.Llm llm = usage.report(UsageFilter.all(ORG)).llm();
 
         assertThat(llm.calls()).isEqualTo(4);
         assertThat(llm.unpricedCalls()).isEqualTo(1);
@@ -90,7 +90,7 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
 
     @Test
     void splitsSpendByCampaignAndKeepsTheRestApart() {
-        UsageReport report = usage.report(UsageFilter.all());
+        UsageReport report = usage.report(UsageFilter.all(ORG));
 
         assertThat(report.totalUsd()).isEqualByComparingTo("0.78300771");
         assertThat(report.byCampaign()).extracting(UsageReport.CampaignSpend::slug).containsExactly("clinicas", "escolas");
@@ -102,7 +102,7 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
 
     @Test
     void filtersByCampaign() {
-        UsageReport report = usage.report(new UsageFilter(null, null, clinics));
+        UsageReport report = usage.report(new UsageFilter(ORG, null, null, clinics));
 
         assertThat(report.apify().runs()).isEqualTo(2);
         assertThat(report.apify().costUsd()).isEqualByComparingTo("0.75");
@@ -128,19 +128,19 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
         OffsetDateTime september = OffsetDateTime.of(2026, 9, 1, 0, 0, 0, 0, ZoneOffset.UTC);
         OffsetDateTime october = OffsetDateTime.of(2026, 10, 1, 0, 0, 0, 0, ZoneOffset.UTC);
 
-        UsageReport inAugust = usage.report(new UsageFilter(august.withDayOfMonth(1).withHour(0), september, null));
+        UsageReport inAugust = usage.report(new UsageFilter(ORG, august.withDayOfMonth(1).withHour(0), september, null));
         assertThat(inAugust.apify().runs()).isEqualTo(2);
         assertThat(inAugust.apify().costUsd()).isEqualByComparingTo("0.03");
         assertThat(inAugust.llm().calls()).isEqualTo(1);
 
-        UsageReport inSeptember = usage.report(new UsageFilter(september, october, null));
+        UsageReport inSeptember = usage.report(new UsageFilter(ORG, september, october, null));
         assertThat(inSeptember.apify().runs()).isEqualTo(2);
         assertThat(inSeptember.apify().costUsd()).isEqualByComparingTo("0.75");
     }
 
     @Test
     void listsEntriesNewestFirstWithUnknownCostsAsNull() {
-        List<UsageReport.Entry> entries = usage.entries(UsageFilter.all(), 100);
+        List<UsageReport.Entry> entries = usage.entries(UsageFilter.all(ORG), 100);
 
         // The DRY_RUN row and the childless parents stay out of the list too.
         assertThat(entries).filteredOn(e -> e.kind().equals("apify"))
@@ -148,15 +148,15 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
                 .containsOnly(true);
         assertThat(entries).extracting(UsageReport.Entry::at).isSortedAccordingTo(Comparator.reverseOrder());
         assertThat(entries).filteredOn(e -> e.kind().equals("llm") && e.costUsd() == null).hasSize(1);
-        assertThat(usage.entries(UsageFilter.all(), 3)).hasSize(3);
-        assertThat(usage.entries(new UsageFilter(null, null, schools), 100))
+        assertThat(usage.entries(UsageFilter.all(ORG), 3)).hasSize(3);
+        assertThat(usage.entries(new UsageFilter(ORG, null, null, schools), 100))
                 .extracting(UsageReport.Entry::kind).containsOnly("apify", "llm");
     }
 
     private long campaign(String slug) {
         return jdbc.sql("""
-                        insert into campaign (slug, name, answers, search)
-                        values (:slug, :slug, '{}'::jsonb, '{}'::jsonb) returning id
+                        insert into campaign (org_id, slug, name, answers, search)
+                        values ('test-org', :slug, :slug, '{}'::jsonb, '{}'::jsonb) returning id
                         """)
                 .param("slug", slug).query(Long.class).single();
     }
@@ -170,7 +170,9 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
     }
 
     private void call(Long campaignId, String purpose, String model, int prompt, int completion, String cost) {
-        LlmRequest request = LlmRequest.text(null, "x").forCampaign(campaignId, purpose);
+        LlmRequest request = campaignId == null
+                ? LlmRequest.text(null, "x").forOrg(ORG.value(), purpose)
+                : LlmRequest.text(null, "x").forCampaign(campaignId, purpose);
         llmCalls.save(request, new LlmResponse("ok", model, prompt, completion,
                 cost == null ? null : new BigDecimal(cost), "gen", "{\"cost\": 1}"));
     }

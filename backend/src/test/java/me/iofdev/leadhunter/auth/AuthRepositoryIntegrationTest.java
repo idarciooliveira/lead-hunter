@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import me.iofdev.leadhunter.PostgresTestSupport;
+import me.iofdev.leadhunter.api.ApiTestAuth;
 import me.iofdev.leadhunter.auth.AuthRepository.Organization;
 import me.iofdev.leadhunter.auth.AuthRepository.User;
 import org.junit.jupiter.api.Test;
@@ -66,7 +67,7 @@ class AuthRepositoryIntegrationTest extends PostgresTestSupport {
         assertThatThrownBy(() -> auth.createUser("ana@example.com", "Ana", "hash", "missing-org", "member"))
                 .isInstanceOf(RuntimeException.class);
 
-        assertThat(count("select count(*) from app_user")).isZero();
-        assertThat(count("select count(*) from auth_account")).isZero();
+        assertThat(count("select count(*) from app_user where email = ?", "ana@example.com")).isZero();
+        assertThat(count("select count(*) from auth_account where account_id <> ?", ApiTestAuth.USER_ID)).isZero();
     }
 }

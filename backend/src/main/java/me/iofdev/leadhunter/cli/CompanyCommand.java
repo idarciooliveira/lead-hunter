@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.Optional;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.company.CompanyProfile;
 import me.iofdev.leadhunter.company.CompanyProfileParser;
 import me.iofdev.leadhunter.company.CompanyRepository;
@@ -31,8 +32,8 @@ class CompanyCommand implements Runnable {
         spec.commandLine().usage(spec.commandLine().getOut());
     }
 
-    static CompanyProfile requireCompany(CompanyRepository company) {
-        return company.find().orElseThrow(() -> new IllegalStateException(
+    static CompanyProfile requireCompany(CompanyRepository company, OrgId org) {
+        return company.find(org).orElseThrow(() -> new IllegalStateException(
                 "no company profile yet. Run: company setup, or company update -f <file>"));
     }
 
@@ -43,9 +44,11 @@ class CompanyCommand implements Runnable {
         CommandSpec spec;
 
         private final CompanyRepository company;
+        private final CliOrg orgs;
 
-        Setup(CompanyRepository company) {
+        Setup(CompanyRepository company, CliOrg orgs) {
             this.company = company;
+            this.orgs = orgs;
         }
 
         @Override
@@ -54,12 +57,13 @@ class CompanyCommand implements Runnable {
             Prompter prompter = Prompter.stdin(out,
                     "input ended before the company profile was complete. "
                             + "In Docker, run it with: docker compose run --rm app company setup");
-            Optional<CompanyProfile> existing = company.find();
+            OrgId org = orgs.require(spec);
+            Optional<CompanyProfile> existing = company.find(org);
             CompanyProfile profile = new CompanyWizard(prompter, existing).run();
             CompanyProfileParser.validate(profile);
             out.println();
 
-            company.save(profile);
+            company.save(org, profile);
             out.printf("Saved the company profile for %s.%n", profile.name());
             Format.printWarnings(out, CompanyProfileParser.warnings(profile));
             out.println("Next: campaign new");
@@ -73,15 +77,17 @@ class CompanyCommand implements Runnable {
         CommandSpec spec;
 
         private final CompanyRepository company;
+        private final CliOrg orgs;
 
-        Show(CompanyRepository company) {
+        Show(CompanyRepository company, CliOrg orgs) {
             this.company = company;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            CompanyProfile profile = requireCompany(company);
+            CompanyProfile profile = requireCompany(company, orgs.require(spec));
             out.println(profile.name());
             out.println(profile.intro());
             out.println();
@@ -124,17 +130,19 @@ class CompanyCommand implements Runnable {
 
         private final CompanyProfileParser parser;
         private final CompanyRepository company;
+        private final CliOrg orgs;
 
-        Update(CompanyProfileParser parser, CompanyRepository company) {
+        Update(CompanyProfileParser parser, CompanyRepository company, CliOrg orgs) {
             this.parser = parser;
             this.company = company;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             String content = CliFiles.read(file);
             CompanyProfile profile = parser.parse(content);
-            boolean created = company.save(profile);
+            boolean created = company.save(orgs.require(spec), profile);
             PrintWriter out = spec.commandLine().getOut();
             out.printf("%s the company profile for %s.%n", created ? "Saved" : "Updated", profile.name());
             Format.printWarnings(out, CompanyProfileParser.warnings(profile));

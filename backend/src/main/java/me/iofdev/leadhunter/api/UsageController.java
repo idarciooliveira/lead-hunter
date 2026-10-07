@@ -7,6 +7,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.usage.UsageFilter;
 import me.iofdev.leadhunter.usage.UsageProperties;
@@ -45,9 +46,10 @@ class UsageController {
     /** Totals for the filter. When `entries` is true, the newest runs and calls instead. */
     @GetMapping
     Summary summary(
+            OrgId org,
             @RequestParam(required = false) String month,
             @RequestParam(required = false, name = "campaign") String campaignSlug) {
-        UsageFilter filter = filter(month, campaignSlug);
+        UsageFilter filter = filter(org, month, campaignSlug);
         UsageReport report = usage.report(filter);
         return new Summary(
                 scope(month, campaignSlug),
@@ -61,19 +63,20 @@ class UsageController {
 
     @GetMapping("/entries")
     List<UsageReport.Entry> entries(
+            OrgId org,
             @RequestParam(required = false) String month,
             @RequestParam(required = false, name = "campaign") String campaignSlug,
             @RequestParam(defaultValue = "30") int limit) {
-        return usage.entries(filter(month, campaignSlug), Math.clamp(limit, 1, 200));
+        return usage.entries(filter(org, month, campaignSlug), Math.clamp(limit, 1, 200));
     }
 
-    private UsageFilter filter(String month, String campaignSlug) {
+    private UsageFilter filter(OrgId org, String month, String campaignSlug) {
         YearMonth selected = month == null ? null : parseMonth(month);
         YearMonth next = selected == null ? null : selected.plusMonths(1);
-        Long campaignId = campaignSlug == null ? null : campaigns.findBySlug(campaignSlug)
+        Long campaignId = campaignSlug == null ? null : campaigns.findBySlug(org, campaignSlug)
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + campaignSlug + "'. Run: campaign list"))
                 .id();
-        return new UsageFilter(start(selected), start(next), campaignId);
+        return new UsageFilter(org, start(selected), start(next), campaignId);
     }
 
     private static String scope(String month, String campaignSlug) {

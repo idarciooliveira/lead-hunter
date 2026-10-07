@@ -60,7 +60,7 @@ public class EnrichmentRunner {
                                     Long parentJobId) {
         List<EnrichmentTarget> targets = leads.unenrichedQualified(campaign.id(), batchSize);
         fetchReviews(campaign, targets, maxReviews, progress, parentJobId);
-        Optional<CompanyProfile> profile = company.find();
+        Optional<CompanyProfile> profile = company.find(campaign.orgId());
         if (profile.isEmpty() && !targets.isEmpty()) {
             progress.accept("No company profile, so no pitches. Run: company setup");
         }

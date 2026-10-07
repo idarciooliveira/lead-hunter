@@ -18,9 +18,11 @@ class MenuCommand implements Runnable {
     CommandSpec spec;
 
     private final CampaignRepository campaigns;
+    private final CliOrg orgs;
 
-    MenuCommand(CampaignRepository campaigns) {
+    MenuCommand(CampaignRepository campaigns, CliOrg orgs) {
         this.campaigns = campaigns;
+        this.orgs = orgs;
     }
 
     @Override
@@ -28,7 +30,7 @@ class MenuCommand implements Runnable {
         CommandLine self = spec.commandLine();
         CommandLine root = self.getParent() != null ? self.getParent() : self;
         Prompter prompter = Prompter.stdin(self.getOut(), "input ended");
-        new Menu(prompter, root::execute, campaigns::findAll).run();
+        new Menu(prompter, root::execute, () -> campaigns.findAll(orgs.require(spec))).run();
     }
 
     /** True when both stdin and stdout are a terminal. Piped and scheduled runs never get the menu. */

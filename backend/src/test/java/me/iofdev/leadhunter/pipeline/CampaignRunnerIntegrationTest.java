@@ -86,8 +86,8 @@ class CampaignRunnerIntegrationTest extends PostgresTestSupport {
         scraper.willReturn("Talatona", List.of(SORRISO, SOCIAL, TINY, BANK, NO_PHONE, CLIENT));
         scraper.willReturn("Maianga", List.of(SORRISO, OWN_SITE));
         // Viana has no canned result, so its run fails.
-        assertThat(campaigns.save(parser.parse(CAMPAIGN))).isTrue();
-        campaign = campaigns.findBySlug("clinicas-teste").orElseThrow();
+        assertThat(campaigns.save(ORG, parser.parse(CAMPAIGN))).isTrue();
+        campaign = campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow();
     }
 
     @Test
@@ -128,7 +128,7 @@ class CampaignRunnerIntegrationTest extends PostgresTestSupport {
                 .query((rs, row) -> rs.getString(1) + ":" + rs.getString(2) + ":" + rs.getString(3)).list())
                 .containsExactly("Talatona:SUCCEEDED:fake-Talatona", "Maianga:SUCCEEDED:fake-Maianga",
                         "Viana:FAILED:fake-Viana");
-        assertThat(campaigns.findBySlug("clinicas-teste").orElseThrow().totalCostUsd()).isEqualByComparingTo("0.20");
+        assertThat(campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow().totalCostUsd()).isEqualByComparingTo("0.20");
     }
 
     @Test
@@ -142,7 +142,7 @@ class CampaignRunnerIntegrationTest extends PostgresTestSupport {
         assertThat(second.newLeads()).isZero();
         assertThat(jdbc.sql("select count(*) from place").query(Long.class).single()).isEqualTo(7);
         assertThat(jdbc.sql("select count(*) from lead").query(Long.class).single()).isEqualTo(7);
-        LeadView sorriso = leads.findById(sorrisoId).orElseThrow();
+        LeadView sorriso = leads.findById(ORG, sorrisoId).orElseThrow();
         assertThat(sorriso.status()).isEqualTo(LeadStatus.CONTACTED);
         assertThat(sorriso.stage()).isEqualTo(LeadStage.QUALIFIED);
         // The cut now ranks only the 3 untouched leads, so the top 50% is 2 of them.
@@ -159,13 +159,13 @@ class CampaignRunnerIntegrationTest extends PostgresTestSupport {
 
     @Test
     void excludesCompanyClientsByPhoneAndAppliesCampaignFilters() {
-        companies.save(new CompanyProfile("X", "Somos a X.", List.of(new CompanyProfile.Service("Site", "1 Kz", null)),
+        companies.save(ORG, new CompanyProfile("X", "Somos a X.", List.of(new CompanyProfile.Service("Site", "1 Kz", null)),
                 "Site", null, List.of(new CompanyProfile.Client("Horizonte", "+244 923 000 444")), null, null, null, null));
-        campaigns.save(parser.parse(CAMPAIGN.replace("qualifyShare: 0.5", """
+        campaigns.save(ORG, parser.parse(CAMPAIGN.replace("qualifyShare: 0.5", """
                 qualifyShare: 0.5
                   minReviews: 5
                   disqualifyingSignals: [SOCIAL_ONLY]""")));
-        Campaign filtered = campaigns.findBySlug("clinicas-teste").orElseThrow();
+        Campaign filtered = campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow();
 
         runner.run(filtered, false, progress::add);
 
@@ -179,13 +179,13 @@ class CampaignRunnerIntegrationTest extends PostgresTestSupport {
     @Test
     void readsCampaignsSavedBeforeTheCompanyProfile() {
         jdbc.sql("""
-                insert into campaign (slug, name, answers, search) values ('antiga', 'Antiga',
+                insert into campaign (org_id, slug, name, answers, search) values ('test-org', 'antiga', 'Antiga',
                   '{"offer": "sites", "buyers": "lojas", "area": "Luanda", "referenceClients": ["a"],
                     "proof": "TODO", "weeklyCapacity": 35}',
                   '{"terms": ["loja"], "locations": ["Luanda"], "maxPlacesPerSearch": 10}')
                 """).update();
 
-        Campaign old = campaigns.findBySlug("antiga").orElseThrow();
+        Campaign old = campaigns.findBySlug(ORG, "antiga").orElseThrow();
 
         assertThat(old.answers().sector()).isNull();
         assertThat(old.search().minReviews()).isZero();
@@ -194,14 +194,14 @@ class CampaignRunnerIntegrationTest extends PostgresTestSupport {
 
     @Test
     void savingTheSameSlugUpdatesTheCampaign() {
-        assertThat(campaigns.save(parser.parse(CAMPAIGN.replace("Clínicas teste", "Clínicas renomeadas")))).isFalse();
-        assertThat(campaigns.findBySlug("clinicas-teste").orElseThrow().name()).isEqualTo("Clínicas renomeadas");
+        assertThat(campaigns.save(ORG, parser.parse(CAMPAIGN.replace("Clínicas teste", "Clínicas renomeadas")))).isFalse();
+        assertThat(campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow().name()).isEqualTo("Clínicas renomeadas");
     }
 
     @Test
     void refusesRunsAboveTheBudgetLimit() {
-        campaigns.save(parser.parse(CAMPAIGN.replace("maxPlacesPerSearch: 20", "maxPlacesPerSearch: 150")));
-        Campaign big = campaigns.findBySlug("clinicas-teste").orElseThrow();
+        campaigns.save(ORG, parser.parse(CAMPAIGN.replace("maxPlacesPerSearch: 20", "maxPlacesPerSearch: 150")));
+        Campaign big = campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow();
 
         assertThat(runner.plan(big).maxPlaces()).isEqualTo(900);
         assertThatThrownBy(() -> runner.run(big, false, progress::add))

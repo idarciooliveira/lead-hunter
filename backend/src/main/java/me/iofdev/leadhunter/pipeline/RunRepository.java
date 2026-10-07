@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import javax.sql.DataSource;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.maps.ExternalRunResult;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.RowMapper;
@@ -271,8 +272,10 @@ public class RunRepository {
         }
     }
 
-    public Optional<JobView> findJob(long jobId) {
-        return jdbc.sql(JOB_SELECT + "where p.id = :id")
+    /** A job of another organization is not found, the same as one that does not exist. */
+    public Optional<JobView> findJob(OrgId orgId, long jobId) {
+        return jdbc.sql(JOB_SELECT + "where c.org_id = :orgId and p.id = :id")
+                .param("orgId", orgId.value())
                 .param("id", jobId)
                 .query(JOB_VIEW)
                 .optional();

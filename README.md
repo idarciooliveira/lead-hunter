@@ -200,6 +200,7 @@ Copy [.env.example](.env.example) to `.env` in the project root and replace the 
 | `DATABASE_URL` | docker-compose value under `./dev` | Postgres connection string the web server keeps its sessions in. It is the same database as the API |
 | `LEADHUNTER_APIFY_MAX_PLACES_PER_RUN` | 600 | Budget guard. Larger runs need `--allow-over-limit` |
 | `LEADHUNTER_APIFY_ESTIMATED_USD_PER_PLACE` | 0.004 | Only for `--dry-run`. Set it from the actor's pricing page |
+| `LEADHUNTER_ORG` | none | The organization slug the CLI works in. `--org <slug>` before the command wins. With neither, the CLI uses the only organization and fails when there are several (ADR 0043) |
 | `LEADHUNTER_USAGE_MONTHLY_BUDGET_USD` | 10 | The budget the bar in `usage` measures against |
 | `LEADHUNTER_STAGE2_BATCH` | 25 | Qualified leads enriched per `campaign enrich` run |
 | `LEADHUNTER_STAGE2_MAX_REVIEWS` | 10 | Recent reviews fetched per place for the complaint classification |

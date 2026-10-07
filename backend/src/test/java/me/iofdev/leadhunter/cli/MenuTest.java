@@ -28,7 +28,7 @@ class MenuTest {
     }
 
     private static Campaign campaign(String slug, String name) {
-        return new Campaign(1, slug, name, null, null, null, null);
+        return new Campaign(1, slug, name, null, null, null, null, null);
     }
 
     @Test

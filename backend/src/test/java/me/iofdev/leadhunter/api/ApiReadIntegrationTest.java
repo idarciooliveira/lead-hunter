@@ -56,8 +56,8 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
 
     @BeforeEach
     void seed() {
-        campaigns.save(parser.parse(CAMPAIGN));
-        campaign = campaigns.findBySlug("clinicas-teste").orElseThrow();
+        campaigns.save(ORG, parser.parse(CAMPAIGN));
+        campaign = campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow();
 
         long place = jdbc.sql("""
                         insert into place (google_place_id, name, category, address, neighborhood,
@@ -104,8 +104,8 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
                 .param("terms", new String[]{"clínica"})
                 .update();
         jdbc.sql("""
-                        insert into llm_call (campaign_id, purpose, model, prompt_tokens, completion_tokens, cost_usd)
-                        values (:campaignId, 'review-analysis', 'google/gemma-4-26b-a4b-it', 100, 50, 0.01)
+                        insert into llm_call (org_id, campaign_id, purpose, model, prompt_tokens, completion_tokens, cost_usd)
+                        values ('test-org', :campaignId, 'review-analysis', 'google/gemma-4-26b-a4b-it', 100, 50, 0.01)
                         """)
                 .param("campaignId", campaign.id())
                 .update();
@@ -134,9 +134,9 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
                 .andExpect(jsonPath("$.search.terms[0]").value("clínica"));
 
         // A dry run is no real work, so a campaign with only dry runs never ran.
-        campaigns.save(parser.parse(CAMPAIGN.replace("clinicas-teste", "so-dry-run")));
+        campaigns.save(ORG, parser.parse(CAMPAIGN.replace("clinicas-teste", "so-dry-run")));
         jdbc.sql("insert into campaign_run (campaign_id, kind, status, places_found) values (:id, 'DRY_RUN', 'SUCCEEDED', 40)")
-                .param("id", campaigns.findBySlug("so-dry-run").orElseThrow().id())
+                .param("id", campaigns.findBySlug(ORG, "so-dry-run").orElseThrow().id())
                 .update();
         mvc.perform(get("/api/campaigns/so-dry-run"))
                 .andExpect(status().isOk())
@@ -197,7 +197,7 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
 
     @Test
     void showsTheCompanyProfile() throws Exception {
-        companies.save(new CompanyProfile(
+        companies.save(ORG, new CompanyProfile(
                 "Exemplo Software",
                 "Fazemos sites",
                 List.of(new CompanyProfile.Service("Site", "400 mil Kz", "2 semanas")),
