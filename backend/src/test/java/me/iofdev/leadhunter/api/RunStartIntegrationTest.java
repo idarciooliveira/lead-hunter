@@ -107,8 +107,8 @@ class RunStartIntegrationTest extends PostgresTestSupport {
         scraper.willReturn("Talatona", List.of(
                 place("p1", "Clínica Sorriso", "+244923456789", 142),
                 place("p2", "Clínica Vida", "222123456", 35)));
-        campaigns.save(parser.parse(CAMPAIGN));
-        campaign = campaigns.findBySlug("clinicas-teste").orElseThrow();
+        campaigns.save(ORG, parser.parse(CAMPAIGN));
+        campaign = campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow();
     }
 
     @Test
@@ -197,7 +197,7 @@ class RunStartIntegrationTest extends PostgresTestSupport {
 
     @Test
     void overLimitWithoutFlagIsABadRequest() throws Exception {
-        campaigns.save(parser.parse(BIG_CAMPAIGN));
+        campaigns.save(ORG, parser.parse(BIG_CAMPAIGN));
 
         mvc.perform(post("/api/campaigns/{slug}/runs", "clinicas-grande").param("dryRun", "true"))
                 .andExpect(status().isOk())
@@ -237,8 +237,8 @@ class RunStartIntegrationTest extends PostgresTestSupport {
 
     @Test
     void restartFailsOnlyJobsWhoseProcessIsGone() throws Exception {
-        campaigns.save(parser.parse(BIG_CAMPAIGN));
-        long other = campaigns.findBySlug("clinicas-grande").orElseThrow().id();
+        campaigns.save(ORG, parser.parse(BIG_CAMPAIGN));
+        long other = campaigns.findBySlug(ORG, "clinicas-grande").orElseThrow().id();
         long dead = startAndAbandon();
 
         try (JobLease live = runs.startJob(other, RunRepository.KIND_SCRAPE, null)) {

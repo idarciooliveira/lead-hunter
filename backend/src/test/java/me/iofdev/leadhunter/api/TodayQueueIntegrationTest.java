@@ -45,8 +45,8 @@ class TodayQueueIntegrationTest extends PostgresTestSupport {
 
     @BeforeEach
     void seed() {
-        campaigns.save(parser.parse(CAMPAIGN));
-        Campaign campaign = campaigns.findBySlug("clinicas-teste").orElseThrow();
+        campaigns.save(ORG, parser.parse(CAMPAIGN));
+        Campaign campaign = campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow();
         lead(campaign, "a", "Baixa", 40, "QUALIFIED", "NEW");
         lead(campaign, "b", "Casa \"Boa\", Lda", 80, "QUALIFIED", "NEW");
         lead(campaign, "c", "Já contactada", 90, "QUALIFIED", "CONTACTED");

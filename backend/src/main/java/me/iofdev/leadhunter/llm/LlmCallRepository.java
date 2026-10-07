@@ -14,11 +14,12 @@ public class LlmCallRepository {
 
     public void save(LlmRequest request, LlmResponse response) {
         jdbc.sql("""
-                        insert into llm_call (campaign_id, purpose, model, prompt_tokens, completion_tokens,
+                        insert into llm_call (org_id, campaign_id, purpose, model, prompt_tokens, completion_tokens,
                                               cost_usd, generation_id, raw_usage)
-                        values (:campaignId, :purpose, :model, :promptTokens, :completionTokens,
+                        values (coalesce((select org_id from campaign where id = :campaignId), :orgId), :campaignId, :purpose, :model, :promptTokens, :completionTokens,
                                 :costUsd, :generationId, cast(:rawUsage as jsonb))
                         """)
+                .param("orgId", request.orgId())
                 .param("campaignId", request.campaignId())
                 .param("purpose", request.purpose())
                 .param("model", response.model())

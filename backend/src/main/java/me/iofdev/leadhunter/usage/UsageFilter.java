@@ -2,12 +2,14 @@ package me.iofdev.leadhunter.usage;
 
 import java.time.OffsetDateTime;
 
-/**
- * Which spend to count. Every field is optional. {@code from} is inclusive and {@code to} is exclusive.
- */
-public record UsageFilter(OffsetDateTime from, OffsetDateTime to, Long campaignId) {
+import me.iofdev.leadhunter.auth.OrgId;
 
-    public static UsageFilter all() {
-        return new UsageFilter(null, null, null);
+/**
+ * Which spend to count: always one organization's, then optionally a time window and a campaign. {@code from} is inclusive and {@code to} is exclusive.
+ */
+public record UsageFilter(OrgId orgId, OffsetDateTime from, OffsetDateTime to, Long campaignId) {
+
+    public static UsageFilter all(OrgId orgId) {
+        return new UsageFilter(orgId, null, null, null);
     }
 }

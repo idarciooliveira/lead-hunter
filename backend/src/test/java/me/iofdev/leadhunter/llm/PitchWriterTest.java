@@ -40,7 +40,7 @@ class PitchWriterTest {
     private final Campaign campaign = new Campaign(
             7L, "clinicas", "Clínicas",
             new Answers("clínicas", "marcações só por telefone", "Site", null, null, null, null, null, null, null),
-            null, null, BigDecimal.ZERO);
+            null, null, BigDecimal.ZERO, null);
 
     private final LeadView lead = new LeadView(
             42L, "clinicas", LeadStage.QUALIFIED, LeadStatus.NEW, null, null, 80,

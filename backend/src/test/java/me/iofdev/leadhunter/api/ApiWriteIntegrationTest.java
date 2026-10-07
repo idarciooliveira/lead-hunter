@@ -121,7 +121,7 @@ class ApiWriteIntegrationTest extends PostgresTestSupport {
                 .andExpect(jsonPath("$.problems", hasItem("answers.problem is required")))
                 .andExpect(jsonPath("$.problems", hasItem("search.terms needs at least one term")));
 
-        org.assertj.core.api.Assertions.assertThat(campaigns.findAll()).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(campaigns.findAll(ORG)).isEmpty();
     }
 
     @Test

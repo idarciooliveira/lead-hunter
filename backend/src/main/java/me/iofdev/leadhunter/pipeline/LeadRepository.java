@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.place.WebsiteKind;
 import me.iofdev.leadhunter.scoring.Score;
 import me.iofdev.leadhunter.scoring.ScoreItem;
@@ -121,22 +122,28 @@ public class LeadRepository {
     }
 
     /**
-     * The contact queue for today: qualified leads nobody has worked yet, across every campaign,
+     * The contact queue for today: qualified leads nobody has worked yet, across every campaign of the organization,
      * best first. Same tie-breaks as {@link #list}.
      */
-    public List<LeadView> today(int limit) {
+    public List<LeadView> today(OrgId orgId, int limit) {
         return jdbc.sql(SELECT_VIEW + """
-                        where l.stage = 'QUALIFIED' and l.status = 'NEW'
+                        where c.org_id = :orgId and l.stage = 'QUALIFIED' and l.status = 'NEW'
                         order by l.score desc, p.reviews_count desc, l.id
                         limit :limit
                         """)
+                .param("orgId", orgId.value())
                 .param("limit", limit)
                 .query(this::mapView)
                 .list();
     }
 
-    public Optional<LeadView> findById(long id) {
-        return jdbc.sql(SELECT_VIEW + " where l.id = :id").param("id", id).query(this::mapView).optional();
+    /** A lead of another organization is not found, the same as one that does not exist. */
+    public Optional<LeadView> findById(OrgId orgId, long id) {
+        return jdbc.sql(SELECT_VIEW + " where c.org_id = :orgId and l.id = :id")
+                .param("orgId", orgId.value())
+                .param("id", id)
+                .query(this::mapView)
+                .optional();
     }
 
     /**
@@ -227,8 +234,8 @@ public class LeadRepository {
      *         an unknown id (the API maps it to 404) and any other message for a bad
      *         transition or reason (the API maps it to 400, the CLI prints {@code error:}).
      */
-    public LeadView updateOutcome(long id, LeadStatus status, LostReason lostReason, String note) {
-        LeadView current = findById(id)
+    public LeadView updateOutcome(OrgId orgId, long id, LeadStatus status, LostReason lostReason, String note) {
+        LeadView current = findById(orgId, id)
                 .orElseThrow(() -> new IllegalArgumentException("no lead with id " + id));
         requireOutcome(current, status, lostReason);
         String storedNote = note == null || note.isBlank() ? null : note;
@@ -245,7 +252,7 @@ public class LeadRepository {
                 .param("lostReason", status == LeadStatus.LOST ? lostReason.name() : null)
                 .param("note", storedNote)
                 .update();
-        return findById(id).orElseThrow();
+        return findById(orgId, id).orElseThrow();
     }
 
     private static void requireOutcome(LeadView current, LeadStatus status, LostReason lostReason) {

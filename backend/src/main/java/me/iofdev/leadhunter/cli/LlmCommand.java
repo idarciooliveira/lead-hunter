@@ -38,9 +38,11 @@ class LlmCommand implements Runnable {
         String prompt;
 
         private final LlmClient llm;
+        private final CliOrg orgs;
 
-        Test(LlmClient llm) {
+        Test(LlmClient llm, CliOrg orgs) {
             this.llm = llm;
+            this.orgs = orgs;
         }
 
         @Override
@@ -49,7 +51,7 @@ class LlmCommand implements Runnable {
             out.printf("Model: %s%n", llm.model());
             out.flush();
             long started = System.nanoTime();
-            LlmResponse response = llm.complete(LlmRequest.text(null, prompt == null ? DEFAULT_PROMPT : prompt).forCampaign(null, "test"));
+            LlmResponse response = llm.complete(LlmRequest.text(null, prompt == null ? DEFAULT_PROMPT : prompt).forOrg(orgs.require(spec).value(), "test"));
             long millis = (System.nanoTime() - started) / 1_000_000;
             out.println();
             out.println(response.text());

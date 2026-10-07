@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import me.iofdev.leadhunter.PostgresTestSupport;
 import me.iofdev.leadhunter.auth.PasswordHasher;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,12 @@ class AuthCliTest extends PostgresTestSupport {
     SpringCommandFactory factory;
     @Autowired
     PasswordHasher hasher;
+
+    /** These tests start from no users and no organizations, so they drop the seed every test gets. */
+    @BeforeEach
+    void dropTheSeed() {
+        jdbc.sql("truncate member, app_user, organization cascade").update();
+    }
 
     @AfterEach
     void restoreStdin() {

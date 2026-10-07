@@ -42,7 +42,7 @@ public class UsageRepository {
                         ) e
                         order by at desc
                         limit :limit
-                        """.formatted(where("r.started_at", "r.campaign_id"), where("l.created_at", "l.campaign_id")))
+                        """.formatted(runWhere("r.started_at", "r.campaign_id"), llmWhere("l.created_at", "l.campaign_id", "l.org_id")))
                 .params(params(filter))
                 .param("limit", limit)
                 .query((rs, row) -> new UsageReport.Entry(
@@ -63,7 +63,7 @@ public class UsageRepository {
                                coalesce(sum(cost_usd), 0) as cost
                         from campaign_run
                         where %s and location is not null
-                        """.formatted(where("started_at", "campaign_id")))
+                        """.formatted(runWhere("started_at", "campaign_id")))
                 .params(params(filter))
                 .query((rs, row) -> new UsageReport.Apify(
                         rs.getInt("runs"), rs.getInt("failed"), rs.getInt("unpriced"),
@@ -78,7 +78,7 @@ public class UsageRepository {
                         where %s
                         group by model
                         order by sum(cost_usd) desc nulls last, model
-                        """.formatted(where("created_at", "campaign_id")))
+                        """.formatted(llmWhere("created_at", "campaign_id", "org_id")))
                 .params(params(filter))
                 .query((rs, row) -> new UsageReport.ModelSpend(
                         rs.getString("model"), rs.getInt("calls"), rs.getBigDecimal("cost")))
@@ -91,7 +91,7 @@ public class UsageRepository {
                                coalesce(sum(cost_usd), 0) as cost
                         from llm_call
                         where %s
-                        """.formatted(where("created_at", "campaign_id")))
+                        """.formatted(llmWhere("created_at", "campaign_id", "org_id")))
                 .params(params(filter))
                 .query((rs, row) -> new UsageReport.Llm(
                         rs.getInt("calls"), rs.getInt("unpriced"),
@@ -108,10 +108,11 @@ public class UsageRepository {
                                    where %s group by campaign_id) a on a.campaign_id = c.id
                         left join (select campaign_id, sum(cost_usd) as cost from llm_call
                                    where %s group by campaign_id) l on l.campaign_id = c.id
-                        where (a.campaign_id is not null or l.campaign_id is not null)
+                        where c.org_id = :orgId
+                          and (a.campaign_id is not null or l.campaign_id is not null)
                           and (cast(:campaignId as bigint) is null or c.id = cast(:campaignId as bigint))
                         order by coalesce(a.cost, 0) + coalesce(l.cost, 0) desc, c.slug
-                        """.formatted(where("started_at", "campaign_id"), where("created_at", "campaign_id")))
+                        """.formatted(runWhere("started_at", "campaign_id"), llmWhere("created_at", "campaign_id", "org_id")))
                 .params(params(filter))
                 .query((rs, row) -> new UsageReport.CampaignSpend(
                         rs.getString("slug"), rs.getBigDecimal("apify_cost"), rs.getBigDecimal("llm_cost")))
@@ -123,13 +124,24 @@ public class UsageRepository {
             return BigDecimal.ZERO;
         }
         return jdbc.sql("select coalesce(sum(cost_usd), 0) from llm_call where campaign_id is null and "
-                        + where("created_at", "campaign_id"))
+                        + llmWhere("created_at", "campaign_id", "org_id"))
                 .params(params(filter))
                 .query(BigDecimal.class)
                 .single();
     }
 
-    /** The conditions every query shares: the time window on {@code timeColumn} and the campaign on {@code campaignColumn}. */
+    /** Runs have no organization of their own (ADR 0043): they count through their campaign. */
+    private static String runWhere(String timeColumn, String campaignColumn) {
+        return where(timeColumn, campaignColumn)
+                + " and " + campaignColumn + " in (select id from campaign where org_id = :orgId)";
+    }
+
+    /** LLM calls carry their organization, because some belong to no campaign. */
+    private static String llmWhere(String timeColumn, String campaignColumn, String orgColumn) {
+        return where(timeColumn, campaignColumn) + " and " + orgColumn + " = :orgId";
+    }
+
+    /** The time window on {@code timeColumn} and the campaign on {@code campaignColumn}, shared by every query. */
     private static String where(String timeColumn, String campaignColumn) {
         return "(cast(:from as timestamptz) is null or " + timeColumn + " >= cast(:from as timestamptz))"
                 + " and (cast(:to as timestamptz) is null or " + timeColumn + " < cast(:to as timestamptz))"
@@ -138,6 +150,7 @@ public class UsageRepository {
 
     private static Map<String, Object> params(UsageFilter filter) {
         Map<String, Object> params = new HashMap<>();
+        params.put("orgId", filter.orgId().value());
         params.put("from", filter.from());
         params.put("to", filter.to());
         params.put("campaignId", filter.campaignId());

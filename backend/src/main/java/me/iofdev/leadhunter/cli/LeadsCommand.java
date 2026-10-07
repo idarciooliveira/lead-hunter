@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.company.CompanyRepository;
@@ -60,16 +61,18 @@ class LeadsCommand implements Runnable {
 
         private final CampaignRepository campaigns;
         private final LeadRepository leads;
+        private final CliOrg orgs;
 
-        ListLeads(CampaignRepository campaigns, LeadRepository leads) {
+        ListLeads(CampaignRepository campaigns, LeadRepository leads, CliOrg orgs) {
             this.campaigns = campaigns;
             this.leads = leads;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            Campaign campaign = CampaignCommand.requireCampaign(campaigns, slug);
+            Campaign campaign = CampaignCommand.requireCampaign(campaigns, orgs.require(spec), slug);
             Optional<LeadStage> filter = stage == StageFilter.ALL
                     ? Optional.empty()
                     : Optional.of(LeadStage.valueOf(stage.name()));
@@ -101,15 +104,17 @@ class LeadsCommand implements Runnable {
         long id;
 
         private final LeadRepository leads;
+        private final CliOrg orgs;
 
-        Show(LeadRepository leads) {
+        Show(LeadRepository leads, CliOrg orgs) {
             this.leads = leads;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            LeadView lead = leads.findById(id)
+            LeadView lead = leads.findById(orgs.require(spec), id)
                     .orElseThrow(() -> new IllegalArgumentException("no lead with id " + id));
             out.printf("%s  ·  score %d  ·  %s  ·  %s%n", lead.name(), lead.score(), lead.stage(), lead.status());
             out.printf("Campaign:  %s%n", lead.campaignSlug());
@@ -150,15 +155,17 @@ class LeadsCommand implements Runnable {
         long id;
 
         private final PitchService pitches;
+        private final CliOrg orgs;
 
-        Pitch(PitchService pitches) {
+        Pitch(PitchService pitches, CliOrg orgs) {
             this.pitches = pitches;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            LeadView lead = pitches.regenerate(id);
+            LeadView lead = pitches.regenerate(orgs.require(spec), id);
             out.printf("Pitch for lead %d '%s':%n%s%n", lead.id(), lead.name(), lead.pitch());
         }
     }
@@ -184,15 +191,17 @@ class LeadsCommand implements Runnable {
         String note;
 
         private final LeadRepository leads;
+        private final CliOrg orgs;
 
-        Mark(LeadRepository leads) {
+        Mark(LeadRepository leads, CliOrg orgs) {
             this.leads = leads;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             PrintWriter out = spec.commandLine().getOut();
-            LeadView lead = leads.updateOutcome(id, status, lostReason, note);
+            LeadView lead = leads.updateOutcome(orgs.require(spec), id, status, lostReason, note);
             if (lead.status() == LeadStatus.LOST) {
                 out.printf("Marked lead %d '%s' as LOST (%s).%n", lead.id(), lead.name(), lead.lostReason());
             } else {
@@ -212,10 +221,12 @@ class LeadsCommand implements Runnable {
 
         private final CompanyRepository company;
         private final LeadRepository leads;
+        private final CliOrg orgs;
 
-        Today(CompanyRepository company, LeadRepository leads) {
+        Today(CompanyRepository company, LeadRepository leads, CliOrg orgs) {
             this.company = company;
             this.leads = leads;
+            this.orgs = orgs;
         }
 
         @Override
@@ -224,7 +235,8 @@ class LeadsCommand implements Runnable {
             if (limit != null && limit < 1) {
                 throw new IllegalArgumentException("--limit must be at least 1");
             }
-            List<LeadView> rows = leads.today(limit != null ? limit : company.dailyQueueSize());
+            OrgId org = orgs.require(spec);
+            List<LeadView> rows = leads.today(org, limit != null ? limit : company.dailyQueueSize(org));
             if (rows.isEmpty()) {
                 out.println("Nobody to contact today. Run: campaign run <slug>");
                 return;
@@ -259,16 +271,18 @@ class LeadsCommand implements Runnable {
 
         private final CampaignRepository campaigns;
         private final LeadRepository leads;
+        private final CliOrg orgs;
 
-        Export(CampaignRepository campaigns, LeadRepository leads) {
+        Export(CampaignRepository campaigns, LeadRepository leads, CliOrg orgs) {
             this.campaigns = campaigns;
             this.leads = leads;
+            this.orgs = orgs;
         }
 
         @Override
         public void run() {
             PrintWriter console = spec.commandLine().getOut();
-            Campaign campaign = CampaignCommand.requireCampaign(campaigns, slug);
+            Campaign campaign = CampaignCommand.requireCampaign(campaigns, orgs.require(spec), slug);
             Optional<LeadStage> filter = stage == StageFilter.ALL
                     ? Optional.empty()
                     : Optional.of(LeadStage.valueOf(stage.name()));

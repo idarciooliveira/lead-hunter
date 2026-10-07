@@ -2,6 +2,7 @@ package me.iofdev.leadhunter.api;
 
 import java.util.List;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.pipeline.EnrichmentProperties;
@@ -39,15 +40,15 @@ class RunController {
     }
 
     @GetMapping("/campaigns/{slug}/runs")
-    List<RunDto> history(@PathVariable String slug) {
-        return runs.listJobs(requireCampaign(slug).id()).stream()
+    List<RunDto> history(OrgId org, @PathVariable String slug) {
+        return runs.listJobs(requireCampaign(org, slug).id()).stream()
                 .map(RunDto::from)
                 .toList();
     }
 
     @GetMapping("/runs/{id}")
-    RunDto get(@PathVariable long id) {
-        return runs.findJob(id)
+    RunDto get(OrgId org, @PathVariable long id) {
+        return runs.findJob(org, id)
                 .map(RunDto::from)
                 .orElseThrow(() -> new IllegalArgumentException("no run with id " + id));
     }
@@ -60,14 +61,15 @@ class RunController {
      */
     @PostMapping("/campaigns/{slug}/runs")
     ResponseEntity<?> startScrape(
+            OrgId org,
             @PathVariable String slug,
             @RequestParam(defaultValue = "false") boolean dryRun,
             @RequestParam(defaultValue = "false") boolean allowOverLimit) {
-        Campaign campaign = requireCampaign(slug);
+        Campaign campaign = requireCampaign(org, slug);
         if (dryRun) {
             return ResponseEntity.ok(RunPlanDto.Scrape.from(jobs.previewScrape(campaign)));
         }
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(RunDto.from(job(jobs.startScrape(campaign, allowOverLimit))));
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(RunDto.from(job(org, jobs.startScrape(campaign, allowOverLimit))));
     }
 
     /**
@@ -77,11 +79,12 @@ class RunController {
      */
     @PostMapping("/campaigns/{slug}/enrichment")
     ResponseEntity<?> startEnrichment(
+            OrgId org,
             @PathVariable String slug,
             @RequestParam(required = false) Integer batchSize,
             @RequestParam(required = false) Integer maxReviews,
             @RequestParam(defaultValue = "false") boolean dryRun) {
-        Campaign campaign = requireCampaign(slug);
+        Campaign campaign = requireCampaign(org, slug);
         int batch = batchSize == null ? enrichment.batch() : batchSize;
         int reviews = maxReviews == null ? enrichment.maxReviews() : maxReviews;
         if (batch < 1) {
@@ -93,15 +96,15 @@ class RunController {
         if (dryRun) {
             return ResponseEntity.ok(RunPlanDto.Enrich.from(jobs.previewEnrichment(campaign, batch, reviews)));
         }
-        return ResponseEntity.status(HttpStatus.ACCEPTED).body(RunDto.from(job(jobs.startEnrichment(campaign, batch, reviews))));
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(RunDto.from(job(org, jobs.startEnrichment(campaign, batch, reviews))));
     }
 
-    private Campaign requireCampaign(String slug) {
-        return campaigns.findBySlug(slug)
+    private Campaign requireCampaign(OrgId org, String slug) {
+        return campaigns.findBySlug(org, slug)
                 .orElseThrow(() -> new IllegalArgumentException("no campaign '" + slug + "'. Run: campaign list"));
     }
 
-    private JobView job(long jobId) {
-        return runs.findJob(jobId).orElseThrow(() -> new IllegalStateException("job " + jobId + " just started is gone"));
+    private JobView job(OrgId org, long jobId) {
+        return runs.findJob(org, jobId).orElseThrow(() -> new IllegalStateException("job " + jobId + " just started is gone"));
     }
 }

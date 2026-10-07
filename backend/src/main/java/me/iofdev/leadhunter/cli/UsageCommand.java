@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 
+import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.campaign.CampaignRepository;
 import me.iofdev.leadhunter.usage.Money;
 import me.iofdev.leadhunter.usage.UsageFilter;
@@ -48,19 +49,22 @@ class UsageCommand implements Runnable {
     private final UsageRepository usage;
     private final CampaignRepository campaigns;
     private final UsageProperties properties;
+    private final CliOrg orgs;
 
-    UsageCommand(UsageRepository usage, CampaignRepository campaigns, UsageProperties properties) {
+    UsageCommand(UsageRepository usage, CampaignRepository campaigns, UsageProperties properties, CliOrg orgs) {
         this.usage = usage;
         this.campaigns = campaigns;
         this.properties = properties;
+        this.orgs = orgs;
     }
 
     @Override
     public void run() {
         PrintWriter out = spec.commandLine().getOut();
         YearMonth selected = month == null ? null : parseMonth(month);
-        Long campaignId = campaignSlug == null ? null : CampaignCommand.requireCampaign(campaigns, campaignSlug).id();
-        UsageFilter filter = new UsageFilter(start(selected), start(selected == null ? null : selected.plusMonths(1)),
+        OrgId org = orgs.require(spec);
+        Long campaignId = campaignSlug == null ? null : CampaignCommand.requireCampaign(campaigns, org, campaignSlug).id();
+        UsageFilter filter = new UsageFilter(org, start(selected), start(selected == null ? null : selected.plusMonths(1)),
                 campaignId);
 
         out.println("Usage  ·  " + scope(selected));
@@ -73,7 +77,7 @@ class UsageCommand implements Runnable {
         printApify(out, report.apify());
         printLlm(out, report.llm());
         out.printf("%nTotal  %s%n", Money.usd(report.totalUsd()));
-        printBudget(out, selected == null ? YearMonth.now() : selected);
+        printBudget(out, org, selected == null ? YearMonth.now() : selected);
         if (campaignId == null) {
             printCampaigns(out, report);
         }
@@ -108,9 +112,9 @@ class UsageCommand implements Runnable {
         }
     }
 
-    /** The bar always covers all campaigns, because the budget is for the whole account. */
-    private void printBudget(PrintWriter out, YearMonth budgetMonth) {
-        UsageFilter monthOnly = new UsageFilter(start(budgetMonth), start(budgetMonth.plusMonths(1)), null);
+    /** The bar always covers all campaigns, because the budget is for the whole organization. */
+    private void printBudget(PrintWriter out, OrgId org, YearMonth budgetMonth) {
+        UsageFilter monthOnly = new UsageFilter(org, start(budgetMonth), start(budgetMonth.plusMonths(1)), null);
         BigDecimal spent = usage.report(monthOnly).totalUsd();
         BigDecimal budget = properties.monthlyBudgetUsd();
         double fraction = budget.signum() == 0 ? 0 : spent.divide(budget, 4, RoundingMode.HALF_UP).doubleValue();

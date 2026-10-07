@@ -32,7 +32,7 @@ class CampaignChecksTest {
     }
 
     static Campaign saved(CampaignFile file) {
-        return new Campaign(1, file.slug(), file.name(), file.answers(), file.search(), null, BigDecimal.ZERO);
+        return new Campaign(1, file.slug(), file.name(), file.answers(), file.search(), null, BigDecimal.ZERO, null);
     }
 
     @Test
