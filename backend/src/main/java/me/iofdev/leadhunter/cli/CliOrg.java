@@ -25,7 +25,10 @@ class CliOrg {
     }
 
     OrgId require(CommandSpec spec) {
-        String slug = ((RootCommand) spec.root().userObject()).org;
+        return require(((RootCommand) spec.root().userObject()).org);
+    }
+
+    OrgId require(String slug) {
         if (slug == null || slug.isBlank()) {
             slug = configured;
         }

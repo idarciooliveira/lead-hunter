@@ -30,7 +30,20 @@ class MenuCommand implements Runnable {
         CommandLine self = spec.commandLine();
         CommandLine root = self.getParent() != null ? self.getParent() : self;
         Prompter prompter = Prompter.stdin(self.getOut(), "input ended");
-        new Menu(prompter, root::execute, () -> campaigns.findAll(orgs.require(spec))).run();
+        String org = ((RootCommand) spec.root().userObject()).org;
+        new Menu(prompter, args -> root.execute(withOrg(org, args)), () -> campaigns.findAll(orgs.require(org))).run();
+    }
+
+    /** Picocli resets options on every execute, so each menu action repeats the {@code --org} the menu started with. */
+    private static String[] withOrg(String org, String[] args) {
+        if (org == null || org.isBlank()) {
+            return args;
+        }
+        String[] full = new String[args.length + 2];
+        full[0] = "--org";
+        full[1] = org;
+        System.arraycopy(args, 0, full, 2, args.length);
+        return full;
     }
 
     /** True when both stdin and stdout are a terminal. Piped and scheduled runs never get the menu. */

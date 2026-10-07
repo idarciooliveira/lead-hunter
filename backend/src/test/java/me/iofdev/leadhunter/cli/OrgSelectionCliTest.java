@@ -51,6 +51,19 @@ class OrgSelectionCliTest extends PostgresTestSupport {
         assertThat(result.err()).contains("no organization 'nada'. Run: orgs list");
     }
 
+    @Test
+    void theMenuKeepsTheOrganizationForEveryAction() {
+        java.io.InputStream stdin = System.in;
+        System.setIn(new java.io.ByteArrayInputStream("5\n5\n0\n".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        try {
+            Result result = execute("--org", "beta", "menu");
+
+            assertThat(result.err()).doesNotContain("choose an organization");
+        } finally {
+            System.setIn(stdin);
+        }
+    }
+
     private Result execute(String... args) {
         StringWriter out = new StringWriter();
         StringWriter err = new StringWriter();
