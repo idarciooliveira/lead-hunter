@@ -1,29 +1,30 @@
 import { apiBaseUrl } from "#/lib/api-config.server";
 import {
-	BackendCampaignList,
 	BackendLead,
 	BackendLeadList,
 	type BackendLead as BackendLeadType,
+	BackendRankedLeadList,
 } from "#/lib/api-contract";
 import { fakeResponse, NotFoundError } from "#/lib/fake-api";
 import { apiFetch, apiMutate } from "#/lib/http.server";
 import { LEADS } from "./fixtures";
 import { Lead, LeadList, type LeadStatus, type Lead as LeadType, type LostReason } from "./schema";
 
-/** All leads, ranked first and excluded last. Becomes GET /api/leads. */
+/** The most leads GET /api/leads returns in one answer (docs/api.md). */
+const ALL_LEADS_LIMIT = 2000;
+
+/** All leads, ranked first and excluded last: GET /api/leads (ADR 0049). The API ranks them, the web only maps. */
 export async function fetchLeads(): Promise<Lead[]> {
 	if (apiBaseUrl() === null) {
 		const ranked = LEADS.filter((l) => l.rank !== null).sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
 		const excluded = LEADS.filter((l) => l.rank === null);
 		return fakeResponse(LeadList, [...ranked, ...excluded]);
 	}
-	const campaigns = await apiFetch(BackendCampaignList, "/campaigns");
-	const lists = await Promise.all(
-		campaigns.map((c) =>
-			apiFetch(BackendLeadList, `/campaigns/${encodeURIComponent(c.slug)}/leads?stage=ALL&limit=200`),
-		),
+	const ranked = await apiFetch(BackendRankedLeadList, `/leads?limit=${ALL_LEADS_LIMIT}`);
+	return fakeResponse(
+		LeadList,
+		ranked.map((b) => toLead(b, b.rank)),
 	);
-	return fakeResponse(LeadList, rankBackendLeads(lists.flat()));
 }
 
 /** Becomes GET /api/leads/{id}. */
@@ -52,7 +53,11 @@ export async function fetchTodayQueue(): Promise<Lead[]> {
 		);
 	}
 	const queue = await apiFetch(BackendLeadList, "/leads/today");
-	return fakeResponse(LeadList, rankBackendLeads(queue));
+	// The API orders the queue; its rank is the position in it.
+	return fakeResponse(
+		LeadList,
+		queue.map((b, i) => toLead(b, i + 1)),
+	);
 }
 
 /**
@@ -123,16 +128,6 @@ export function toLead(b: BackendLeadType, rank: number | null): LeadType {
 		pitch: b.pitch ?? "",
 		note: b.note,
 	};
-}
-
-/** Best score first, excluded last; the rank is the position among the non-excluded. */
-export function rankBackendLeads(rows: BackendLeadType[]): LeadType[] {
-	const ordered = [...rows].sort((a, b) => {
-		if ((a.stage === "EXCLUDED") !== (b.stage === "EXCLUDED")) return a.stage === "EXCLUDED" ? 1 : -1;
-		return b.score - a.score || b.reviewsCount - a.reviewsCount || a.id - b.id;
-	});
-	let rank = 0;
-	return ordered.map((b) => toLead(b, b.stage === "EXCLUDED" ? null : ++rank));
 }
 
 function websiteLink(website: string | null): LeadType["website"] {

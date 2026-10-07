@@ -13,6 +13,7 @@ Run it: `SPRING_PROFILES_ACTIVE=web java -jar backend/target/lead-hunter.jar`. T
 | `GET` | `/api/campaigns/{slug}` | | Same shape as one row of the list. 404 `no campaign '<slug>'. Run: campaign list` |
 | `GET` | `/api/campaigns/{slug}/leads` | `stage=QUALIFIED\|BELOW_CUT\|EXCLUDED\|ALL` (default `QUALIFIED`), `limit` (default 20, max 200) | Same order as `leads list`: stage, score, reviews, id. Bad stage → 400 |
 | `GET` | `/api/campaigns/{slug}/leads.csv` | `stage` (default `QUALIFIED`) | Every lead of the stage as a CSV download, like `leads export` (ADR 0041). UTF-8 with a byte order mark, columns `id,campanha,nome,categoria,telefone,whatsapp,pontuacao,estado,pitch,motivos`. 404 for an unknown campaign, 400 for a bad stage |
+| `GET` | `/api/leads` | `limit` (default 500, max 2000) | Every lead of the organization across campaigns, best score first, the excluded last. Each row is the lead shape plus `rank`: the position among the non-excluded leads, null for the excluded (ADR 0049) |
 | `GET` | `/api/leads/today` | `limit` (default: weekly capacity / 5, max 200) | Today's queue: `QUALIFIED` leads still `NEW`, all campaigns, best first, like `leads today` (ADR 0041) |
 | `GET` | `/api/leads/{id}` | | Full lead card: score, `breakdown[{code,points,reason}]`, `complaintKinds`, `pitch` (null until one is written, ADR 0040), `whatsappLink`. 404 `no lead with id <id>` |
 | `GET` | `/api/company` | | The company profile. 404 `no company profile yet. Run: company setup` |

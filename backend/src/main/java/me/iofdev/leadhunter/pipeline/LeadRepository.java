@@ -137,6 +137,29 @@ public class LeadRepository {
                 .list();
     }
 
+    /**
+     * Every lead of the organization, non-excluded first by score, then reviews, then id, excluded last.
+     * The rank is the position among the non-excluded leads and is null for the excluded.
+     */
+    public List<RankedLead> ranked(OrgId orgId, int limit) {
+        return jdbc.sql("with v as (" + SELECT_VIEW + " where c.org_id = :orgId) "
+                        + """
+                        select v.*,
+                               case when v.stage = 'EXCLUDED' then null
+                                    else row_number() over (order by (v.stage = 'EXCLUDED'), v.score desc, v.reviews_count desc, v.id) end as rank
+                        from v
+                        order by (v.stage = 'EXCLUDED'), v.score desc, v.reviews_count desc, v.id
+                        limit :limit
+                        """)
+                .param("orgId", orgId.value())
+                .param("limit", limit)
+                .query((rs, row) -> new RankedLead(mapView(rs, row), rs.getObject("rank") == null ? null : rs.getInt("rank")))
+                .list();
+    }
+
+    public record RankedLead(LeadView lead, Integer rank) {
+    }
+
     /** A lead of another organization is not found, the same as one that does not exist. */
     public Optional<LeadView> findById(OrgId orgId, long id) {
         return jdbc.sql(SELECT_VIEW + " where c.org_id = :orgId and l.id = :id")

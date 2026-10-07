@@ -273,6 +273,14 @@ const server = http.createServer((req, res) => {
 	}
 	if (req.method === "GET" && url.pathname === "/api/usage") return json(200, USAGE);
 	if (req.method === "GET" && url.pathname === "/api/usage/entries") return json(200, ENTRIES);
+	if (req.method === "GET" && url.pathname === "/api/leads") {
+		// Mirrors LeadRepository.ranked: best first, the excluded last, rank only for the others.
+		const kept = LEADS.filter((l) => l.stage !== "EXCLUDED").sort(
+			(a, b) => b.score - a.score || b.reviewsCount - a.reviewsCount || a.id - b.id,
+		);
+		const excluded = LEADS.filter((l) => l.stage === "EXCLUDED");
+		return json(200, [...kept.map((l, i) => ({ ...l, rank: i + 1 })), ...excluded.map((l) => ({ ...l, rank: null }))]);
+	}
 	if (req.method === "GET" && url.pathname === "/api/leads/today") {
 		// Mirrors LeadRepository.today: QUALIFIED still NEW, best first.
 		const queue = LEADS.filter((l) => l.stage === "QUALIFIED" && l.status === "NEW").sort(

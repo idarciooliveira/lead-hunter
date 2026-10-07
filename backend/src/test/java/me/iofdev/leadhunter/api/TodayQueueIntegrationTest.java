@@ -66,6 +66,26 @@ class TodayQueueIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
+    void allLeadsComeRankedWithTheExcludedLast() throws Exception {
+        lead(campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow(), "e", "Fora", 0, "EXCLUDED", "NEW");
+
+        mvc.perform(get("/api/leads"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(5))
+                .andExpect(jsonPath("$[0].name").value("Abaixo do corte"))
+                .andExpect(jsonPath("$[0].rank").value(1))
+                .andExpect(jsonPath("$[0].breakdown").isArray())
+                .andExpect(jsonPath("$[1].rank").value(2))
+                .andExpect(jsonPath("$[3].name").value("Baixa"))
+                .andExpect(jsonPath("$[3].rank").value(4))
+                .andExpect(jsonPath("$[4].name").value("Fora"))
+                .andExpect(jsonPath("$[4].rank").isEmpty());
+
+        mvc.perform(get("/api/leads").param("limit", "2"))
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
     void csvDownloadsTheQualifiedLeadsWithQuoting() throws Exception {
         mvc.perform(get("/api/campaigns/clinicas-teste/leads.csv"))
                 .andExpect(status().isOk())
