@@ -299,8 +299,14 @@ const server = http.createServer((req, res) => {
 			return json(200, { saved: COMPANY, warnings: companyWarnings() });
 		});
 	}
-	if (req.method === "GET" && url.pathname === "/api/usage") return json(200, USAGE);
-	if (req.method === "GET" && url.pathname === "/api/usage/entries") return json(200, ENTRIES);
+	if (req.method === "GET" && (url.pathname === "/api/usage" || url.pathname === "/api/usage/entries")) {
+		// Mirrors UsageController.filter: an unknown campaign is a 404, as a deleted campaign's bookmark would be.
+		const slug = url.searchParams.get("campaign");
+		if (slug && !CAMPAIGNS.some((c) => c.slug === slug)) {
+			return json(404, { message: `no campaign '${slug}'. Run: campaign list` });
+		}
+		return json(200, url.pathname === "/api/usage" ? USAGE : ENTRIES);
+	}
 	if (req.method === "GET" && url.pathname === "/api/leads") {
 		// Mirrors LeadRepository.ranked: best first, the excluded last, rank only for the others.
 		// Mirrors LeadController.all: limit defaults to 500 and is clamped to 1..2000.

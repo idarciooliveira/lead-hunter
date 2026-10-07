@@ -6,9 +6,11 @@ import { Page, PageHeader } from "#/components/page-header";
 import { Button } from "#/components/ui/button";
 import { Card, CardHeader } from "#/components/ui/card";
 import { Chip } from "#/components/ui/chip";
+import { NativeSelect } from "#/components/ui/field";
 import { ProgressBar } from "#/components/ui/progress";
+import { campaignsQuery } from "#/features/campaigns/queries";
 import { UsageEvents } from "#/features/usage/components/usage-events";
-import { budgetState, shiftMonth, totalOf, usedOf } from "#/features/usage/model";
+import { budgetOf, budgetState, shiftMonth, totalOf, usedOf } from "#/features/usage/model";
 import { usageQuery } from "#/features/usage/queries";
 import { monthLabel, percent, usd } from "#/lib/format";
 
@@ -19,29 +21,38 @@ export const Route = createFileRoute("/_app/uso")({
 			.regex(/^\d{4}-\d{2}$/)
 			.optional()
 			.catch(undefined),
+		campaign: z.string().min(1).optional().catch(undefined),
 	}),
-	loaderDeps: ({ search }) => ({ month: search.month }),
+	loaderDeps: ({ search }) => ({ month: search.month, campaign: search.campaign }),
 	loader: ({ context, deps }) =>
 		Promise.all([
 			context.queryClient.ensureQueryData(usageQuery()),
 			context.queryClient.ensureQueryData(usageQuery(deps.month)),
+			context.queryClient.ensureQueryData(usageQuery(deps.month, deps.campaign)),
+			context.queryClient.ensureQueryData(campaignsQuery()),
 		]),
 	head: () => ({ meta: [{ title: "Uso e custos · Lead Hunter" }] }),
 	component: UsagePage,
 });
 
 function UsagePage() {
-	const { month: wanted } = Route.useSearch();
+	const { month: wanted, campaign } = Route.useSearch();
 	const { data: current } = useSuspenseQuery(usageQuery());
-	const { data: m } = useSuspenseQuery(usageQuery(wanted));
+	const { data: organisation } = useSuspenseQuery(usageQuery(wanted));
+	const { data: m } = useSuspenseQuery(usageQuery(wanted, campaign));
+	const { data: campaigns } = useSuspenseQuery(campaignsQuery());
 	const latest = current.month;
 	const month = m.month;
 	const navigate = Route.useNavigate();
 	const total = totalOf(m);
-	const used = usedOf(m);
-	const state = budgetState(m);
+	const budget = budgetOf(m, organisation, campaign);
+	const used = usedOf(budget);
+	const state = budgetState(budget);
 	const max = Math.max(...m.byCampaign.map((c) => c.usd));
-	const go = (delta: number) => navigate({ search: { month: shiftMonth(month, delta) }, replace: true });
+	const go = (delta: number) =>
+		navigate({ search: (prev) => ({ ...prev, month: shiftMonth(month, delta) }), replace: true });
+	const choose = (slug: string) =>
+		navigate({ search: (prev) => ({ ...prev, campaign: slug || undefined }), replace: true });
 
 	return (
 		<Page>
@@ -49,7 +60,20 @@ function UsagePage() {
 				title="Uso e custos"
 				subtitle={`Orçamento de $${m.budgetUsd} por mês. Apify cobra por lugar, o LLM por chamada.`}
 				actions={
-					<div className="flex items-center gap-2">
+					<div className="flex flex-wrap items-center gap-2">
+						<NativeSelect
+							aria-label="Campanha"
+							className="w-auto min-w-[180px]"
+							value={campaign ?? ""}
+							onChange={(e) => choose(e.target.value)}
+						>
+							<option value="">Todas as campanhas</option>
+							{campaigns.map((c) => (
+								<option key={c.slug} value={c.slug}>
+									{c.name}
+								</option>
+							))}
+						</NativeSelect>
 						<Button size="icon" aria-label="Mês anterior" onClick={() => go(-1)}>
 							<ChevronLeft className="size-4" aria-hidden />
 						</Button>
@@ -68,8 +92,11 @@ function UsagePage() {
 					</div>
 					<Chip tone={state.tone}>{state.label}</Chip>
 				</div>
-				<ProgressBar value={percent(used, m.budgetUsd)} label="Orçamento gasto" />
-				{used > total && (
+				<ProgressBar value={percent(used, budget.budgetUsd)} label="Orçamento gasto" />
+				{campaign && (
+					<div className="text-mute">O estado e a barra usam o orçamento do mês inteiro, de todas as campanhas.</div>
+				)}
+				{used > totalOf(budget) && (
 					<div className="text-mute">
 						{usd(used)} gasto ou reservado por jobs em curso. Uma nova execução é recusada se passar o orçamento.
 					</div>
