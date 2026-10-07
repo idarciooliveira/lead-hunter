@@ -52,4 +52,5 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0046](0046-run-spend-outlives-its-campaign.md) | Keep run spend after its campaign is deleted, and admit jobs one at a time | Accepted |
 | [0047](0047-serve-the-stage-two-evidence-on-the-lead-card.md) | Serve the stage 2 breakdown and website crawl on the lead card | Partly superseded by 0050 |
 | [0048](0048-campaign-funnel-from-leads-and-jobs.md) | Serve the campaign funnel from the stored leads and jobs | Accepted |
+| [0049](0049-rank-all-leads-on-the-server.md) | Serve every lead ranked from `GET /api/leads` | Accepted |
 | [0050](0050-keep-stage-two-across-rescrapes.md) | Keep stage 2 across rescrapes, and audit only the current website | Accepted |

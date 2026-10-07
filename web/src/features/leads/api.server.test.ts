@@ -1,15 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BackendLead } from "#/lib/api-contract";
-import { BACKEND_CAMPAIGN, stubApi } from "#/lib/test-api";
-import {
-	fetchLead,
-	fetchLeads,
-	fetchTodayQueue,
-	markLead,
-	rankBackendLeads,
-	regeneratePitch,
-	toLead,
-} from "./api.server";
+import { stubApi } from "#/lib/test-api";
+import { fetchLead, fetchLeads, fetchTodayQueue, markLead, regeneratePitch, toLead } from "./api.server";
 
 const QUALIFIED: BackendLead = {
 	id: 9001,
@@ -123,14 +115,6 @@ describe("backend lead mapping", () => {
 		});
 	});
 
-	it("ranks by score with the excluded last and unranked", () => {
-		const leads = rankBackendLeads([EXCLUDED, QUALIFIED]);
-		expect(leads.map((l) => [l.name, l.rank])).toEqual([
-			["Mock Sorriso", 1],
-			["Mock Banco", null],
-		]);
-	});
-
 	it("maps the outcome fields from the API", () => {
 		const lead = toLead({ ...QUALIFIED, status: "LOST", lostReason: "NOT_NOW", note: "falar em marco" }, null);
 		expect(lead).toMatchObject({ status: "LOST", lostReason: "NOT_NOW", note: "falar em marco" });
@@ -138,13 +122,19 @@ describe("backend lead mapping", () => {
 });
 
 describe("leads over HTTP", () => {
-	it("reads every campaign and ranks the leads", async () => {
-		stubApi({
-			"/campaigns": [BACKEND_CAMPAIGN],
-			"/campaigns/mock-clinicas/leads?stage=ALL&limit=200": [EXCLUDED, QUALIFIED],
+	it("reads every lead with the rank the API gives it", async () => {
+		const fetch = stubApi({
+			"/leads?limit=2000": [
+				{ ...QUALIFIED, rank: 1 },
+				{ ...EXCLUDED, rank: null },
+			],
 		});
 		const leads = await fetchLeads();
-		expect(leads.map((l) => l.name)).toEqual(["Mock Sorriso", "Mock Banco"]);
+		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(leads.map((l) => [l.name, l.rank])).toEqual([
+			["Mock Sorriso", 1],
+			["Mock Banco", null],
+		]);
 	});
 
 	it("reads one lead without a list-scoped rank", async () => {

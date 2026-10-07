@@ -39,6 +39,8 @@ class LeadController {
 
     private static final int DEFAULT_LIMIT = 20;
     private static final int MAX_LIMIT = 200;
+    private static final int ALL_DEFAULT_LIMIT = 500;
+    private static final int ALL_MAX_LIMIT = 2000;
 
     private final CampaignRepository campaigns;
     private final LeadRepository leads;
@@ -53,6 +55,17 @@ class LeadController {
         this.leads = leads;
         this.pitches = pitches;
         this.company = company;
+    }
+
+    /**
+     * Every lead of the organization with its rank (ADR 0049): best score first across campaigns, the excluded
+     * last with a null rank. {@code limit} defaults to 500 and stops at 2000.
+     */
+    @GetMapping("/leads")
+    List<RankedLeadDto> all(OrgId org, @RequestParam(defaultValue = "" + ALL_DEFAULT_LIMIT) int limit) {
+        return leads.ranked(org, Math.clamp(limit, 1, ALL_MAX_LIMIT)).stream()
+                .map(r -> new RankedLeadDto(LeadDto.from(r.lead()), r.rank()))
+                .toList();
     }
 
     /** Today's queue (ADR 0041), same as {@code leads today}. {@code limit} overrides the profile's daily size. */

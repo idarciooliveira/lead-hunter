@@ -5,6 +5,14 @@ export function totalOf(m: UsageMonth): number {
 	return m.apifyUsd + m.llmUsd;
 }
 
+/**
+ * The month whose budget the page checks. A campaign filter narrows the spend shown, but the budget belongs to the
+ * whole organisation, so its health comes from the unfiltered month.
+ */
+export function budgetOf(filtered: UsageMonth, organisation: UsageMonth, campaign?: string): UsageMonth {
+	return campaign ? organisation : filtered;
+}
+
 /** What counts against the budget: the spend, or more when running jobs reserve some (ADR 0044). */
 export function usedOf(m: UsageMonth): number {
 	return Math.max(totalOf(m), m.committedUsd ?? 0);
