@@ -71,7 +71,26 @@ export function toCampaign(b: BackendCampaign): Campaign {
 		state: stateOf(b.latestRun),
 		qualifiedCount: b.qualifiedCount,
 		spendUsd: b.totalCostUsd,
-		funnel: null,
+		funnel: funnelOf(b.funnel),
+	};
+}
+
+/** The counts as the API holds them; only the note on the filter card is worded here. */
+function funnelOf(f: BackendCampaign["funnel"]): Campaign["funnel"] {
+	if (f === null) return null;
+	return {
+		scraped: f.scraped,
+		scrapeCostUsd: f.scrapeCostUsd,
+		kept: f.kept,
+		filterNote:
+			f.excluded === 0
+				? "nenhum lugar excluído"
+				: `${f.excluded} fora: ${f.excludedBy.map((e) => e.reason).join(", ")}`,
+		cutShare: f.cutShare,
+		qualified: f.qualified,
+		enriched: f.enriched,
+		enrichCostUsd: f.enrichCostUsd,
+		enriching: f.enriching,
 	};
 }
 

@@ -113,6 +113,60 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
+    void showsTheFunnelOnTheSingleCampaignOnly() throws Exception {
+        long excludedPlace = jdbc.sql("""
+                        insert into place (google_place_id, name, website_kind, reviews_count, raw)
+                        values ('p3', 'Banco', 'NONE', 900, '{}') returning id
+                        """)
+                .query(Long.class).single();
+        // Enriched, then a rerun excluded it: it keeps enriched_at but no longer counts as enriched.
+        jdbc.sql("""
+                        insert into lead (campaign_id, place_id, stage, score, score_breakdown, stage_reason, enriched_at)
+                        values (:campaignId, :placeId, 'EXCLUDED', 0, cast('[]' as jsonb), 'Chain or client', now())
+                        """)
+                .param("campaignId", campaign.id())
+                .param("placeId", excludedPlace)
+                .update();
+        jdbc.sql("update lead set enriched_at = now() where id = :id").param("id", qualifiedLeadId).update();
+
+        // A failed job whose one part has a known cost and one part without: the known cost still counts.
+        long failedJob = jdbc.sql("""
+                        insert into campaign_run (org_id, campaign_id, status, cost_usd)
+                        values (:orgId, :campaignId, 'FAILED', null) returning id
+                        """)
+                .param("orgId", ORG.value())
+                .param("campaignId", campaign.id())
+                .query(Long.class)
+                .single();
+        jdbc.sql("""
+                        insert into campaign_run (org_id, campaign_id, parent_id, location, search_terms, max_places, status, cost_usd)
+                        values (:orgId, :campaignId, :parentId, 'Kilamba', :terms, 40, 'SUCCEEDED', 0.15),
+                               (:orgId, :campaignId, :parentId, 'Maianga', :terms, 40, 'FAILED', null)
+                        """)
+                .param("orgId", ORG.value())
+                .param("campaignId", campaign.id())
+                .param("parentId", failedJob)
+                .param("terms", new String[]{"clínica"})
+                .update();
+
+        mvc.perform(get("/api/campaigns/clinicas-teste"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.funnel.scraped").value(3))
+                .andExpect(jsonPath("$.funnel.kept").value(2))
+                .andExpect(jsonPath("$.funnel.excluded").value(1))
+                .andExpect(jsonPath("$.funnel.excludedBy[0].reason").value("Chain or client"))
+                .andExpect(jsonPath("$.funnel.excludedBy[0].leads").value(1))
+                .andExpect(jsonPath("$.funnel.cutShare").value(0.4))
+                .andExpect(jsonPath("$.funnel.qualified").value(1))
+                .andExpect(jsonPath("$.funnel.enriched").value(1))
+                .andExpect(jsonPath("$.funnel.scrapeCostUsd").value(0.35))
+                .andExpect(jsonPath("$.funnel.enriching").value(false));
+
+        mvc.perform(get("/api/campaigns"))
+                .andExpect(jsonPath("$[0].funnel").value(nullValue()));
+    }
+
+    @Test
     void healthIsOpen() throws Exception {
         mvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
@@ -143,7 +197,8 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
         mvc.perform(get("/api/campaigns/so-dry-run"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.qualifiedCount").value(0))
-                .andExpect(jsonPath("$.latestRun").value(nullValue()));
+                .andExpect(jsonPath("$.latestRun").value(nullValue()))
+                .andExpect(jsonPath("$.funnel").value(nullValue()));
 
         mvc.perform(get("/api/campaigns/desconhecida"))
                 .andExpect(status().isNotFound())

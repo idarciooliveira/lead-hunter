@@ -36,6 +36,15 @@ class TodayQueueIntegrationTest extends PostgresTestSupport {
               locations: [Talatona]
             """;
 
+    private static final String OUTRA_CAMPANHA = """
+            slug: outra-campanha
+            name: Outra campanha
+            answers: {sector: oficinas, problem: sem agenda, service: Site}
+            search:
+              terms: [oficina]
+              locations: [Talatona]
+            """;
+
     @Autowired
     MockMvc mvc;
     @Autowired
@@ -83,6 +92,42 @@ class TodayQueueIntegrationTest extends PostgresTestSupport {
 
         mvc.perform(get("/api/leads").param("limit", "2"))
                 .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void allLeadsRankAcrossCampaignsAndPastTheOldPerCampaignCap() throws Exception {
+        campaigns.save(ORG, parser.parse(OUTRA_CAMPANHA));
+        Campaign outra = campaigns.findBySlug(ORG, "outra-campanha").orElseThrow();
+        Campaign teste = campaigns.findBySlug(ORG, "clinicas-teste").orElseThrow();
+        // 250 leads in one campaign, above the old cap of 200 per campaign: even scores 1002..1500, no ties.
+        for (int i = 1; i <= 250; i++) {
+            lead(teste, "massa-" + i, "Massa " + i, 1000 + 2 * i, "QUALIFIED", "NEW");
+        }
+        // Scores interleave with the first campaign: 200 leads of the big one score above 1101.
+        lead(outra, "entre", "Entre", 1101, "QUALIFIED", "NEW");
+        lead(outra, "topo", "Topo de outra", 99, "QUALIFIED", "NEW");
+        lead(outra, "fora-outra", "Fora de outra", 2000, "EXCLUDED", "NEW");
+
+        mvc.perform(get("/api/leads"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(257))
+                .andExpect(jsonPath("$[0].name").value("Massa 250"))
+                .andExpect(jsonPath("$[0].rank").value(1))
+                .andExpect(jsonPath("$[200].name").value("Entre"))
+                .andExpect(jsonPath("$[200].rank").value(201))
+                .andExpect(jsonPath("$[249].name").value("Massa 2"))
+                .andExpect(jsonPath("$[249].rank").value(250))
+                .andExpect(jsonPath("$[250].name").value("Massa 1"))
+                .andExpect(jsonPath("$[250].rank").value(251))
+                .andExpect(jsonPath("$[251].name").value("Topo de outra"))
+                .andExpect(jsonPath("$[251].rank").value(252))
+                .andExpect(jsonPath("$[255].name").value("Baixa"))
+                .andExpect(jsonPath("$[255].rank").value(256))
+                .andExpect(jsonPath("$[256].name").value("Fora de outra"))
+                .andExpect(jsonPath("$[256].rank").isEmpty());
+
+        mvc.perform(get("/api/leads").param("limit", "300"))
+                .andExpect(jsonPath("$.length()").value(257));
     }
 
     @Test

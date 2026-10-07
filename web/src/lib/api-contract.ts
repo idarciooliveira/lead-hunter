@@ -31,6 +31,21 @@ export const BackendCampaign = z.object({
 	qualifiedCount: z.number().int(),
 	/** The newest real job, never a dry run; null when the campaign never ran. */
 	latestRun: BackendRun.nullable(),
+	/** The pipeline counts; only the single-campaign endpoints send it, and null until the campaign ran. */
+	funnel: z
+		.object({
+			scraped: z.number().int(),
+			scrapeCostUsd: z.number(),
+			kept: z.number().int(),
+			excluded: z.number().int(),
+			excludedBy: z.array(z.object({ reason: z.string(), leads: z.number().int() })),
+			cutShare: z.number(),
+			qualified: z.number().int(),
+			enriched: z.number().int(),
+			enrichCostUsd: z.number(),
+			enriching: z.boolean(),
+		})
+		.nullable(),
 });
 export type BackendCampaign = z.infer<typeof BackendCampaign>;
 export const BackendCampaignList = z.array(BackendCampaign);
