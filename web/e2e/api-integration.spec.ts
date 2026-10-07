@@ -111,16 +111,16 @@ test.describe
 			await page.goto("/campanhas/mock-clinicas");
 			await expect(page.getByRole("heading", { level: 1, name: "Mock Clínicas" })).toBeVisible();
 			await expect(page.getByText("Mock clínicas privadas", { exact: false })).toBeVisible();
-			await expect(page.getByText("Esta campanha ainda não correu.")).toBeVisible();
+			await expect(page.getByText("Esta campanha ainda não correu.")).toHaveCount(0);
 			await page.getByRole("button", { name: /Executar/ }).click();
 			await expect(page.getByText("clínica em Kilamba")).toBeVisible();
 			await page.getByRole("checkbox").check();
 			await page.getByRole("button", { name: /Executar com --allow-over-limit/ }).click();
 			await expect(page.getByRole("dialog")).toHaveCount(0);
-			// The mock only starts a run with allowOverLimit=true, so one run proves the opt-in reached it.
+			// The mock only starts a run with allowOverLimit=true, so the new run proves the opt-in reached it.
+			// The mock seeds one finished scrape, so the new run is the second.
 			const runs = await (await request.get(`${MOCK}/api/campaigns/mock-clinicas/runs`, { headers: AUTH })).json();
-			expect(runs).toHaveLength(1);
-			await expect(page.getByText("Esta campanha ainda não correu.")).toHaveCount(0);
+			expect(runs).toHaveLength(2);
 			await expect(page.getByText("Concluída")).toBeVisible();
 			expect(errors).toEqual([]);
 		});

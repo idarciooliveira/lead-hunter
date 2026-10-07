@@ -29,8 +29,8 @@ public class CampaignFunnel {
     }
 
     /**
-     * The counts, or empty when the campaign never ran. Costs add up the jobs whose price is known;
-     * a job still unpriced adds nothing yet.
+     * The counts, or empty when the campaign never ran. Costs add up the parts of each job whose price
+     * is known, so a job with one unpriced part still counts the others.
      */
     public Optional<Funnel> of(Campaign campaign) {
         List<JobView> jobs = runs.listJobs(campaign.id()).stream()
@@ -55,8 +55,8 @@ public class CampaignFunnel {
 
     private static BigDecimal cost(List<JobView> jobs, String kind) {
         return jobs.stream()
-                .filter(j -> kind.equals(j.kind()) && j.costUsd() != null)
-                .map(JobView::costUsd)
+                .filter(j -> kind.equals(j.kind()))
+                .map(JobView::knownCostUsd)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

@@ -32,7 +32,8 @@ public class RunRepository {
     /**
      * One job as the UI polls it (ADR 0033): the parent row plus the cost of
      * its children. {@code done} is what the job reported so far, then its
-     * verdict. {@code costUsd} is null when a finished part has no known cost.
+     * verdict. {@code costUsd} is null when a finished part has no known cost; {@code knownCostUsd} still
+     * adds up the parts whose cost is known.
      */
     public record JobView(
             long id,
@@ -43,6 +44,7 @@ public class RunRepository {
             long done,
             Integer total,
             BigDecimal costUsd,
+            BigDecimal knownCostUsd,
             String error) {
     }
 
@@ -58,6 +60,7 @@ public class RunRepository {
                 case when a.unpriced or l.unpriced
                           or (p.location is not null and p.status <> 'RUNNING' and p.cost_usd is null) then null
                      else coalesce(p.cost_usd, 0) + a.cost + l.cost end as cost_usd,
+                coalesce(p.cost_usd, 0) + a.cost + l.cost as known_cost_usd,
                 p.error
             from campaign_run p
             join campaign c on c.id = p.campaign_id
@@ -84,6 +87,7 @@ public class RunRepository {
             rs.getLong("done"),
             rs.getObject("total", Integer.class),
             rs.getBigDecimal("cost_usd"),
+            rs.getBigDecimal("known_cost_usd"),
             rs.getString("error"));
 
     /** The two-key advisory lock space of job leases, apart from Flyway's single-key locks. */

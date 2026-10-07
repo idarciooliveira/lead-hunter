@@ -289,13 +289,16 @@ public class LeadRepository {
     public record StageCounts(int qualified, int belowCut, int excluded) {
     }
 
-    /** Every lead of the campaign, how many stage 1 excluded, how many are qualified and how many were enriched. */
+    /**
+     * Every lead of the campaign, how many stage 1 excluded, how many are qualified and how many of those were
+     * enriched. A lead a later scrape demoted keeps its {@code enriched_at}, so it only counts while qualified.
+     */
     public FunnelCounts funnelCounts(long campaignId) {
         return jdbc.sql("""
                         select count(*) as total,
                                count(*) filter (where stage = 'EXCLUDED') as excluded,
                                count(*) filter (where stage = 'QUALIFIED') as qualified,
-                               count(*) filter (where enriched_at is not null) as enriched
+                               count(*) filter (where stage = 'QUALIFIED' and enriched_at is not null) as enriched
                         from lead where campaign_id = :campaignId
                         """)
                 .param("campaignId", campaignId)

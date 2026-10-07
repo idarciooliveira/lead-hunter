@@ -12,9 +12,9 @@ Every number already sits in the database. Each place a campaign finds is a lead
 ## Decision
 
 - `GET /api/campaigns/{slug}` returns `funnel`, built by `CampaignFunnel` from the leads and the job history. The list and the other campaign responses leave it null, which avoids more queries per row.
-- `scraped` is the number of leads, so a place two searches return counts once. `kept` is `scraped - excluded`. `qualified` and `enriched` are lead counts. `cutShare` is the campaign's `qualifyShare`.
+- `scraped` is the number of leads, so a place two searches return counts once. `kept` is `scraped - excluded`. `qualified` is a lead count. `enriched` counts the qualified leads that are enriched, so a lead a rerun demoted drops out of it. `cutShare` is the campaign's `qualifyShare`.
 - `excludedBy` holds the three most common exclusion reasons with their counts. The web words the filter note from them and computes no count.
-- `scrapeCostUsd` and `enrichCostUsd` add the cost of the scrape and enrich jobs. A job whose price is not known yet adds nothing, so a running job's cost grows as its parts finish. Dry runs are ignored.
+- `scrapeCostUsd` and `enrichCostUsd` add the known cost of the scrape and enrich jobs, part by part. A part whose price is not known yet adds nothing, so a running job's cost grows as its parts finish, and a failed part without a price does not hide the priced ones. Dry runs are ignored.
 - `enriching` is true while an enrich job is running.
 - The funnel is null until the campaign has a real (non dry-run) job.
 - No migration and no new storage.
