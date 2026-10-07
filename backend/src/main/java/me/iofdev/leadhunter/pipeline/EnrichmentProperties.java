@@ -20,6 +20,18 @@ public record EnrichmentProperties(
         @DefaultValue("0.0005") BigDecimal estimatedUsdPerReview,
         @DefaultValue("0.002") BigDecimal estimatedLlmUsdPerLead) {
 
+    /** A zero or negative estimate would let a chargeable enrichment through the budget check. */
+    public EnrichmentProperties {
+        requirePositive("estimated-usd-per-review", estimatedUsdPerReview);
+        requirePositive("estimated-llm-usd-per-lead", estimatedLlmUsdPerLead);
+    }
+
+    private static void requirePositive(String name, BigDecimal value) {
+        if (value == null || value.signum() <= 0) {
+            throw new IllegalArgumentException("leadhunter.stage2." + name + " must be more than 0, got " + value);
+        }
+    }
+
     /** The Apify cost of one review batch over {@code places} places. */
     public BigDecimal estimateReviewsUsd(int places, int maxReviews) {
         return estimatedUsdPerReview.multiply(BigDecimal.valueOf((long) places * maxReviews));

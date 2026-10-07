@@ -49,3 +49,4 @@ How we record decisions is described in [0001](0001-record-architecture-decision
 | [0043](0043-organizations-as-tenants.md) | Make the organization the tenant, with an `org_id` column on its tables | Accepted |
 | [0044](0044-owner-keys-with-enforced-budgets.md) | Run every organization on the owner's keys, with budgets that refuse runs | Accepted |
 | [0045](0045-public-sign-up-creates-an-organization.md) | Open public sign-up, with one new organization per account | Proposed |
+| [0046](0046-run-spend-outlives-its-campaign.md) | Keep run spend after its campaign is deleted, and admit jobs one at a time | Accepted |

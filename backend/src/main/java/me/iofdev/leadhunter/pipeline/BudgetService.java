@@ -51,22 +51,30 @@ public class BudgetService {
      * organization's budget or the install cap. The message names the limit and both amounts.
      */
     public void check(OrgId orgId, BigDecimal estimateUsd) {
-        YearMonth month = YearMonth.now(clock.withZone(ZoneOffset.UTC));
-        OffsetDateTime from = month.atDay(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
-        OffsetDateTime to = month.plusMonths(1).atDay(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
-
         BigDecimal budget = budgetFor(orgId);
-        BigDecimal spent = usage.committed(orgId, from, to);
+        BigDecimal spent = committedThisMonth(orgId);
         if (spent.add(estimateUsd).compareTo(budget) > 0) {
             throw refusal("the monthly budget of this organization", budget, spent, estimateUsd);
         }
         BigDecimal cap = installCap();
         if (cap != null) {
-            BigDecimal installSpent = usage.committed(null, from, to);
+            BigDecimal installSpent = committedThisMonth(null);
             if (installSpent.add(estimateUsd).compareTo(cap) > 0) {
                 throw refusal("the monthly cap on all organizations together", cap, installSpent, estimateUsd);
             }
         }
+    }
+
+    /**
+     * What the check counts for this UTC month: spent, plus what running jobs and unpriced runs reserve. An
+     * {@code orgId} of null means every organization. The usage views show it next to the reported spend, so
+     * a refusal makes sense when little has been reported yet.
+     */
+    public BigDecimal committedThisMonth(OrgId orgId) {
+        YearMonth month = YearMonth.now(clock.withZone(ZoneOffset.UTC));
+        OffsetDateTime from = month.atDay(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
+        OffsetDateTime to = month.plusMonths(1).atDay(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
+        return usage.committed(orgId, from, to);
     }
 
     private static BudgetExceededException refusal(String limitName, BigDecimal limit, BigDecimal spent,

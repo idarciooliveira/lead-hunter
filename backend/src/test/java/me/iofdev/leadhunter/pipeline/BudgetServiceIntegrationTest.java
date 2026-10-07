@@ -6,6 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import me.iofdev.leadhunter.PostgresTestSupport;
 import me.iofdev.leadhunter.auth.OrgId;
@@ -95,6 +101,47 @@ class BudgetServiceIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
+    void aJobThatStartedLastMonthStillReservesItsEstimate() {
+        try (JobLease job = runs.startJob(campaign, RunRepository.KIND_SCRAPE, null, usd("8"))) {
+            jdbc.sql("update campaign_run set started_at = date_trunc('month', now()) - interval '1 hour' where id = :id")
+                    .param("id", job.jobId()).update();
+
+            assertThatThrownBy(() -> budget.check(ORG, usd("3"))).isInstanceOf(BudgetExceededException.class);
+            assertThat(budget.committedThisMonth(ORG)).isEqualByComparingTo("8");
+        }
+    }
+
+    @Test
+    void twoJobsThatStartAtOnceAreAdmittedOneAfterTheOther() throws Exception {
+        CountDownLatch firstAdmitted = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<JobLease> first = pool.submit(() -> runs.startJob(campaign, RunRepository.KIND_SCRAPE, null, usd("6"),
+                    () -> {
+                        budget.check(ORG, usd("6"));
+                        firstAdmitted.countDown();
+                        await(releaseFirst);
+                    }));
+            assertThat(firstAdmitted.await(10, TimeUnit.SECONDS)).isTrue();
+            Future<JobLease> second = pool.submit(() -> runs.startJob(otherCampaignOfOrg(), RunRepository.KIND_SCRAPE,
+                    null, usd("6"), () -> budget.check(ORG, usd("6"))));
+
+            // The second start waits on the admission lock while the first has not written its row.
+            assertThatThrownBy(() -> second.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+            releaseFirst.countDown();
+
+            try (JobLease admitted = first.get(10, TimeUnit.SECONDS)) {
+                assertThatThrownBy(() -> second.get(10, TimeUnit.SECONDS))
+                        .hasCauseInstanceOf(BudgetExceededException.class);
+            }
+        } finally {
+            releaseFirst.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
     void theOrganizationsOwnBudgetReplacesTheDefault() {
         jdbc.sql("update organization set monthly_budget_usd = 2 where id = :id").param("id", ORG.value()).update();
 
@@ -118,6 +165,18 @@ class BudgetServiceIntegrationTest extends PostgresTestSupport {
         assertThatThrownBy(() -> budget.check(OTHER, usd("1.50")))
                 .isInstanceOf(BudgetExceededException.class)
                 .hasMessageContaining("cap on all organizations together of $15.0000");
+    }
+
+    private long otherCampaignOfOrg() {
+        return campaign(ORG, "restaurantes");
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private long campaign(OrgId org, String slug) {

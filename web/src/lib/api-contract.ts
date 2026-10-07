@@ -72,8 +72,11 @@ export type BackendCompanyProfile = z.infer<typeof BackendCompanyProfile>;
 export const BackendUsage = z.object({
 	apify: z.object({ costUsd: z.number() }),
 	llm: z.object({ costUsd: z.number() }),
-	byCampaign: z.array(z.object({ slug: z.string(), apifyUsd: z.number(), llmUsd: z.number() })),
+	/** A null slug holds the spend of deleted campaigns and of LLM calls made outside one. */
+	byCampaign: z.array(z.object({ slug: z.string().nullable(), apifyUsd: z.number(), llmUsd: z.number() })),
 	budgetUsd: z.number(),
+	/** This UTC month, whatever the filter: spend plus what running jobs and unpriced runs reserve. */
+	committedUsd: z.number(),
 });
 export type BackendUsage = z.infer<typeof BackendUsage>;
 

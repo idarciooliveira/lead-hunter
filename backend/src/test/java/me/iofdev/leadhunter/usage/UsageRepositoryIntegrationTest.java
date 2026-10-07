@@ -93,11 +93,24 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
         UsageReport report = usage.report(UsageFilter.all(ORG));
 
         assertThat(report.totalUsd()).isEqualByComparingTo("0.78300771");
-        assertThat(report.byCampaign()).extracting(UsageReport.CampaignSpend::slug).containsExactly("clinicas", "escolas");
+        assertThat(report.byCampaign()).extracting(UsageReport.CampaignSpend::slug)
+                .containsExactly("clinicas", "escolas", null);
         assertThat(report.byCampaign().get(0).apifyUsd()).isEqualByComparingTo("0.75");
         assertThat(report.byCampaign().get(0).llmUsd()).isEqualByComparingTo("0.003");
         assertThat(report.byCampaign().get(1).apifyUsd()).isEqualByComparingTo("0.03");
-        assertThat(report.llmWithoutCampaignUsd()).isEqualByComparingTo("0.00000771");
+        assertThat(report.byCampaign().get(2).llmUsd()).isEqualByComparingTo("0.00000771");
+    }
+
+    @Test
+    void aDeletedCampaignsSpendStaysInTheBreakdown() {
+        jdbc.sql("delete from campaign where id = :id").param("id", schools).update();
+
+        UsageReport report = usage.report(UsageFilter.all(ORG));
+
+        assertThat(report.byCampaign()).extracting(UsageReport.CampaignSpend::slug).containsExactly("clinicas", null);
+        assertThat(report.byCampaign().get(1).apifyUsd()).isEqualByComparingTo("0.03");
+        assertThat(report.byCampaign().stream().map(UsageReport.CampaignSpend::totalUsd)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo(report.totalUsd());
     }
 
     @Test
@@ -108,7 +121,6 @@ class UsageRepositoryIntegrationTest extends PostgresTestSupport {
         assertThat(report.apify().costUsd()).isEqualByComparingTo("0.75");
         assertThat(report.llm().calls()).isEqualTo(2);
         assertThat(report.byCampaign()).extracting(UsageReport.CampaignSpend::slug).containsExactly("clinicas");
-        assertThat(report.llmWithoutCampaignUsd()).isZero();
     }
 
     private void moveTo(OffsetDateTime at, long campaignId) {

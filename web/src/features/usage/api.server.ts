@@ -16,10 +16,23 @@ function currentMonth(): string {
 	);
 }
 
+/** The month the API's committedUsd covers. */
+function utcMonth(): string {
+	return new Date().toISOString().slice(0, 7);
+}
+
 /** GET /api/usage?month= and GET /api/usage/entries?month=, as one month; this month by default. */
 export async function fetchUsage(month: string = currentMonth()): Promise<UsageMonth> {
 	if (apiBaseUrl() === null) {
-		const empty = { month, budgetUsd: USAGE[0].budgetUsd, apifyUsd: 0, llmUsd: 0, byCampaign: [], events: [] };
+		const empty = {
+			month,
+			budgetUsd: USAGE[0].budgetUsd,
+			apifyUsd: 0,
+			llmUsd: 0,
+			committedUsd: null,
+			byCampaign: [],
+			events: [],
+		};
 		return fakeResponse(UsageMonth, USAGE.find((m) => m.month === month) ?? empty);
 	}
 	const query = `month=${encodeURIComponent(month)}`;
@@ -32,7 +45,11 @@ export async function fetchUsage(month: string = currentMonth()): Promise<UsageM
 		budgetUsd: summary.budgetUsd,
 		apifyUsd: summary.apify.costUsd,
 		llmUsd: summary.llm.costUsd,
-		byCampaign: summary.byCampaign.map((c) => ({ campaign: c.slug, usd: c.apifyUsd + c.llmUsd })),
+		committedUsd: month === utcMonth() ? summary.committedUsd : null,
+		byCampaign: summary.byCampaign.map((c) => ({
+			campaign: c.slug ?? "Sem campanha ou apagada",
+			usd: c.apifyUsd + c.llmUsd,
+		})),
 		events: entries.map((e) => ({
 			at: e.at,
 			campaign: e.campaignSlug,

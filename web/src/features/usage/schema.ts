@@ -6,6 +6,11 @@ export const UsageMonth = z.object({
 	budgetUsd: z.number(),
 	apifyUsd: z.number(),
 	llmUsd: z.number(),
+	/**
+	 * What the budget check counts this month: spend plus what running jobs and unpriced runs reserve (ADR 0044).
+	 * Null for any other month.
+	 */
+	committedUsd: z.number().nullable(),
 	byCampaign: z.array(z.object({ campaign: z.string(), usd: z.number() })),
 	events: z.array(
 		z.object({
