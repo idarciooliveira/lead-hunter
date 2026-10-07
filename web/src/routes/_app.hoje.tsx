@@ -13,7 +13,7 @@ import { todayQueueQuery, useMarkLead } from "#/features/leads/queries";
 import { longDay, percent } from "#/lib/format";
 import { useHotkeys } from "#/lib/use-hotkeys";
 
-export const Route = createFileRoute("/hoje")({
+export const Route = createFileRoute("/_app/hoje")({
 	loader: ({ context }) => context.queryClient.ensureQueryData(todayQueueQuery()),
 	head: () => ({ meta: [{ title: "Hoje · Lead Hunter" }] }),
 	component: TodayPage,

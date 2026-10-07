@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { apiBaseUrl, apiToken } from "./api-config.server";
 import { NotFoundError } from "./fake-api";
+import { requireViewer } from "./session.server";
 
 /**
  * GETs `path` from the backend API and validates the response with the same
@@ -35,6 +36,10 @@ async function request(path: string, method?: "PATCH" | "POST" | "PUT", body?: u
 	const headers: Record<string, string> = {};
 	const token = apiToken();
 	if (token) headers.authorization = `Bearer ${token}`;
+	// The backend trusts these two headers only because the service token comes with them (ADR 0037, 0043).
+	const viewer = await requireViewer();
+	headers["x-leadhunter-user"] = viewer.userId;
+	headers["x-leadhunter-org"] = viewer.orgId;
 	if (body !== undefined) headers["content-type"] = "application/json";
 	return fetch(`${base}${path}`, {
 		method: method ?? "GET",

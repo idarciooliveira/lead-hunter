@@ -11,7 +11,7 @@ import { totalOf } from "#/features/usage/model";
 import { usageQuery } from "#/features/usage/queries";
 import { usd } from "#/lib/format";
 
-export const Route = createFileRoute("/campanhas/")({
+export const Route = createFileRoute("/_app/campanhas/")({
 	loader: ({ context }) => context.queryClient.ensureQueryData(campaignsQuery()),
 	head: () => ({ meta: [{ title: "Campanhas · Lead Hunter" }] }),
 	component: CampaignsPage,

@@ -49,6 +49,11 @@ check_web() {
     pnpm lint
     pnpm typecheck
     pnpm test
+    # The integration project signs in against real Postgres tables in a throwaway schema (ADR 0038).
+    if [ -z "$E2E_DATABASE_URL" ]; then
+      docker info >/dev/null 2>&1 || fail "no database for the web integration tests. Start Docker or set E2E_DATABASE_URL."
+      (cd .. && docker compose up -d --wait postgres)
+    fi
     # Builds the app, then runs the smoke tests against the production server.
     pnpm test:e2e
   )

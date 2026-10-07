@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { E2E_ORG_ID, E2E_USER_ID } from "./auth-fixture";
 
 /**
  * The `integration` project runs the web server with LEADHUNTER_API_URL
@@ -71,7 +72,11 @@ test("unknown API campaign shows the not found page", async ({ page }) => {
 
 // The mock API and its token match playwright.integration.config.ts.
 const MOCK = "http://localhost:3330";
-const AUTH = { authorization: "Bearer mock-token" };
+const AUTH = {
+	authorization: "Bearer mock-token",
+	"x-leadhunter-user": E2E_USER_ID,
+	"x-leadhunter-org": E2E_ORG_ID,
+};
 
 // These specs change the mock's in-memory leads and runs, so they run serially
 // with a reset first. The read-only specs above never depend on that state.

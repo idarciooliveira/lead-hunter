@@ -10,7 +10,7 @@ import { useCreateCampaign } from "#/features/campaigns/queries";
 import { type Answers, campaignFileFromAnswers, SAMPLE_ANSWERS, SAMPLE_YAML, STEPS } from "#/features/campaigns/wizard";
 import { companyQuery } from "#/features/company/queries";
 
-export const Route = createFileRoute("/campanhas/nova")({
+export const Route = createFileRoute("/_app/campanhas/nova")({
 	loader: ({ context }) => context.queryClient.ensureQueryData(companyQuery()),
 	head: () => ({ meta: [{ title: "Nova campanha · Lead Hunter" }] }),
 	component: NewCampaignPage,

@@ -14,7 +14,7 @@ import { RunTable } from "#/features/runs/components/run-table";
 import { campaignRunsQuery, usePreviewEnrichment, usePreviewScrape, useStartRun } from "#/features/runs/queries";
 import { usd } from "#/lib/format";
 
-export const Route = createFileRoute("/campanhas/$slug")({
+export const Route = createFileRoute("/_app/campanhas/$slug")({
 	// An unknown slug throws notFound() from the server function, so the router shows its not-found page.
 	loader: async ({ context, params }) => {
 		const [campaign] = await Promise.all([

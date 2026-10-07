@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { PlannedChip } from "#/components/ui/chip";
 import { Kbd } from "#/components/ui/kbd";
+import { UserMenu } from "#/features/session/components/user-menu";
 import { FoxLogo } from "./fox-logo";
 import { NAV, STATES_NAV } from "./nav";
 
@@ -39,6 +40,7 @@ export function Sidebar({ companyName }: { companyName: string }) {
 				<div className="mt-2 border-t border-line px-2 pt-3 text-[11px] leading-normal text-mute">
 					Dados de exemplo enquanto a API não existe. Ecrãs marcados como <PlannedChip /> ainda não existem no backend.
 				</div>
+				<UserMenu />
 			</div>
 		</aside>
 	);

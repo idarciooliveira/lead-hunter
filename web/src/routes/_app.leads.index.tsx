@@ -30,7 +30,7 @@ const search = z.object({
 	phone: z.boolean().catch(DEFAULTS.phone).default(DEFAULTS.phone),
 });
 
-export const Route = createFileRoute("/leads/")({
+export const Route = createFileRoute("/_app/leads/")({
 	validateSearch: search,
 	// Keep the URL short: only filters that differ from the defaults are written.
 	search: { middlewares: [stripSearchParams(DEFAULTS)] },

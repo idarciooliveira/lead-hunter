@@ -9,6 +9,9 @@ import http from "node:http";
 const PORT = Number(process.env.MOCK_API_PORT ?? 3330);
 // When set, every /api call but health needs it, like the backend under ADR 0037.
 const TOKEN = process.env.MOCK_API_TOKEN;
+// When set, every /api call but health must also name this user and organization, like the backend under ADR 0043.
+const USER = process.env.MOCK_API_USER;
+const ORG = process.env.MOCK_API_ORG;
 
 const STATUSES = ["NEW", "CONTACTED", "NO_ANSWER", "INTERESTED", "MEETING", "PROPOSAL_SENT", "WON", "LOST"];
 const LOST_REASONS = ["NO_BUDGET", "WRONG_PERSON", "HAS_SUPPLIER", "NOT_INTERESTED", "NOT_NOW"];
@@ -165,6 +168,12 @@ const server = http.createServer((req, res) => {
 	if (req.method === "GET" && url.pathname === "/api/health") return json(200, { status: "ok" });
 	if (TOKEN && url.pathname.startsWith("/api/") && req.headers.authorization !== `Bearer ${TOKEN}`) {
 		return json(401, { message: "missing or wrong API token" });
+	}
+	if (
+		url.pathname.startsWith("/api/") &&
+		((USER && req.headers["x-leadhunter-user"] !== USER) || (ORG && req.headers["x-leadhunter-org"] !== ORG))
+	) {
+		return json(403, { message: "missing or wrong user or organization header" });
 	}
 	if (req.method === "POST" && url.pathname === "/api/campaigns/mock-clinicas/enrichment") {
 		return json(400, { message: "nothing to enrich: every qualified lead of mock-clinicas is enriched" });

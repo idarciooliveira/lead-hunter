@@ -14,7 +14,7 @@ import { leadQuery, leadsQuery } from "#/features/leads/queries";
 import { whatsappUrl } from "#/lib/format";
 import { useHotkeys } from "#/lib/use-hotkeys";
 
-export const Route = createFileRoute("/leads/$leadId")({
+export const Route = createFileRoute("/_app/leads/$leadId")({
 	loader: async ({ context, params }) => {
 		// Prev/next needs the list, but the page should not wait for it.
 		void context.queryClient.prefetchQuery(leadsQuery());

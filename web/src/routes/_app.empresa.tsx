@@ -11,7 +11,7 @@ import { companyQuery, useSaveCompany } from "#/features/company/queries";
 import type { CompanyProfile } from "#/features/company/schema";
 import { percent } from "#/lib/format";
 
-export const Route = createFileRoute("/empresa")({
+export const Route = createFileRoute("/_app/empresa")({
 	loader: ({ context }) => context.queryClient.ensureQueryData(companyQuery()),
 	head: () => ({ meta: [{ title: "Empresa · Lead Hunter" }] }),
 	component: CompanyPage,

@@ -6,7 +6,7 @@ import { Button } from "#/components/ui/button";
 import { Card } from "#/components/ui/card";
 import { Cost } from "#/components/ui/cost";
 
-export const Route = createFileRoute("/estados")({
+export const Route = createFileRoute("/_app/estados")({
 	head: () => ({ meta: [{ title: "Estados do sistema · Lead Hunter" }] }),
 	component: StatesPage,
 });

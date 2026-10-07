@@ -12,7 +12,7 @@ import { budgetState, shiftMonth, totalOf } from "#/features/usage/model";
 import { usageQuery } from "#/features/usage/queries";
 import { monthLabel, percent, usd } from "#/lib/format";
 
-export const Route = createFileRoute("/uso")({
+export const Route = createFileRoute("/_app/uso")({
 	validateSearch: z.object({
 		month: z
 			.string()

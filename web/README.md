@@ -16,8 +16,12 @@ Point the pages at the backend instead of the fixtures (needs the `web`
 Spring profile running, see `../docs/api.md`):
 
 ```bash
-LEADHUNTER_API_URL=http://localhost:8080/api LEADHUNTER_API_TOKEN=<same token as the API> pnpm dev
+LEADHUNTER_API_URL=http://localhost:8080/api LEADHUNTER_API_TOKEN=<same token as the API> \
+  DATABASE_URL=postgresql://leadhunter:leadhunter@localhost:5432/leadhunter \
+  BETTER_AUTH_SECRET=<openssl rand -hex 32> BETTER_AUTH_URL=http://localhost:3000 pnpm dev
 ```
+
+With `LEADHUNTER_API_URL` set the app needs a login (ADR 0038, 0042): Better Auth runs in this server, keeps its sessions in the same Postgres, and `src/lib/session-middleware.ts` sends every signed-out page request to `/entrar` and answers signed-out server function calls with 401. Create the first account with `./lh orgs add` and `./lh users add` from the repo root. Without the variable there is no login and the pages show sample data.
 
 Or start Postgres, the API and the web together from the repo root with `./dev`, or all three in containers with `docker compose up --build` (ADR 0039).
 
@@ -30,7 +34,7 @@ Or start Postgres, the API and the web together from the repo root with `./dev`,
 | `pnpm lint` / `pnpm format` | Biome check / Biome fix |
 | `pnpm typecheck` | Generate the route tree, then `tsc` |
 | `pnpm test` | Vitest unit tests |
-| `pnpm test:e2e` | Smoke tests (fixtures build) plus the API integration tests (mock-API build, `playwright.integration.config.ts`). Needs `pnpm exec playwright install chromium` once |
+| `pnpm test:e2e` | Smoke tests (fixtures build) plus the API integration tests (mock-API build, `playwright.integration.config.ts`). Needs `pnpm exec playwright install chromium` once. The integration project also needs Postgres (`docker compose up -d postgres`, or `E2E_DATABASE_URL`): it builds the auth tables in a throwaway schema and signs in for real |
 | `pnpm screenshots` | Writes one image per page to `../docs/screenshots/web` |
 
 `./check web` from the repo root runs everything the definition of done needs.

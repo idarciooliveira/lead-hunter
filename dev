@@ -23,6 +23,18 @@ if [ -z "$LEADHUNTER_API_TOKEN" ]; then
 fi
 export LEADHUNTER_API_TOKEN
 
+# The web server signs people in against the same database (ADR 0038). A secret made here lasts one run, so
+# everyone signs in again after a restart; set BETTER_AUTH_SECRET in the environment or .env to keep sessions.
+if [ -z "$BETTER_AUTH_SECRET" ]; then
+  BETTER_AUTH_SECRET="$(sed -n 's/^BETTER_AUTH_SECRET=//p' .env 2>/dev/null | tail -n 1 | tr -d '\r' | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/")"
+fi
+if [ -z "$BETTER_AUTH_SECRET" ]; then
+  BETTER_AUTH_SECRET="$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
+fi
+export BETTER_AUTH_SECRET
+export BETTER_AUTH_URL="${BETTER_AUTH_URL:-http://localhost:3000}"
+export DATABASE_URL="${DATABASE_URL:-postgresql://leadhunter:leadhunter@localhost:5432/leadhunter}"
+
 docker compose up -d --wait postgres
 # Rebuild every time so the API runs the code on disk.
 ./backend/mvnw -q -B -f backend/pom.xml package -DskipTests
