@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { Page, PageHeader } from "#/components/page-header";
 import { StatBar } from "#/components/stat-bar";
 import { FoxState } from "#/components/states";
@@ -35,7 +36,10 @@ function CompanyPage() {
 
 function CompanyProfilePage({ profile }: { profile: CompanyProfile }) {
 	const save = useSaveCompany();
-	const sections = sectionsOf(profile);
+	// Edits live in the draft until Guardar; the saved profile only moves the baseline.
+	const [draft, setDraft] = useState(profile);
+	const dirty = JSON.stringify(draft) !== JSON.stringify(profile);
+	const sections = sectionsOf(draft, setDraft);
 	const complete = sections.filter((s) => s.complete).length;
 	const share = percent(complete, sections.length);
 	const firstGap = sections.find((s) => !s.complete);
@@ -46,7 +50,7 @@ function CompanyProfilePage({ profile }: { profile: CompanyProfile }) {
 				title="Empresa"
 				subtitle="O perfil que as campanhas usam para propor serviços e excluir clientes que já tens."
 				actions={
-					<Button variant="primary" disabled={save.isPending} onClick={() => save.mutate(profile)}>
+					<Button variant="primary" disabled={save.isPending || !dirty} onClick={() => save.mutate(draft)}>
 						{save.isPending ? "A guardar…" : "Guardar perfil"}
 					</Button>
 				}

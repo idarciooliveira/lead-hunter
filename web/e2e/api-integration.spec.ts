@@ -39,7 +39,8 @@ test("campaigns, company and usage render from the API", async ({ page }) => {
 	await expect(page.getByRole("link", { name: "Mock Clínicas" })).toBeVisible();
 	await expect(page.getByText("Mock Software, Lda.").first()).toBeVisible();
 	await page.goto("/empresa");
-	await expect(page.getByText("Mock marcações online")).toBeVisible();
+	await page.getByRole("button", { name: /O que vendemos/ }).click();
+	await expect(page.getByLabel("Serviço", { exact: true })).toHaveValue("Mock marcações online");
 	await page.goto("/uso");
 	await expect(page.getByText("Mock Talatona, SUCCEEDED")).toBeVisible();
 	expect(errors).toEqual([]);
@@ -150,7 +151,8 @@ test.describe
 			const errors: string[] = [];
 			page.on("pageerror", (e) => errors.push(e.message));
 			await page.goto("/empresa");
-			await expect(page.getByText("Mock marcações online")).toBeVisible();
+			await expect(page.getByRole("button", { name: "Guardar perfil" })).toBeDisabled();
+			await page.getByLabel("Nome", { exact: true }).fill("Mock Software, Lda. (editada)");
 			await page.getByRole("button", { name: "Guardar perfil" }).click();
 			// The mock client has no phone, so the save answers the backend's warning.
 			await expect(page.getByText(/matched by name only/)).toBeVisible();

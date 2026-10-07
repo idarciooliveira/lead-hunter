@@ -2,6 +2,8 @@ import type { CompanyProfile } from "./schema";
 
 export const COMPANY: CompanyProfile = {
 	name: "Raposa Software, Lda.",
+	intro: "Fazemos sites, sistemas de marcações e apps para PME de Luanda.",
+	entryOffer: "Website institucional",
 	services: [
 		{ name: "Website institucional", price: "350 000 a 900 000 Kz", deliveryTime: "2 a 4 semanas" },
 		{ name: "Sistema de marcações", price: "1 800 000 a 6 000 000 Kz", deliveryTime: "6 a 10 semanas" },
@@ -24,6 +26,8 @@ export const COMPANY: CompanyProfile = {
 		{
 			sector: "Clínicas privadas",
 			client: "Clínica Esperança, Alvalade",
+			problem: "Marcações por telefone e muitas faltas.",
+			built: "Sistema de marcações com lembretes por WhatsApp.",
 			result: "Sistema de marcações com lembretes por WhatsApp, em produção desde 2025.",
 			mayName: true,
 		},

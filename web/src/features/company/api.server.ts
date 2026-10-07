@@ -23,7 +23,7 @@ export type SaveCompany = { saved: CompanyProfile; warnings: string[] };
 /**
  * Saves the company profile: PUT /api/company (docs/api.md Writes). The UI
  * only edits part of the profile, so over HTTP the input is merged over the
- * stored one and the CLI-only fields (intro, entry offer, objections) survive.
+ * stored one and the CLI-only fields (objections, capacity, quarter target) survive.
  * Without an API configured the profile lands on the in-memory fixtures for
  * the session, so the pages keep working in the smoke build.
  */
@@ -38,12 +38,7 @@ export async function saveCompany(input: CompanyProfile): Promise<SaveCompany> {
 		if (e instanceof NotFoundError) return null;
 		throw e;
 	});
-	// The UI never edits a case's problem or what was built, but the backend
-	// requires them: merge each case over its stored counterpart by position.
-	const body =
-		current === null
-			? input
-			: { ...current, ...input, cases: input.cases.map((c, i) => ({ ...current.cases[i], ...c })) };
+	const body = current === null ? input : { ...current, ...input };
 	const res = await apiMutate(BackendSaveResult(CompanyProfile), "/company", "PUT", body);
 	return { saved: await fakeResponse(CompanyProfile, res.saved), warnings: res.warnings };
 }

@@ -3,7 +3,10 @@ import { z } from "zod";
 /** The company profile campaigns propose services from (ADR 0019, 0029). Optional answers are null. */
 export const CompanyProfile = z.object({
 	name: z.string(),
+	intro: z.string().nullable(),
 	services: z.array(z.object({ name: z.string(), price: z.string().nullable(), deliveryTime: z.string().nullable() })),
+	/** The service campaigns lead with. Must be the name of one of the services. */
+	entryOffer: z.string().nullable(),
 	/** Where we work: Luanda zones. */
 	area: z.array(z.string()),
 	/** Current clients; they never show up as leads. */
@@ -12,6 +15,8 @@ export const CompanyProfile = z.object({
 		z.object({
 			sector: z.string().nullable(),
 			client: z.string().nullable(),
+			problem: z.string().nullable(),
+			built: z.string().nullable(),
 			result: z.string().nullable(),
 			/** False when the pitch may not use the client's name. */
 			mayName: z.boolean(),
