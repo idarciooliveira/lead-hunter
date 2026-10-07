@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { NotFoundError } from "#/lib/fake-api";
 import { stubApi } from "#/lib/test-api";
 import { fetchUsage } from "./api.server";
 
@@ -57,5 +58,68 @@ describe("usage API", () => {
 			"/usage/entries?month=2026-10&limit=30": [],
 		});
 		await expect(fetchUsage("2026-10")).resolves.toMatchObject({ committedUsd: 8 });
+	});
+
+	it("sends the campaign to both calls when one is chosen", async () => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(new Date("2026-10-07T12:00:00Z"));
+		const fetch = stubApi({
+			"/usage?month=2026-10&campaign=mock-clinicas": {
+				apify: { costUsd: 0.25 },
+				llm: { costUsd: 0.5 },
+				byCampaign: [{ slug: "mock-clinicas", apifyUsd: 0.25, llmUsd: 0.5 }],
+				totalUsd: 0.75,
+				budgetUsd: 10,
+				committedUsd: 8,
+			},
+			"/usage/entries?month=2026-10&campaign=mock-clinicas&limit=30": [],
+		});
+		await expect(fetchUsage("2026-10", "mock-clinicas")).resolves.toMatchObject({
+			apifyUsd: 0.25,
+			llmUsd: 0.5,
+			byCampaign: [{ campaign: "mock-clinicas", usd: 0.75 }],
+			committedUsd: null,
+		});
+		expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+			"http://api:8080/api/usage?month=2026-10&campaign=mock-clinicas",
+			"http://api:8080/api/usage/entries?month=2026-10&campaign=mock-clinicas&limit=30",
+		]);
+	});
+
+	it("leaves the campaign out of both calls when none is chosen", async () => {
+		const fetch = stubApi({
+			"/usage?month=2026-10": {
+				apify: { costUsd: 0 },
+				llm: { costUsd: 0 },
+				byCampaign: [],
+				totalUsd: 0,
+				budgetUsd: 10,
+				committedUsd: 0,
+			},
+			"/usage/entries?month=2026-10&limit=30": [],
+		});
+		await fetchUsage("2026-10", undefined);
+		expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+			"http://api:8080/api/usage?month=2026-10",
+			"http://api:8080/api/usage/entries?month=2026-10&limit=30",
+		]);
+	});
+
+	it("passes an unknown campaign's 404 on as NotFoundError", async () => {
+		stubApi({});
+		await expect(fetchUsage("2026-10", "nao-existe")).rejects.toBeInstanceOf(NotFoundError);
+	});
+
+	it("narrows the fixture month to one campaign when no API is set", async () => {
+		vi.stubEnv("LEADHUNTER_API_URL", "");
+		await expect(fetchUsage("2026-10", "clinicas-talatona")).resolves.toMatchObject({
+			month: "2026-10",
+			budgetUsd: 10,
+			apifyUsd: 0.84,
+			llmUsd: 0.28,
+			byCampaign: [{ campaign: "Clínicas Talatona", usd: 1.12 }],
+		});
+		const { events } = await fetchUsage("2026-10", "clinicas-talatona");
+		expect(events.map((e) => e.campaign)).toEqual(["Clínicas Talatona", "Clínicas Talatona"]);
 	});
 });

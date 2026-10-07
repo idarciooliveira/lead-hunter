@@ -6,7 +6,9 @@ import { Page, PageHeader } from "#/components/page-header";
 import { Button } from "#/components/ui/button";
 import { Card, CardHeader } from "#/components/ui/card";
 import { Chip } from "#/components/ui/chip";
+import { NativeSelect } from "#/components/ui/field";
 import { ProgressBar } from "#/components/ui/progress";
+import { campaignsQuery } from "#/features/campaigns/queries";
 import { UsageEvents } from "#/features/usage/components/usage-events";
 import { budgetState, shiftMonth, totalOf, usedOf } from "#/features/usage/model";
 import { usageQuery } from "#/features/usage/queries";
@@ -19,21 +21,24 @@ export const Route = createFileRoute("/_app/uso")({
 			.regex(/^\d{4}-\d{2}$/)
 			.optional()
 			.catch(undefined),
+		campaign: z.string().min(1).optional().catch(undefined),
 	}),
-	loaderDeps: ({ search }) => ({ month: search.month }),
+	loaderDeps: ({ search }) => ({ month: search.month, campaign: search.campaign }),
 	loader: ({ context, deps }) =>
 		Promise.all([
 			context.queryClient.ensureQueryData(usageQuery()),
-			context.queryClient.ensureQueryData(usageQuery(deps.month)),
+			context.queryClient.ensureQueryData(usageQuery(deps.month, deps.campaign)),
+			context.queryClient.ensureQueryData(campaignsQuery()),
 		]),
 	head: () => ({ meta: [{ title: "Uso e custos · Lead Hunter" }] }),
 	component: UsagePage,
 });
 
 function UsagePage() {
-	const { month: wanted } = Route.useSearch();
+	const { month: wanted, campaign } = Route.useSearch();
 	const { data: current } = useSuspenseQuery(usageQuery());
-	const { data: m } = useSuspenseQuery(usageQuery(wanted));
+	const { data: m } = useSuspenseQuery(usageQuery(wanted, campaign));
+	const { data: campaigns } = useSuspenseQuery(campaignsQuery());
 	const latest = current.month;
 	const month = m.month;
 	const navigate = Route.useNavigate();
@@ -41,7 +46,10 @@ function UsagePage() {
 	const used = usedOf(m);
 	const state = budgetState(m);
 	const max = Math.max(...m.byCampaign.map((c) => c.usd));
-	const go = (delta: number) => navigate({ search: { month: shiftMonth(month, delta) }, replace: true });
+	const go = (delta: number) =>
+		navigate({ search: (prev) => ({ ...prev, month: shiftMonth(month, delta) }), replace: true });
+	const choose = (slug: string) =>
+		navigate({ search: (prev) => ({ ...prev, campaign: slug || undefined }), replace: true });
 
 	return (
 		<Page>
@@ -49,7 +57,20 @@ function UsagePage() {
 				title="Uso e custos"
 				subtitle={`Orçamento de $${m.budgetUsd} por mês. Apify cobra por lugar, o LLM por chamada.`}
 				actions={
-					<div className="flex items-center gap-2">
+					<div className="flex flex-wrap items-center gap-2">
+						<NativeSelect
+							aria-label="Campanha"
+							className="w-auto min-w-[180px]"
+							value={campaign ?? ""}
+							onChange={(e) => choose(e.target.value)}
+						>
+							<option value="">Todas as campanhas</option>
+							{campaigns.map((c) => (
+								<option key={c.slug} value={c.slug}>
+									{c.name}
+								</option>
+							))}
+						</NativeSelect>
 						<Button size="icon" aria-label="Mês anterior" onClick={() => go(-1)}>
 							<ChevronLeft className="size-4" aria-hidden />
 						</Button>
