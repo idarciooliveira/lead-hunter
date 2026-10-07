@@ -10,7 +10,7 @@ export function apiBaseUrl(): string | null {
 	return raw.trim().replace(/\/+$/, "");
 }
 
-/** Sent as a bearer token when set. The backend starts requiring it with ADR 0037. */
+/** Sent as a bearer token when set. The backend refuses every call without it (ADR 0037). */
 export function apiToken(): string | null {
 	const raw = process.env.LEADHUNTER_API_TOKEN;
 	return raw?.trim() ? raw.trim() : null;

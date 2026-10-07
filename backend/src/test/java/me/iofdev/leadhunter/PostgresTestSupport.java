@@ -1,5 +1,6 @@
 package me.iofdev.leadhunter;
 
+import me.iofdev.leadhunter.api.ApiTestAuth;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,6 +41,7 @@ public abstract class PostgresTestSupport {
 
     @DynamicPropertySource
     static void datasource(DynamicPropertyRegistry registry) {
+        registry.add("leadhunter.api.token", () -> ApiTestAuth.TOKEN);
         if (EXTERNAL_URL != null) {
             registry.add("spring.datasource.url", () -> EXTERNAL_URL);
             registry.add("spring.datasource.username", () -> env("LEADHUNTER_TEST_DB_USER", "leadhunter"));
@@ -59,7 +61,7 @@ public abstract class PostgresTestSupport {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbc.sql("truncate lead, campaign_run, llm_call, website_crawl, place_review, place, campaign, company restart identity cascade").update();
+        jdbc.sql("truncate invitation, member, auth_session, auth_account, auth_verification, app_user, organization, lead, campaign_run, llm_call, website_crawl, place_review, place, campaign, company restart identity cascade").update();
     }
 
     private static String env(String name, String fallback) {

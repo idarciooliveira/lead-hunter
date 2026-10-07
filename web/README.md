@@ -16,7 +16,7 @@ Point the pages at the backend instead of the fixtures (needs the `web`
 Spring profile running, see `../docs/api.md`):
 
 ```bash
-LEADHUNTER_API_URL=http://localhost:8080/api pnpm dev
+LEADHUNTER_API_URL=http://localhost:8080/api LEADHUNTER_API_TOKEN=<same token as the API> pnpm dev
 ```
 
 Or start Postgres, the API and the web together from the repo root with `./dev`, or all three in containers with `docker compose up --build` (ADR 0039).
@@ -41,7 +41,7 @@ Or start Postgres, the API and the web together from the repo root with `./dev`,
 - `src/features/<feature>/` one folder per feature (`leads`, `campaigns`, `runs`, `usage`, `company`):
   - `schema.ts` Zod schemas for the API responses, mirroring the backend enums.
   - `api.ts` the TanStack Start server functions (`createServerFn`) the queries call. The browser only ever calls these; only the web server talks to the backend (ADR 0037).
-  - `api.server.ts` the only file that knows where data comes from: the HTTP API through `lib/http.server.ts` when `LEADHUNTER_API_URL` is set (with `LEADHUNTER_API_TOKEN` as a bearer token when set), `fixtures.ts` through `lib/fake-api.ts` otherwise. It maps the backend shapes in `lib/api-contract.ts` to the feature schema. Plain functions, so the unit tests call them directly.
+  - `api.server.ts` the only file that knows where data comes from: the HTTP API through `lib/http.server.ts` when `LEADHUNTER_API_URL` is set (with `LEADHUNTER_API_TOKEN` as the bearer token the API requires), `fixtures.ts` through `lib/fake-api.ts` otherwise. It maps the backend shapes in `lib/api-contract.ts` to the feature schema. Plain functions, so the unit tests call them directly.
   - `queries.ts` TanStack Query options. Pages read data only through these.
   - `model.ts` labels, tones and formatting helpers. Never scoring: scores and reasons come from the API (ADR 0007).
   - `components/` the feature's UI.

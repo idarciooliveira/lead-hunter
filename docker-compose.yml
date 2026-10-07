@@ -24,6 +24,7 @@ services:
         required: false
     environment:
       SPRING_PROFILES_ACTIVE: web
+      LEADHUNTER_API_TOKEN: ${LEADHUNTER_API_TOKEN:-}
       PGHOST: postgres
       PGPORT: "5432"
     command: []
@@ -47,6 +48,7 @@ services:
         required: false
     environment:
       LEADHUNTER_API_URL: http://api:8080/api
+      LEADHUNTER_API_TOKEN: ${LEADHUNTER_API_TOKEN:-}
     ports:
       - "3000:3000"
     depends_on:

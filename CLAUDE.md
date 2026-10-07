@@ -32,7 +32,7 @@ Environment: building needs JDK 21 (a JRE is not enough). It is installed with S
 ## Conventions
 
 - Web: one folder per feature under `web/src/features` with `schema.ts` (Zod), `api.ts` (server functions), `api.server.ts`, `queries.ts` and `components/`. Pages read data only through the query options, the queries call only the server functions, and only `api.server.ts` knows where data comes from. The browser never calls the backend (ADR 0037). Build screens from `web/src/components/ui` and the token classes in `web/src/styles.css` (`bg-panel`, `text-mute`, `bg-acc`...), never raw colours. The UI shows scores and reasons from the API and never computes them.
-- Package by feature under `me.iofdev.leadhunter`: `company`, `campaign`, `maps`, `apify`, `place`, `scoring`, `pipeline`, `llm`, `cli`, `input`.
+- Package by feature under `me.iofdev.leadhunter`: `company`, `campaign`, `maps`, `apify`, `place`, `scoring`, `pipeline`, `llm`, `auth`, `cli`, `input`.
 - SQL is hand-written with `JdbcClient`. Schema changes are new Flyway migrations; never edit an applied one.
 - Jackson 3: packages are `tools.jackson.*`, and `JsonNode.asString()` replaces `asText()`.
 - CLI output goes through picocli's `spec.commandLine().getOut()` so tests can capture it. Errors are thrown and printed as `error: <message>` with exit code 1.

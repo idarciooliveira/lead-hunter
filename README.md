@@ -140,7 +140,7 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 
 | Command | What it does |
 |---|---|
-| `menu` | Numbered menu to run a campaign, browse leads, create a campaign, see the company profile and usage. Opens by itself when you run with no arguments in a terminal. Greets you with a shaded fox illustration (monochrome text without color; honor `NO_COLOR`) |
+| `menu` | Numbered menu to run a campaign, browse leads, create a campaign, see the company profile, usage, users and organizations. Opens by itself when you run with no arguments in a terminal. Greets you with a shaded fox illustration (monochrome text without color; honor `NO_COLOR`) |
 | `company setup` | Ask the company questions and save the profile. Run it again to change answers |
 | `company update -f <file>` | Save the profile from a YAML file |
 | `company show` | Print the saved profile |
@@ -158,6 +158,10 @@ A shorter alias: `alias lhd='docker compose run --rm app'`, then `lhd leads list
 | `leads pitch <id>` | Write a new pitch for a lead, replacing the old one. Spends LLM credit |
 | `leads mark <id> --status <status> [--lost-reason <reason>] [--note <text>]` | Mark a contact outcome. `LOST` needs one of `NO_BUDGET`, `WRONG_PERSON`, `HAS_SUPPLIER`, `NOT_INTERESTED`, `NOT_NOW` |
 | `usage [--month YYYY-MM] [--campaign <slug>] [--runs] [--limit 30]` | What Apify and the LLM have cost, with a monthly budget bar and spend per campaign. `--runs` lists each run and call |
+| `users add <email> --name <name> [--org <slug>] [--role owner\|admin\|member]` | Create an account for the web app. Asks for the password twice without showing it, and writes it the way Better Auth reads it (ADR 0042) |
+| `users list`, `users password <email>`, `users remove <email> [--yes]` | List accounts with their organizations, set a new password (it ends their sessions), delete an account |
+| `orgs add <name> [--slug <slug>]`, `orgs list` | Create and list organizations, the tenants (ADR 0043) |
+| `members add <org> <email> [--role owner\|admin\|member]` | Add a user to an organization, or change their role |
 | `llm test ["prompt"]` | Send one prompt to the configured model, print the answer, token usage and cost |
 
 ## Web client
@@ -170,7 +174,7 @@ cd web && pnpm install && pnpm dev   # http://localhost:3000, on sample data
 
 ### API and web with one command
 
-Both read `.env` and use the same database as the CLI. See [ADR 0039](docs/adr/0039-full-stack-in-docker-compose-and-a-dev-script.md).
+Both read `.env` and use the same database as the CLI. Set `LEADHUNTER_API_TOKEN` in `.env` for `docker compose up`; `./dev` makes one when it is unset. See [ADR 0039](docs/adr/0039-full-stack-in-docker-compose-and-a-dev-script.md).
 
 ```bash
 docker compose up --build   # everything in Docker: Postgres, the API on :8080, the web on :3000
@@ -190,6 +194,7 @@ Copy [.env.example](.env.example) to `.env` in the project root and replace the 
 | `LEADHUNTER_LLM_MODEL` | `google/gemma-4-26b-a4b-it` | Any gateway model id. Gemma is for testing, see [ADR 0017](docs/adr/0017-vercel-ai-gateway.md) |
 | `LEADHUNTER_LLM_BASE_URL` | `https://ai-gateway.vercel.sh/v1` | Any OpenAI-compatible endpoint |
 | `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` | docker-compose values | Railway sets these on its Postgres |
+| `LEADHUNTER_API_TOKEN` | none | Service token the web server sends and the API requires on every `/api` call. The web profile will not start without it. `openssl rand -hex 32` makes one |
 | `LEADHUNTER_APIFY_MAX_PLACES_PER_RUN` | 600 | Budget guard. Larger runs need `--allow-over-limit` |
 | `LEADHUNTER_APIFY_ESTIMATED_USD_PER_PLACE` | 0.004 | Only for `--dry-run`. Set it from the actor's pricing page |
 | `LEADHUNTER_USAGE_MONTHLY_BUDGET_USD` | 10 | The budget the bar in `usage` measures against |
@@ -241,7 +246,7 @@ No test calls a real external API. See [ADR 0016](docs/adr/0016-testing-strategy
 
 ```
 backend/    Spring Boot app and picocli CLI, package me.iofdev.leadhunter
-            (company, campaign, maps, apify, place, scoring, pipeline, llm, usage, api, cli, input)
+            (company, campaign, maps, apify, place, scoring, pipeline, llm, usage, auth, api, cli, input)
 web/        TanStack Start client, one folder per feature under src/features
 docs/       adr/ decisions, api.md, calibration.md, screenshots/
 evals/      harness and rounds for evaluating the LLM steps

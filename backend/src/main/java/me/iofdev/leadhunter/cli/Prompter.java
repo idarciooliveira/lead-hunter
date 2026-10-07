@@ -1,6 +1,7 @@
 package me.iofdev.leadhunter.cli;
 
 import java.io.BufferedReader;
+import java.io.Console;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -144,6 +145,24 @@ final class Prompter {
         }
         Integer picked = askOptionalInt("", null, 0, options.size());
         return picked == null ? 0 : picked;
+    }
+
+    /**
+     * Reads a line without echoing it when stdin is a terminal. With piped input, which tests and
+     * {@code docker compose run -T} use, it reads the next line like any other answer.
+     */
+    String askSecret(String question) {
+        Console console = System.console();
+        if (console != null) {
+            char[] typed = console.readPassword("%s > ", question);
+            if (typed == null) {
+                throw new InputEnded(inputEndedMessage);
+            }
+            return new String(typed);
+        }
+        out.print(question + " > ");
+        out.flush();
+        return readLine();
     }
 
     boolean confirm(String question) {

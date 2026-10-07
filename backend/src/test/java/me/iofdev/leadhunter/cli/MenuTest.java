@@ -32,6 +32,27 @@ class MenuTest {
     }
 
     @Test
+    void addsAUserToAnOrganizationThroughTheUsersCommand() {
+        run("7\n2\nana@acme.ao\nAna\nacme\n0\n", List.of());
+
+        assertThat(commands).containsExactly("users add ana@acme.ao --name Ana --org acme");
+    }
+
+    @Test
+    void addsAUserWithoutAnOrganizationWhenTheSlugIsLeftEmpty() {
+        run("7\n2\nana@acme.ao\nAna\n\n0\n", List.of());
+
+        assertThat(commands).containsExactly("users add ana@acme.ao --name Ana");
+    }
+
+    @Test
+    void listsAndCreatesOrganizations() {
+        run("7\n3\n7\n4\nClínica Sorriso\n0\n", List.of());
+
+        assertThat(commands).containsExactly("orgs list", "orgs add Clínica Sorriso");
+    }
+
+    @Test
     void enterQuits() {
         run("\n", List.of());
 
@@ -106,7 +127,7 @@ class MenuTest {
     void asksAgainOnANumberOutsideTheMenu() {
         run("9\n0\n", List.of());
 
-        assertThat(output.toString()).contains("Enter a whole number from 0 to 6.");
+        assertThat(output.toString()).contains("Enter a whole number from 0 to 7.");
     }
 
     @Test

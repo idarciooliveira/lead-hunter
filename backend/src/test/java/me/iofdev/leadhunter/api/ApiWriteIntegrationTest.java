@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -26,6 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @EnabledIf("me.iofdev.leadhunter.PostgresTestSupport#databaseAvailable")
 @SpringBootTest(properties = {"leadhunter.cli.enabled=false", "spring.main.web-application-type=servlet"})
 @AutoConfigureMockMvc
+@Import(ApiTestAuth.class)
 class ApiWriteIntegrationTest extends PostgresTestSupport {
 
     private static final String COMPANY = """
