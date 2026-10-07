@@ -50,6 +50,7 @@ class ServiceTokenIntegrationTest extends PostgresTestSupport {
     @Test
     void theBrowserCannotPreflightAnOrigin() throws Exception {
         mvc.perform(options("/api/leads/1")
+                        .header("Authorization", "Bearer " + ApiTestAuth.TOKEN)
                         .header("Origin", "http://localhost:3000")
                         .header("Access-Control-Request-Method", "PATCH"))
                 .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));

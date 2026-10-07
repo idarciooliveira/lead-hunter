@@ -48,6 +48,9 @@ class OrgsCommand implements Runnable {
         @Override
         public void run() {
             String chosen = slug != null ? slug : CampaignWizard.slugify(name);
+            if (chosen == null) {
+                throw new IllegalArgumentException("the name has no letters or digits to make a slug from. Pass --slug");
+            }
             Organization organization = auth.createOrganization(name, chosen);
             PrintWriter out = spec.commandLine().getOut();
             out.printf("Created organization %s (%s).%n", organization.name(), organization.slug());

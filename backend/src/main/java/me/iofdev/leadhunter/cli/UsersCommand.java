@@ -88,13 +88,15 @@ class UsersCommand implements Runnable {
             }
 
             String password = askNewPassword(prompter(out));
-            User user = auth.createUser(normalized, name, hasher.hash(password));
+            String hash = hasher.hash(password);
+            User user = organization == null
+                    ? auth.createUser(normalized, name, hash)
+                    : auth.createUser(normalized, name, hash, organization.id(), memberRole);
             out.printf("Created %s (%s). They can sign in with the password.%n", user.email(), user.name());
             if (organization == null) {
                 out.println("They belong to no organization yet. Next: members add <org> " + user.email());
                 return;
             }
-            auth.addMember(organization.id(), user.id(), memberRole);
             out.printf("Added to %s as %s.%n", organization.slug(), memberRole);
         }
     }

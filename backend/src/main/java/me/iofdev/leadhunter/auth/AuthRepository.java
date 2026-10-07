@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 /** Users, organizations and who belongs to which, in the tables Better Auth also reads (ADR 0042, 0043). */
 @Repository
@@ -54,6 +55,14 @@ public class AuthRepository {
             throw new IllegalArgumentException("role must be one of " + String.join(", ", ROLES) + ", got '" + role + "'");
         }
         return value;
+    }
+
+    /** Creates the user as {@link #createUser(String, String, String)} does and adds them to the organization, all or nothing. */
+    @Transactional
+    public User createUser(String email, String name, String passwordHash, String organizationId, String role) {
+        User user = createUser(email, name, passwordHash);
+        addMember(organizationId, user.id(), role);
+        return user;
     }
 
     /** Creates a verified user who signs in with a password: one row in each of {@code app_user} and {@code auth_account}. */
@@ -112,17 +121,25 @@ public class AuthRepository {
     }
 
     /** Sets the password of a user, adding a password login when they only used magic links so far. */
+    @Transactional
     public void setPassword(String userId, String passwordHash) {
-        jdbc.sql("""
-                        insert into auth_account (id, user_id, account_id, provider_id, password)
-                        values (:id, :userId, :userId, 'credential', :hash)
-                        on conflict (provider_id, account_id)
-                        do update set password = excluded.password, updated_at = now()
+        int updated = jdbc.sql("""
+                        update auth_account set password = :hash, updated_at = now()
+                        where user_id = :userId and provider_id = 'credential'
                         """)
-                .param("id", newId())
                 .param("userId", userId)
                 .param("hash", passwordHash)
                 .update();
+        if (updated == 0) {
+            jdbc.sql("""
+                            insert into auth_account (id, user_id, account_id, provider_id, password)
+                            values (:id, :userId, :userId, 'credential', :hash)
+                            """)
+                    .param("id", newId())
+                    .param("userId", userId)
+                    .param("hash", passwordHash)
+                    .update();
+        }
         // A password change ends every session, like a password reset on the web.
         jdbc.sql("delete from auth_session where user_id = :userId").param("userId", userId).update();
     }

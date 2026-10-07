@@ -29,13 +29,13 @@ class ServiceTokenFilter extends OncePerRequestFilter {
     private final JsonMapper json;
 
     ServiceTokenFilter(ApiProperties properties, JsonMapper json) {
-        this.expected = properties.token().getBytes(StandardCharsets.UTF_8);
+        this.expected = properties.token().trim().getBytes(StandardCharsets.UTF_8);
         this.json = json;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
+        String path = request.getRequestURI().substring(request.getContextPath().length());
         return !path.startsWith("/api/") || path.equals("/api/health");
     }
 
@@ -53,10 +53,10 @@ class ServiceTokenFilter extends OncePerRequestFilter {
     }
 
     private boolean accepts(String header) {
-        if (expected.length == 0 || header == null || !header.startsWith(BEARER)) {
+        if (expected.length == 0 || header == null || !header.regionMatches(true, 0, BEARER, 0, BEARER.length())) {
             return false;
         }
-        byte[] given = header.substring(BEARER.length()).getBytes(StandardCharsets.UTF_8);
+        byte[] given = header.substring(BEARER.length()).trim().getBytes(StandardCharsets.UTF_8);
         return MessageDigest.isEqual(expected, given);
     }
 }
