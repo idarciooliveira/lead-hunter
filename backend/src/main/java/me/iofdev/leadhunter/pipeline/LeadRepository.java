@@ -289,6 +289,46 @@ public class LeadRepository {
     public record StageCounts(int qualified, int belowCut, int excluded) {
     }
 
+    /**
+     * Every lead of the campaign, how many stage 1 excluded, how many are qualified and how many of those were
+     * enriched. A lead a later scrape demoted keeps its {@code enriched_at}, so it only counts while qualified.
+     */
+    public FunnelCounts funnelCounts(long campaignId) {
+        return jdbc.sql("""
+                        select count(*) as total,
+                               count(*) filter (where stage = 'EXCLUDED') as excluded,
+                               count(*) filter (where stage = 'QUALIFIED') as qualified,
+                               count(*) filter (where stage = 'QUALIFIED' and enriched_at is not null) as enriched
+                        from lead where campaign_id = :campaignId
+                        """)
+                .param("campaignId", campaignId)
+                .query((rs, row) -> new FunnelCounts(rs.getInt("total"), rs.getInt("excluded"),
+                        rs.getInt("qualified"), rs.getInt("enriched")))
+                .single();
+    }
+
+    public record FunnelCounts(int total, int excluded, int qualified, int enriched) {
+    }
+
+    /** Why stage 1 dropped leads, most common reason first. */
+    public List<ExclusionCount> topExclusions(long campaignId, int limit) {
+        return jdbc.sql("""
+                        select stage_reason as reason, count(*) as leads
+                        from lead
+                        where campaign_id = :campaignId and stage = 'EXCLUDED' and stage_reason is not null
+                        group by stage_reason
+                        order by count(*) desc, stage_reason
+                        limit :limit
+                        """)
+                .param("campaignId", campaignId)
+                .param("limit", limit)
+                .query((rs, row) -> new ExclusionCount(rs.getString("reason"), rs.getInt("leads")))
+                .list();
+    }
+
+    public record ExclusionCount(String reason, int leads) {
+    }
+
     private LeadView mapView(ResultSet rs, int row) throws SQLException {
         String lostReason = rs.getString("lost_reason");
         return new LeadView(
