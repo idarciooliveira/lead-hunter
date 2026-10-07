@@ -239,7 +239,7 @@ class CliIntegrationTest extends PostgresTestSupport {
                 .contains("Total  $3.0008")
                 .contains("30% of $10.00 monthly budget")
                 .contains("clinicas")
-                .contains("(no campaign)")
+                .contains("(deleted or no campaign)")
                 .contains("<$0.0001");
         assertThat(execute("usage", "--month", "2026-08").out()).contains("Apify  $9.0000");
         assertThat(execute("usage", "--campaign", "clinicas").out())

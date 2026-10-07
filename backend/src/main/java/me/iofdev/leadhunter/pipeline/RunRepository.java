@@ -88,6 +88,8 @@ public class RunRepository {
 
     /** The two-key advisory lock space of job leases, apart from Flyway's single-key locks. */
     private static final int LOCK_SPACE = 0x4C48;
+    /** The lock space of job admission, one key for every organization so the install cap holds too. */
+    private static final int ADMISSION_SPACE = 0x4C49;
     static final String UNLOCK = "select pg_advisory_unlock(" + lockKey("?") + ")";
 
     private final JdbcClient jdbc;
@@ -166,9 +168,24 @@ public class RunRepository {
      * second RUNNING job per campaign.
      */
     public JobLease startJob(long campaignId, String kind, Integer total, BigDecimal estimatedUsd) {
+        return startJob(campaignId, kind, total, estimatedUsd, () -> {
+        });
+    }
+
+    /**
+     * {@link #startJob(long, String, Integer, BigDecimal)} after {@code admit} lets the job in. One
+     * transaction holds the admission lock across {@code admit} and the insert, so two jobs that start
+     * at once never both pass the budget check on the same spend (ADR 0046). Whatever {@code admit}
+     * throws rolls the insert back.
+     */
+    public JobLease startJob(long campaignId, String kind, Integer total, BigDecimal estimatedUsd, Runnable admit) {
         Connection connection = connect();
         try {
-            long jobId = session(connection).sql("""
+            connection.setAutoCommit(false);
+            JdbcClient session = session(connection);
+            session.sql("select pg_advisory_xact_lock(" + ADMISSION_SPACE + ", 0)").query().listOfRows();
+            admit.run();
+            long jobId = session.sql("""
                             with job as (
                                 insert into campaign_run (org_id, campaign_id, kind, status, total, estimated_usd)
                                 values ((select org_id from campaign where id = :campaignId), :campaignId, :kind,
@@ -183,9 +200,14 @@ public class RunRepository {
                     .param("estimatedUsd", estimatedUsd)
                     .query(Long.class)
                     .single();
+            connection.commit();
+            connection.setAutoCommit(true);
             return new JobLease(jobId, connection);
+        } catch (SQLException e) {
+            rollbackAndClose(connection);
+            throw new DataAccessResourceFailureException("could not start the job", e);
         } catch (RuntimeException e) {
-            closeQuietly(connection);
+            rollbackAndClose(connection);
             throw e;
         }
     }
@@ -329,6 +351,16 @@ public class RunRepository {
 
     private static JdbcClient session(Connection connection) {
         return JdbcClient.create(new SingleConnectionDataSource(connection, true));
+    }
+
+    /** A rolled-back transaction frees the admission lock; the session lock was never taken. */
+    private static void rollbackAndClose(Connection connection) {
+        try {
+            connection.rollback();
+        } catch (SQLException e) {
+            // Closing the connection ends the transaction as well.
+        }
+        closeQuietly(connection);
     }
 
     private static void closeQuietly(Connection connection) {

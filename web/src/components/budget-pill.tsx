@@ -1,14 +1,14 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ProgressBar } from "#/components/ui/progress";
-import { totalOf } from "#/features/usage/model";
+import { usedOf } from "#/features/usage/model";
 import { usageQuery } from "#/features/usage/queries";
 import { monthName, percent, usd } from "#/lib/format";
 
-/** This month's spend against the $10 budget (ADR 0006). */
+/** This month's spend and reservations against the budget (ADR 0006, 0044). */
 export function BudgetPill() {
 	const { data: month } = useSuspenseQuery(usageQuery());
-	const total = totalOf(month);
+	const total = usedOf(month);
 	return (
 		<Link
 			to="/uso"
@@ -29,7 +29,7 @@ export function BudgetText() {
 	const { data: month } = useSuspenseQuery(usageQuery());
 	return (
 		<>
-			{usd(totalOf(month))} / ${month.budgetUsd} este mês
+			{usd(usedOf(month))} / ${month.budgetUsd} este mês
 		</>
 	);
 }

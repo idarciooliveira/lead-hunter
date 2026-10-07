@@ -116,15 +116,16 @@ public class RunJobService {
     /**
      * Opens the job's parent row and lease. Jobs whose process died are
      * failed first, so a killed run never blocks its campaign and its reserved
-     * estimate does not count against the budget. The budget check comes next
-     * and refuses before any row is written (ADR 0044). The unique index behind
-     * {@link RunRepository#startJob} settles two starts that race.
+     * estimate does not count against the budget. The budget check runs under
+     * the admission lock and refuses before any row is written (ADR 0044, 0046).
+     * The unique index behind {@link RunRepository#startJob} settles two starts
+     * of one campaign that race.
      */
     private JobLease begin(Campaign campaign, String kind, Integer total, BigDecimal estimatedUsd) {
         runs.failAbandoned(campaign.id());
-        budget.check(campaign.orgId(), estimatedUsd);
         try {
-            return runs.startJob(campaign.id(), kind, total, estimatedUsd);
+            return runs.startJob(campaign.id(), kind, total, estimatedUsd,
+                    () -> budget.check(campaign.orgId(), estimatedUsd));
         } catch (DataIntegrityViolationException e) {
             throw new AlreadyRunningException("campaign '" + campaign.slug() + "' already has a running job");
         }

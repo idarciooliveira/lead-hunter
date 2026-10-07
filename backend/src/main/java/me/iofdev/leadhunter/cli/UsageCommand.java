@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -36,7 +37,7 @@ class UsageCommand implements Runnable {
     @Spec
     CommandSpec spec;
 
-    @Option(names = "--month", paramLabel = "YYYY-MM", description = "Only this month. The budget bar uses it too.")
+    @Option(names = "--month", paramLabel = "YYYY-MM", description = "Only this month, in UTC like the budget check. The budget bar uses it too.")
     String month;
 
     @Option(names = "--campaign", paramLabel = "SLUG", description = "Only this campaign.")
@@ -92,7 +93,7 @@ class UsageCommand implements Runnable {
         printApify(out, report.apify());
         printLlm(out, report.llm());
         out.printf("%nTotal  %s%n", Money.usd(report.totalUsd()));
-        printBudget(out, org, selected == null ? YearMonth.now() : selected);
+        printBudget(out, org, selected == null ? YearMonth.now(ZoneOffset.UTC) : selected);
         if (campaignId == null) {
             printCampaigns(out, report);
         }
@@ -154,6 +155,13 @@ class UsageCommand implements Runnable {
         out.printf("%nMonth %s, all campaigns  %s%n", budgetMonth, Money.usd(spent));
         out.printf("  %s  %d%% of $%s monthly budget%n", Format.bar(fraction, BAR_WIDTH),
                 Math.round(fraction * 100), limit.setScale(2, RoundingMode.HALF_UP).toPlainString());
+        if (budgetMonth.equals(YearMonth.now(ZoneOffset.UTC))) {
+            BigDecimal committed = budget.committedThisMonth(org);
+            if (committed.compareTo(spent) > 0) {
+                out.printf("  %s spent or reserved by running jobs and unpriced runs; new runs are checked against it%n",
+                        Money.usd(committed));
+            }
+        }
         BigDecimal cap = budget.installCap();
         if (cap != null) {
             out.printf("  all organizations together are capped at $%s a month%n", cap.setScale(2, RoundingMode.HALF_UP).toPlainString());
@@ -161,17 +169,14 @@ class UsageCommand implements Runnable {
     }
 
     private void printCampaigns(PrintWriter out, UsageReport report) {
-        if (report.byCampaign().isEmpty() && report.llmWithoutCampaignUsd().signum() == 0) {
+        if (report.byCampaign().isEmpty()) {
             return;
         }
         out.printf("%nBy campaign%n");
         for (UsageReport.CampaignSpend campaign : report.byCampaign()) {
-            out.printf("  %-28s Apify %-10s LLM %-10s Total %s%n", Format.truncate(campaign.slug(), 28),
+            String name = campaign.slug() == null ? "(deleted or no campaign)" : Format.truncate(campaign.slug(), 28);
+            out.printf("  %-28s Apify %-10s LLM %-10s Total %s%n", name,
                     Money.usd(campaign.apifyUsd()), Money.usd(campaign.llmUsd()), Money.usd(campaign.totalUsd()));
-        }
-        if (report.llmWithoutCampaignUsd().signum() > 0) {
-            out.printf("  %-28s Apify %-10s LLM %-10s Total %s%n", "(no campaign)", Money.usd(BigDecimal.ZERO),
-                    Money.usd(report.llmWithoutCampaignUsd()), Money.usd(report.llmWithoutCampaignUsd()));
         }
     }
 
@@ -197,6 +202,6 @@ class UsageCommand implements Runnable {
     }
 
     private static OffsetDateTime start(YearMonth month) {
-        return month == null ? null : month.atDay(1).atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
+        return month == null ? null : month.atDay(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
     }
 }

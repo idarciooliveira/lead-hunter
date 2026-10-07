@@ -231,6 +231,7 @@ class ApiReadIntegrationTest extends PostgresTestSupport {
                 .andExpect(jsonPath("$.apify.costUsd").value(0.20))
                 .andExpect(jsonPath("$.llm.calls").value(1))
                 .andExpect(jsonPath("$.totalUsd").value(0.21))
+                .andExpect(jsonPath("$.committedUsd").isNumber())
                 .andExpect(jsonPath("$.byCampaign[0].slug").value("clinicas-teste"));
 
         mvc.perform(get("/api/usage/entries"))

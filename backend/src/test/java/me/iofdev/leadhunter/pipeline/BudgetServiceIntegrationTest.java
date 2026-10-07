@@ -5,11 +5,24 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import me.iofdev.leadhunter.PostgresTestSupport;
 import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.maps.ScrapeResult;
+import me.iofdev.leadhunter.usage.UsageProperties;
+import me.iofdev.leadhunter.usage.UsageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -28,6 +41,10 @@ class BudgetServiceIntegrationTest extends PostgresTestSupport {
     BudgetService budget;
     @Autowired
     RunRepository runs;
+    @Autowired
+    UsageRepository usage;
+    @Autowired
+    UsageProperties properties;
 
     private long campaign;
     private long otherCampaign;
@@ -95,6 +112,76 @@ class BudgetServiceIntegrationTest extends PostgresTestSupport {
     }
 
     @Test
+    void aJobThatStartedLastMonthStillReservesItsEstimate() {
+        try (JobLease job = runs.startJob(campaign, RunRepository.KIND_SCRAPE, null, usd("8"))) {
+            jdbc.sql("update campaign_run set started_at = date_trunc('month', now()) - interval '1 hour' where id = :id")
+                    .param("id", job.jobId()).update();
+
+            assertThatThrownBy(() -> budget.check(ORG, usd("3"))).isInstanceOf(BudgetExceededException.class);
+            assertThat(budget.committedThisMonth(ORG)).isEqualByComparingTo("8");
+        }
+    }
+
+    @Test
+    void twoJobsThatStartAtOnceAreAdmittedOneAfterTheOther() throws Exception {
+        CountDownLatch firstAdmitted = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<JobLease> first = pool.submit(() -> runs.startJob(campaign, RunRepository.KIND_SCRAPE, null, usd("6"),
+                    () -> {
+                        budget.check(ORG, usd("6"));
+                        firstAdmitted.countDown();
+                        await(releaseFirst);
+                    }));
+            assertThat(firstAdmitted.await(10, TimeUnit.SECONDS)).isTrue();
+            Future<JobLease> second = pool.submit(() -> runs.startJob(otherCampaignOfOrg(), RunRepository.KIND_SCRAPE,
+                    null, usd("6"), () -> budget.check(ORG, usd("6"))));
+
+            // The second start waits on the admission lock while the first has not written its row.
+            assertThatThrownBy(() -> second.get(500, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+            releaseFirst.countDown();
+
+            try (JobLease admitted = first.get(10, TimeUnit.SECONDS)) {
+                assertThatThrownBy(() -> second.get(10, TimeUnit.SECONDS))
+                        .hasCauseInstanceOf(BudgetExceededException.class);
+            }
+        } finally {
+            releaseFirst.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void bothLimitsReadTheSameMonthWhenTheCheckRunsAcrossMidnight() {
+        succeed(otherCampaign, "14.50", null);
+        Clock now = Clock.systemUTC();
+        // Every read of the clock lands a month later, like a check that starts at 23:59:59 on the last day.
+        Clock jumping = new Clock() {
+            private int reads;
+
+            @Override
+            public ZoneId getZone() {
+                return ZoneOffset.UTC;
+            }
+
+            @Override
+            public Clock withZone(ZoneId zone) {
+                return this;
+            }
+
+            @Override
+            public Instant instant() {
+                return now.instant().plus(Duration.ofDays(32L * reads++));
+            }
+        };
+        BudgetService acrossMidnight = new BudgetService(usage, properties, jumping);
+
+        assertThatThrownBy(() -> acrossMidnight.check(ORG, usd("1")))
+                .hasMessageContaining("cap on all organizations together");
+    }
+
+    @Test
     void theOrganizationsOwnBudgetReplacesTheDefault() {
         jdbc.sql("update organization set monthly_budget_usd = 2 where id = :id").param("id", ORG.value()).update();
 
@@ -118,6 +205,18 @@ class BudgetServiceIntegrationTest extends PostgresTestSupport {
         assertThatThrownBy(() -> budget.check(OTHER, usd("1.50")))
                 .isInstanceOf(BudgetExceededException.class)
                 .hasMessageContaining("cap on all organizations together of $15.0000");
+    }
+
+    private long otherCampaignOfOrg() {
+        return campaign(ORG, "restaurantes");
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private long campaign(OrgId org, String slug) {

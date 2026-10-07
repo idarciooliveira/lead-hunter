@@ -8,7 +8,7 @@ import { Card, CardHeader } from "#/components/ui/card";
 import { Chip } from "#/components/ui/chip";
 import { ProgressBar } from "#/components/ui/progress";
 import { UsageEvents } from "#/features/usage/components/usage-events";
-import { budgetState, shiftMonth, totalOf } from "#/features/usage/model";
+import { budgetState, shiftMonth, totalOf, usedOf } from "#/features/usage/model";
 import { usageQuery } from "#/features/usage/queries";
 import { monthLabel, percent, usd } from "#/lib/format";
 
@@ -38,6 +38,7 @@ function UsagePage() {
 	const month = m.month;
 	const navigate = Route.useNavigate();
 	const total = totalOf(m);
+	const used = usedOf(m);
 	const state = budgetState(m);
 	const max = Math.max(...m.byCampaign.map((c) => c.usd));
 	const go = (delta: number) => navigate({ search: { month: shiftMonth(month, delta) }, replace: true });
@@ -67,7 +68,12 @@ function UsagePage() {
 					</div>
 					<Chip tone={state.tone}>{state.label}</Chip>
 				</div>
-				<ProgressBar value={percent(total, m.budgetUsd)} label="Orçamento gasto" />
+				<ProgressBar value={percent(used, m.budgetUsd)} label="Orçamento gasto" />
+				{used > total && (
+					<div className="text-mute">
+						{usd(used)} gasto ou reservado por jobs em curso. Uma nova execução é recusada se passar o orçamento.
+					</div>
+				)}
 				<div className="flex flex-wrap gap-6">
 					<span>
 						<span className="text-mute">Apify</span> <span className="font-mono font-semibold">{usd(m.apifyUsd)}</span>
