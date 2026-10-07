@@ -51,14 +51,16 @@ public class BudgetService {
      * organization's budget or the install cap. The message names the limit and both amounts.
      */
     public void check(OrgId orgId, BigDecimal estimateUsd) {
+        // One month for both limits, so a check that runs across midnight UTC never mixes two months.
+        YearMonth month = thisMonth();
         BigDecimal budget = budgetFor(orgId);
-        BigDecimal spent = committedThisMonth(orgId);
+        BigDecimal spent = committed(orgId, month);
         if (spent.add(estimateUsd).compareTo(budget) > 0) {
             throw refusal("the monthly budget of this organization", budget, spent, estimateUsd);
         }
         BigDecimal cap = installCap();
         if (cap != null) {
-            BigDecimal installSpent = committedThisMonth(null);
+            BigDecimal installSpent = committed(null, month);
             if (installSpent.add(estimateUsd).compareTo(cap) > 0) {
                 throw refusal("the monthly cap on all organizations together", cap, installSpent, estimateUsd);
             }
@@ -71,10 +73,19 @@ public class BudgetService {
      * a refusal makes sense when little has been reported yet.
      */
     public BigDecimal committedThisMonth(OrgId orgId) {
-        YearMonth month = YearMonth.now(clock.withZone(ZoneOffset.UTC));
-        OffsetDateTime from = month.atDay(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
-        OffsetDateTime to = month.plusMonths(1).atDay(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
-        return usage.committed(orgId, from, to);
+        return committed(orgId, thisMonth());
+    }
+
+    private YearMonth thisMonth() {
+        return YearMonth.now(clock.withZone(ZoneOffset.UTC));
+    }
+
+    private BigDecimal committed(OrgId orgId, YearMonth month) {
+        return usage.committed(orgId, start(month), start(month.plusMonths(1)));
+    }
+
+    private static OffsetDateTime start(YearMonth month) {
+        return month.atDay(1).atStartOfDay(ZoneOffset.UTC).toOffsetDateTime();
     }
 
     private static BudgetExceededException refusal(String limitName, BigDecimal limit, BigDecimal spent,

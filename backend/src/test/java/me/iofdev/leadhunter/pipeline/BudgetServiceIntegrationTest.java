@@ -5,6 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -16,6 +21,8 @@ import java.util.concurrent.TimeoutException;
 import me.iofdev.leadhunter.PostgresTestSupport;
 import me.iofdev.leadhunter.auth.OrgId;
 import me.iofdev.leadhunter.maps.ScrapeResult;
+import me.iofdev.leadhunter.usage.UsageProperties;
+import me.iofdev.leadhunter.usage.UsageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -34,6 +41,10 @@ class BudgetServiceIntegrationTest extends PostgresTestSupport {
     BudgetService budget;
     @Autowired
     RunRepository runs;
+    @Autowired
+    UsageRepository usage;
+    @Autowired
+    UsageProperties properties;
 
     private long campaign;
     private long otherCampaign;
@@ -139,6 +150,35 @@ class BudgetServiceIntegrationTest extends PostgresTestSupport {
             releaseFirst.countDown();
             pool.shutdownNow();
         }
+    }
+
+    @Test
+    void bothLimitsReadTheSameMonthWhenTheCheckRunsAcrossMidnight() {
+        succeed(otherCampaign, "14.50", null);
+        Clock now = Clock.systemUTC();
+        // Every read of the clock lands a month later, like a check that starts at 23:59:59 on the last day.
+        Clock jumping = new Clock() {
+            private int reads;
+
+            @Override
+            public ZoneId getZone() {
+                return ZoneOffset.UTC;
+            }
+
+            @Override
+            public Clock withZone(ZoneId zone) {
+                return this;
+            }
+
+            @Override
+            public Instant instant() {
+                return now.instant().plus(Duration.ofDays(32L * reads++));
+            }
+        };
+        BudgetService acrossMidnight = new BudgetService(usage, properties, jumping);
+
+        assertThatThrownBy(() -> acrossMidnight.check(ORG, usd("1")))
+                .hasMessageContaining("cap on all organizations together");
     }
 
     @Test
