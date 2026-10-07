@@ -5,11 +5,13 @@ import java.time.OffsetDateTime;
 
 import me.iofdev.leadhunter.campaign.Campaign;
 import me.iofdev.leadhunter.campaign.CampaignFile;
+import me.iofdev.leadhunter.pipeline.CampaignFunnel.Funnel;
 
 /**
  * A campaign as the web client reads it. Same validation and content as the CLI,
  * plus the qualified lead count and the newest real job (never a dry run), null
  * when the campaign never ran, so the UI can show its state without computing it.
+ * {@code funnel} is the pipeline counts (ADR 0048); only the single-campaign endpoints fill it.
  */
 public record CampaignDto(
         long id,
@@ -20,7 +22,8 @@ public record CampaignDto(
         OffsetDateTime createdAt,
         BigDecimal totalCostUsd,
         int qualifiedCount,
-        RunDto latestRun) {
+        RunDto latestRun,
+        Funnel funnel) {
 
     static CampaignDto from(Campaign campaign, int qualifiedCount, RunDto latestRun) {
         return new CampaignDto(
@@ -32,6 +35,12 @@ public record CampaignDto(
                 campaign.createdAt(),
                 campaign.totalCostUsd(),
                 qualifiedCount,
-                latestRun);
+                latestRun,
+                null);
+    }
+
+    CampaignDto withFunnel(Funnel funnel) {
+        return new CampaignDto(id, slug, name, answers, search, createdAt, totalCostUsd, qualifiedCount, latestRun,
+                funnel);
     }
 }

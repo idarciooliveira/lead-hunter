@@ -57,6 +57,11 @@ test("the browser never calls the API, only the web server does (ADR 0037)", asy
 	expect(direct).toEqual([]);
 });
 
+test("the campaign page shows the funnel from the API", async ({ page }) => {
+	await page.goto("/campanhas/mock-clinicas");
+	await expect(page.getByText("3 fora: Sem telefone")).toBeVisible();
+});
+
 test("a backend error reaches the page with its message", async ({ page }) => {
 	await page.goto("/campanhas/mock-clinicas");
 	await page.locator("html[data-hydrated]").waitFor();

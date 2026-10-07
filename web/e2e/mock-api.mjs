@@ -79,6 +79,18 @@ const CAMPAIGN = {
 	totalCostUsd: 0.21,
 	qualifiedCount: 1,
 	latestRun: null,
+	funnel: {
+		scraped: 12,
+		scrapeCostUsd: 0.2,
+		kept: 9,
+		excluded: 3,
+		excludedBy: [{ reason: "Sem telefone", leads: 3 }],
+		cutShare: 0.4,
+		qualified: 1,
+		enriched: 1,
+		enrichCostUsd: 0.01,
+		enriching: false,
+	},
 };
 
 const RUNS = [];
@@ -204,6 +216,7 @@ const server = http.createServer((req, res) => {
 				totalCostUsd: 0,
 				qualifiedCount: 0,
 				latestRun: null,
+				funnel: null,
 			};
 			CAMPAIGNS.push(saved);
 			return json(201, { saved, warnings: [] });

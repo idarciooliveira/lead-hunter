@@ -26,4 +26,5 @@ export const BACKEND_CAMPAIGN: BackendCampaign = {
 	totalCostUsd: 0.21,
 	qualifiedCount: 1,
 	latestRun: null,
+	funnel: null,
 };

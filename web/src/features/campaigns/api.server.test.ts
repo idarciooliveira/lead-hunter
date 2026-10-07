@@ -37,6 +37,37 @@ describe("backend campaign mapping", () => {
 		});
 	});
 
+	it("maps the funnel counts and words the filter note", () => {
+		const funnel = {
+			scraped: 12,
+			scrapeCostUsd: 0.2,
+			kept: 9,
+			excluded: 3,
+			excludedBy: [
+				{ reason: "Sem telefone", leads: 2 },
+				{ reason: "Cliente", leads: 1 },
+			],
+			cutShare: 0.4,
+			qualified: 4,
+			enriched: 2,
+			enrichCostUsd: 0.01,
+			enriching: true,
+		};
+		expect(toCampaign({ ...BACKEND_CAMPAIGN, funnel }).funnel).toEqual({
+			scraped: 12,
+			scrapeCostUsd: 0.2,
+			kept: 9,
+			filterNote: "3 fora: Sem telefone, Cliente",
+			cutShare: 0.4,
+			qualified: 4,
+			enriched: 2,
+			enrichCostUsd: 0.01,
+			enriching: true,
+		});
+		const none = toCampaign({ ...BACKEND_CAMPAIGN, funnel: { ...funnel, excluded: 0, excludedBy: [] } });
+		expect(none.funnel?.filterNote).toBe("nenhum lugar excluído");
+	});
+
 	it("takes the state from the newest real job", () => {
 		const state = (latestRun: BackendRun | null) => toCampaign({ ...BACKEND_CAMPAIGN, latestRun }).state;
 		expect(state(null)).toBe("DRAFT");
